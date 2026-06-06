@@ -10,8 +10,8 @@ Requirements for the initial release (the screenshot-ready demo). Each maps to r
 ### Foundation & Infrastructure
 
 - [ ] **DATA-01**: Developer can launch the full stack (backend, frontend, Postgres+pgvector) with a single `docker compose up`
-- [ ] **DATA-02**: On first start the system seeds demo users, ~15 securities, ~2 years of daily OHLCV price series, plus benchmark and factor-return series
-- [ ] **DATA-03**: pgvector schema initializes automatically on a cold start so RAG storage works with no manual setup
+- [x] **DATA-02**: On first start the system seeds demo users, ~15 securities, ~2 years of daily OHLCV price series, plus benchmark and factor-return series
+- [x] **DATA-03**: pgvector schema initializes automatically on a cold start so RAG storage works with no manual setup
 
 ### Authentication & Demo Users
 
@@ -125,8 +125,8 @@ Which phases cover which requirements. Populated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | DATA-01 | Phase 1 | Pending |
-| DATA-02 | Phase 1 | Pending |
-| DATA-03 | Phase 1 | Pending |
+| DATA-02 | Phase 1 | Complete |
+| DATA-03 | Phase 1 | Complete |
 | AUTH-01 | Phase 1 | Pending |
 | AUTH-02 | Phase 1 | Pending |
 | DEVX-01 | Phase 1 | Pending |

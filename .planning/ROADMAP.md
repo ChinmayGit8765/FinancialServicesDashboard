@@ -12,7 +12,7 @@ QuantLens is built in 10 phases that respect a hard dependency order enforced by
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Data Foundation** - Docker stack, Postgres+pgvector, Flyway seeds, demo users, price and factor series, dev MCP tooling
+- [ ] **Phase 1: Data Foundation** - Docker stack, Postgres+pgvector, Flyway seeds, demo users, price and factor series, dev MCP tooling [IN PROGRESS — 1/4 plans complete]
 - [ ] **Phase 2: Portfolio Domain** - Holdings, P&L, allocation, transactions, benchmark — full portfolio REST API
 - [ ] **Phase 3: Frontend Scaffold** - Vue 3 + Pinia + ECharts dashboard, portfolio chart bindings, auth flow, OAuth upgrade path docs
 - [ ] **Phase 4: Quant Risk Engine** - Sharpe, VaR, beta, volatility, correlation heatmap, Fama-French attribution, cointegration pairs scanner
@@ -38,7 +38,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   5. Dev-side MCP servers (context7 for Spring AI docs, Postgres MCP) are configured in `.mcp.json` and Claude Code can connect to them
 **Plans**: 4 plans (Walking Skeleton)
 Plans:
-- [ ] 01-01-PLAN.md — Scaffold backend (Boot 3.5.13/Java 21 Modulith, pinned BOMs) + Wave 0 test scaffolds (Testcontainers pgvector)
+- [x] 01-01-PLAN.md — Scaffold backend (Boot 3.5.13/Java 21 Modulith, pinned BOMs) + Wave 0 test scaffolds (Testcontainers pgvector) [COMPLETE 2026-06-07]
 - [ ] 01-02-PLAN.md — Flyway schema + pgvector(1536)/HNSW + idempotent correlated-GBM seeder (DATA-02, DATA-03)
 - [ ] 01-03-PLAN.md — Spring Security form login (JSON handlers, session, persona scoping) (AUTH-01, AUTH-02)
 - [ ] 01-04-PLAN.md — Vue shell + Dockerfiles + docker-compose + .mcp.json; `docker compose up` end-to-end (DATA-01, DEVX-01)
@@ -158,7 +158,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Data Foundation | 0/4 | Not started | - |
+| 1. Data Foundation | 1/4 | In progress | Plan 01-01 complete 2026-06-07 |
 | 2. Portfolio Domain | 0/TBD | Not started | - |
 | 3. Frontend Scaffold | 0/TBD | Not started | - |
 | 4. Quant Risk Engine | 0/TBD | Not started | - |

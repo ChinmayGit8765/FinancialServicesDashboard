@@ -1,7 +1,6 @@
 package com.quantlens.infra;
 
 import com.quantlens.AbstractPostgresIntegrationTest;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -19,7 +18,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  *   <li>Its {@code embedding} column has the pgvector type with dimension 1536</li>
  * </ul>
  */
-@Disabled("RED — turns green in Plan 02 when Flyway migration creates the vector_store table")
 class VectorStoreSchemaTest extends AbstractPostgresIntegrationTest {
 
     @Autowired

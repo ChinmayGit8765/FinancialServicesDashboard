@@ -101,7 +101,7 @@ An AI-augmented portfolio & market intelligence dashboard that fuses a quantitat
 | Tool | Config | Purpose |
 |------|--------|---------|
 | context7 MCP | `claude mcp add context7 -- npx -y @upstash/context7-mcp@latest` | Fetch current Spring AI / Hipparchus / finmath docs into Claude Code context |
-| Postgres MCP | `claude mcp add --transport stdio project-db -- npx -y @modelcontextprotocol/server-postgres postgresql://localhost:5432/quantlens` | Query the local dev DB from Claude Code; introspect schema, write migrations |
+| Postgres MCP | `claude mcp add --transport stdio project-db -- npx -y @henkey/postgres-mcp-server --connection-string postgresql://quantlens:quantlens@localhost:5432/quantlens` | Query the local dev DB from Claude Code; introspect schema, write migrations. **NOTE:** `@modelcontextprotocol/server-postgres` is DEPRECATED (archived July 2025, SQL-injection CVE) — DO NOT USE; this `@henkey/postgres-mcp-server` replacement needs human-verify before first install. |
 ## Alternatives Considered
 | Recommended | Alternative | Why Not |
 |-------------|-------------|---------|

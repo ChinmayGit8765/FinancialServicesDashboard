@@ -46,7 +46,8 @@ Requirements covered: DATA-01, DATA-02, DATA-03, AUTH-01, AUTH-02, DEVX-01.
 - DB name/user `quantlens`; dev credentials via compose env vars only (never committed as real secrets).
 
 ### Dev MCP Tooling (DEVX-01)
-- Add a project `.mcp.json` (and/or document `claude mcp add` commands in README) configuring: context7 MCP (`npx -y @upstash/context7-mcp@latest`) for current Spring AI / Hipparchus / finmath docs, and a Postgres MCP (`@modelcontextprotocol/server-postgres`) pointed at the local dev DB for schema introspection.
+- Add a project `.mcp.json` (and/or document `claude mcp add` commands in README) configuring: context7 MCP (`npx -y @upstash/context7-mcp@latest`) for current Spring AI / Hipparchus / finmath docs, and a Postgres MCP pointed at the local dev DB for schema introspection.
+- **Postgres MCP package:** Do NOT use `@modelcontextprotocol/server-postgres` — it was deprecated/archived (July 2025) with a SQL-injection CVE. Use `@henkey/postgres-mcp-server` (flag for human-verify before first install) or a user-scoped `claude mcp add` fallback that keeps credentials out of version control.
 
 ### Claude's Discretion
 - Exact table/column names, migration file organization, the precise GBM parameters per security, frontend scaffold tool (Vite + Vue 3 + TS), and Dockerfile layering are at Claude's discretion within the above constraints.

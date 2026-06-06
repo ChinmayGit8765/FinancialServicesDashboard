@@ -1125,22 +1125,13 @@ management:
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Spring Modulith exact version for Boot 3.5.13**
-   - What we know: Spring Modulith 1.3.x is the current stable line; Boot 3.5 support was added in 1.3.
-   - What's unclear: Exact patch version (1.3.4 vs 1.3.5 vs 1.4.0).
-   - Recommendation: Check https://github.com/spring-projects/spring-modulith/releases at plan time and pin the exact version in pom.xml.
+1. **Spring Modulith exact version for Boot 3.5.13** — **RESOLVED:** Pinned to **1.4.11** (verified live against the Spring Modulith releases at plan time; supersedes the earlier [ASSUMED] 1.3.5). Set in `pom.xml` dependencyManagement.
 
-2. **Is CookieCsrfTokenRepository needed or can we disable CSRF for the demo?**
-   - What we know: CSRF is a real attack vector for session-cookie auth. `CookieCsrfTokenRepository.withHttpOnlyFalse()` is the documented pattern. Disabling CSRF is simpler but requires documenting the SameSite=Lax dependency.
-   - What's unclear: Whether the complexity of CSRF token plumbing is worth it for a demo app with no user-uploaded data.
-   - Recommendation: Use `CookieCsrfTokenRepository.withHttpOnlyFalse()` — it is one extra line in SecurityConfig and one Axios interceptor. Worth it for the portfolio credibility signal.
+2. **Is CookieCsrfTokenRepository needed or can we disable CSRF for the demo?** — **RESOLVED:** Use `CookieCsrfTokenRepository.withHttpOnlyFalse()` + an Axios `X-XSRF-TOKEN` interceptor. One line in SecurityConfig, worth it for credibility.
 
-3. **Should the seeder guard be on `securityRepository.count() > 0` or on a dedicated `seed_log` table?**
-   - What we know: `count() > 0` is simple and sufficient for Phase 1.
-   - What's unclear: If a partial seed run was interrupted, `count() > 0` might be true with partial data, and the seeder will not re-run.
-   - Recommendation: Add a `seed_completed` boolean flag to a small `seed_log` table and set it at the END of the seeder transaction. Guard on `seedLogRepository.findById("v1").map(SeedLog::isCompleted).orElse(false)`.
+3. **Seeder guard: `count() > 0` vs dedicated `seed_log` table?** — **RESOLVED:** Use a `seed_log` table with a `seed_completed` flag set at the END of the seeder transaction; guard on `seedLogRepository.findById("v1").map(SeedLog::isCompleted).orElse(false)`. Avoids partial-seed false positives.
 
 ---
 

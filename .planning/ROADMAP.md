@@ -36,7 +36,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. The `vector_store` table and HNSW index are present and queryable after cold start (pgvector initialize-schema=true verified)
   4. The database contains price series for ~15 securities (~2 years daily OHLCV), a seeded S&P 500 benchmark series, and Fama-French factor return series (Mkt-RF, SMB, HML)
   5. Dev-side MCP servers (context7 for Spring AI docs, Postgres MCP) are configured in `.mcp.json` and Claude Code can connect to them
-**Plans**: TBD
+**Plans**: 4 plans (Walking Skeleton)
+Plans:
+- [ ] 01-01-PLAN.md — Scaffold backend (Boot 3.5.13/Java 21 Modulith, pinned BOMs) + Wave 0 test scaffolds (Testcontainers pgvector)
+- [ ] 01-02-PLAN.md — Flyway schema + pgvector(1536)/HNSW + idempotent correlated-GBM seeder (DATA-02, DATA-03)
+- [ ] 01-03-PLAN.md — Spring Security form login (JSON handlers, session, persona scoping) (AUTH-01, AUTH-02)
+- [ ] 01-04-PLAN.md — Vue shell + Dockerfiles + docker-compose + .mcp.json; `docker compose up` end-to-end (DATA-01, DEVX-01)
 
 ### Phase 2: Portfolio Domain
 **Goal**: Users can view their complete portfolio — holdings with P&L, allocation breakdown, transaction history, and benchmark comparison — all computed from seeded data through a clean REST API.
@@ -153,7 +158,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Data Foundation | 0/TBD | Not started | - |
+| 1. Data Foundation | 0/4 | Not started | - |
 | 2. Portfolio Domain | 0/TBD | Not started | - |
 | 3. Frontend Scaffold | 0/TBD | Not started | - |
 | 4. Quant Risk Engine | 0/TBD | Not started | - |

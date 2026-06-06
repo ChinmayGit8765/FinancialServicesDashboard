@@ -1,7 +1,6 @@
 package com.quantlens.seed;
 
 import com.quantlens.AbstractPostgresIntegrationTest;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -22,7 +21,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  *   <li>A second context start does not duplicate data (idempotence)</li>
  * </ul>
  */
-@Disabled("RED — turns green in Plan 02 when SeedRunner is implemented")
 class SeedRunnerIntegrationTest extends AbstractPostgresIntegrationTest {
 
     @Autowired

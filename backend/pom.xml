@@ -112,6 +112,19 @@
 			<scope>test</scope>
 		</dependency>
 
+		<!-- Hipparchus — seedable MersenneTwister RNG + NormalDistribution for GBM generator -->
+		<!-- STACK.md-locked at 4.0.3 — Apache Commons Math successor, same API, active team -->
+		<dependency>
+			<groupId>org.hipparchus</groupId>
+			<artifactId>hipparchus-core</artifactId>
+			<version>4.0.3</version>
+		</dependency>
+		<dependency>
+			<groupId>org.hipparchus</groupId>
+			<artifactId>hipparchus-stat</artifactId>
+			<version>4.0.3</version>
+		</dependency>
+
 		<!-- Testcontainers -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

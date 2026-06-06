@@ -40,7 +40,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 Plans:
 - [x] 01-01-PLAN.md — Scaffold backend (Boot 3.5.13/Java 21 Modulith, pinned BOMs) + Wave 0 test scaffolds (Testcontainers pgvector) [COMPLETE 2026-06-07]
 - [x] 01-02-PLAN.md — Flyway schema + pgvector(1536)/HNSW + idempotent correlated-GBM seeder (DATA-02, DATA-03)
-- [ ] 01-03-PLAN.md — Spring Security form login (JSON handlers, session, persona scoping) (AUTH-01, AUTH-02)
+- [x] 01-03-PLAN.md — Spring Security form login (JSON handlers, session, persona scoping) (AUTH-01, AUTH-02) [COMPLETE 2026-06-07]
 - [ ] 01-04-PLAN.md — Vue shell + Dockerfiles + docker-compose + .mcp.json; `docker compose up` end-to-end (DATA-01, DEVX-01)
 
 ### Phase 2: Portfolio Domain
@@ -158,7 +158,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Data Foundation | 2/4 | In Progress|  |
+| 1. Data Foundation | 3/4 | In Progress|  |
 | 2. Portfolio Domain | 0/TBD | Not started | - |
 | 3. Frontend Scaffold | 0/TBD | Not started | - |
 | 4. Quant Risk Engine | 0/TBD | Not started | - |

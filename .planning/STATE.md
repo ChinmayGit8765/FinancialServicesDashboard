@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "Completed 01-01-PLAN.md — backend scaffold + Wave 0 test scaffolds (3 commits: e1828b4, 9dc6492, a337a6f)"
-last_updated: "2026-06-06T19:08:18.268Z"
-last_activity: 2026-06-06
+stopped_at: "Completed 01-03-PLAN.md — Spring Security form login + persona scoping (2 commits: 5c601d5, a5ed5cf)"
+last_updated: "2026-06-07T19:26:10Z"
+last_activity: 2026-06-07
 progress:
   total_phases: 10
   completed_phases: 0
   total_plans: 4
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Phase: 01 (data-foundation) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
-Last activity: 2026-06-06
+Last activity: 2026-06-07
 
-Progress: [█████░░░░░] 50%
+Progress: [███████░░░] 75%
 
 ## Performance Metrics
 
@@ -53,6 +53,7 @@ Progress: [█████░░░░░] 50%
 
 *Updated after each plan completion*
 | Phase 01 P02 | 35 minutes | 2 tasks | 29 files |
+| Phase 01 P03 | 16 minutes | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -69,6 +70,9 @@ Recent decisions affecting current work:
 - [01-01] initialize-schema: false — Flyway owns vector_store DDL; Spring AI will not auto-create the table (prevents DDL divergence)
 - [01-01] Spring Modulith BOM 1.4.11 selected (plan locks 1.4.11, not RESEARCH.md's assumed 1.3.5)
 - [01-01] QuantLensModulithTest is fast-path (<15s) — no Spring context or DB needed for module boundary check
+- [01-03] CSRF ignoringRequestMatchers on /api/auth/login and /api/auth/logout — login entry point cannot self-supply CSRF token; SameSite=Lax is the CSRF defence at the login boundary
+- [01-03] DaoAuthenticationProvider(UserDetailsService) is the non-deprecated Spring Security 6.5.x constructor; setPasswordEncoder called separately
+- [01-03] security module allowedDependencies = portfolio::domain — cross-module read for UserDetailsService + AuthController
 
 ### Pending Todos
 
@@ -95,6 +99,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-06T19:08:18.223Z
-Stopped at: Completed 01-01-PLAN.md — backend scaffold + Wave 0 test scaffolds (3 commits: e1828b4, 9dc6492, a337a6f)
+Last session: 2026-06-07T19:26:10Z
+Stopped at: Completed 01-03-PLAN.md — Spring Security form login + persona scoping (2 commits: 5c601d5, a5ed5cf)
 Resume file: None

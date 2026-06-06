@@ -1,7 +1,6 @@
 package com.quantlens.security;
 
 import com.quantlens.AbstractPostgresIntegrationTest;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.web.client.TestRestTemplate;
@@ -30,7 +29,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  *   <li>sessionPersists: session cookie from login lets GET /api/auth/me return 200</li>
  * </ul>
  */
-@Disabled("RED — turns green in Plan 03 when SecurityConfig and auth endpoints are implemented")
 class AuthIntegrationTest extends AbstractPostgresIntegrationTest {
 
     @Autowired

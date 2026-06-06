@@ -1,0 +1,155 @@
+package com.quantlens.security.config;
+
+import com.quantlens.security.QuantLensUserDetailsService;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.ProviderManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AuthenticationFailureHandler;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+
+/**
+ * Spring Security configuration for the QuantLens SPA.
+ * <p>
+ * Key decisions:
+ * <ul>
+ *   <li><strong>JSON handlers:</strong> Default Spring Security form-login returns HTTP 302
+ *       redirects, which an Axios-based SPA cannot consume correctly.  A custom
+ *       {@link AuthenticationSuccessHandler} returns 200 JSON and a custom
+ *       {@link AuthenticationFailureHandler} returns 401 JSON so the Vue frontend can
+ *       handle login results programmatically. (RESEARCH Pitfall 4)</li>
+ *   <li><strong>Session:</strong> {@code SessionCreationPolicy.ALWAYS} ensures an
+ *       {@code HttpSession} exists from the very first request so the CSRF cookie is
+ *       available immediately.  {@code sessionFixation().changeSessionId()} rotates the
+ *       session ID at authentication to prevent session fixation attacks. (AUTH-02,
+ *       RESEARCH Security Domain V3, STRIDE T-01-07)</li>
+ *   <li><strong>CSRF:</strong> {@link CookieCsrfTokenRepository#withHttpOnlyFalse()} sets
+ *       the {@code XSRF-TOKEN} cookie without {@code HttpOnly} so the Axios interceptor
+ *       (Plan 04) can read it and send it as {@code X-XSRF-TOKEN}.  Together with
+ *       {@code SameSite=Lax} (set in application.yml), this provides defence-in-depth.
+ *       (STRIDE T-01-08)</li>
+ *   <li><strong>Authentication entry point:</strong> Unauthenticated API requests receive
+ *       401 JSON — not a redirect to a login page — so the SPA can handle them
+ *       programmatically. (STRIDE T-01-10)</li>
+ *   <li><strong>PasswordEncoder:</strong> Autowired from {@code PasswordEncoderConfig}
+ *       (Plan 02) — NOT redefined here.  Redefining it would create an ambiguous-bean
+ *       error or a BCrypt-strength mismatch between seeded hashes and login verification.
+ *       </li>
+ * </ul>
+ *
+ * <h3>OAuth upgrade seam</h3>
+ * Authorization rules ({@code authorizeHttpRequests}) are independent of the login
+ * mechanism.  To add OAuth2/OIDC login (CONTEXT.md — deferred to Phase 3 Polish):
+ * <ol>
+ *   <li>Add {@code spring-boot-starter-oauth2-client} dependency.</li>
+ *   <li>Add {@code .oauth2Login(...)} to the filter chain <em>alongside</em>
+ *       {@code .formLogin(...)} — do not remove form login (demos still use it).</li>
+ *   <li>Wire an {@code OAuth2UserService} that maps the OIDC {@code sub} claim to an
+ *       {@code AppUser} via the {@code external_id} column.</li>
+ *   <li>The {@code authorizeHttpRequests} block below remains unchanged.</li>
+ * </ol>
+ * See ARCHITECTURE Auth Seam for the full upgrade path.
+ */
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    private final QuantLensUserDetailsService userDetailsService;
+    private final PasswordEncoder passwordEncoder;
+
+    public SecurityConfig(QuantLensUserDetailsService userDetailsService,
+                          PasswordEncoder passwordEncoder) {
+        this.userDetailsService = userDetailsService;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        return http
+                .authorizeHttpRequests(auth -> auth
+                        // Public endpoints — permitAll keeps these open regardless of login mechanism
+                        // (OAuth upgrade seam: add oauth2Login without touching these rules)
+                        .requestMatchers(
+                                "/api/auth/login",
+                                "/api/auth/logout",
+                                "/api/auth/personas",
+                                "/actuator/health"
+                        ).permitAll()
+                        .anyRequest().authenticated()
+                )
+                .formLogin(form -> form
+                        .loginProcessingUrl("/api/auth/login")  // Vue POSTs form-encoded credentials here
+                        .successHandler(jsonSuccessHandler())   // 200 JSON — no redirect (Pitfall 4)
+                        .failureHandler(jsonFailureHandler())   // 401 JSON — no redirect (Pitfall 4)
+                        .permitAll()
+                )
+                .logout(logout -> logout
+                        .logoutUrl("/api/auth/logout")
+                        .logoutSuccessHandler((req, res, auth) -> res.setStatus(HttpServletResponse.SC_OK))
+                        .invalidateHttpSession(true)
+                        .deleteCookies("JSESSIONID")
+                )
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.ALWAYS)   // AUTH-02: session always exists
+                        .sessionFixation().changeSessionId()                   // T-01-07: rotate on auth
+                )
+                .csrf(csrf -> csrf
+                        // CookieCsrfTokenRepository.withHttpOnlyFalse() → Axios can read XSRF-TOKEN cookie
+                        // and send X-XSRF-TOKEN header.  SameSite=Lax (application.yml) is the complementary
+                        // defence.  (T-01-08)
+                        // The login and logout endpoints themselves are excluded from CSRF checking because
+                        // a CSRF token cannot be fetched before the first authenticated request — the SPA
+                        // reads the XSRF-TOKEN cookie that Spring sets on the first GET request and then
+                        // attaches it to all subsequent mutating calls (Plan 04 Axios interceptor).
+                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                        .ignoringRequestMatchers("/api/auth/login", "/api/auth/logout")
+                )
+                .exceptionHandling(ex -> ex
+                        // Unauthenticated API requests → 401 JSON; no redirect to login page (T-01-10)
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"authenticated\":false,\"error\":\"Authentication required\"}");
+                        })
+                )
+                .build();
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager() {
+        // DaoAuthenticationProvider(UserDetailsService) is the non-deprecated constructor in Spring Security 6.5.x
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
+        provider.setPasswordEncoder(passwordEncoder);
+        return new ProviderManager(provider);
+    }
+
+    // ── JSON handlers ─────────────────────────────────────────────────────────
+
+    private AuthenticationSuccessHandler jsonSuccessHandler() {
+        return (request, response, authentication) -> {
+            response.setStatus(HttpServletResponse.SC_OK);
+            response.setContentType("application/json");
+            response.setCharacterEncoding("UTF-8");
+            String username = authentication.getName();
+            response.getWriter().write("{\"authenticated\":true,\"username\":\"" + username + "\"}");
+        };
+    }
+
+    private AuthenticationFailureHandler jsonFailureHandler() {
+        return (request, response, exception) -> {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json");
+            response.setCharacterEncoding("UTF-8");
+            // Generic message — no user-enumeration detail (T-01-06)
+            response.getWriter().write("{\"authenticated\":false,\"error\":\"Invalid credentials\"}");
+        };
+    }
+}

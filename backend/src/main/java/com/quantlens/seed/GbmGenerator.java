@@ -131,6 +131,14 @@ public class GbmGenerator {
      * @return {@link OhlcvResult} containing per-security OHLCV rows and market excess returns
      */
     public OhlcvResult generateOhlcv(List<SecuritySpec> specs, LocalDate startDate) {
+        // Normalize startDate to a trading day — if a weekend is passed, advance to Monday (WR-05).
+        // This prevents bar[0] from carrying a weekend date, which would violate the
+        // UNIQUE (security_id, bar_date) constraint if two calls share the same Saturday start.
+        LocalDate tradingStart = startDate;
+        while (tradingStart.getDayOfWeek().getValue() > 5) {
+            tradingStart = tradingStart.plusDays(1);
+        }
+
         MersenneTwister rng = new MersenneTwister(RNG_SEED);
 
         // Pre-generate market-factor Z draws (one per day) and compute market excess returns
@@ -159,7 +167,7 @@ public class GbmGenerator {
 
             List<OhlcvRow> rows = new ArrayList<>(TRADING_DAYS);
             double s = spec.startPrice();
-            LocalDate date = startDate;
+            LocalDate date = tradingStart;
 
             for (int d = 0; d < TRADING_DAYS; d++) {
                 // Clamp beta into [0,1] for the correlation decomposition
@@ -221,6 +229,10 @@ public class GbmGenerator {
     public List<FactorRow> generateFactors(double[] mktExcessReturns, LocalDate startDate) {
         if (mktExcessReturns == null) {
             throw new IllegalArgumentException("mktExcessReturns must not be null — pass OhlcvResult.mktExcessReturns()");
+        }
+        // Normalize startDate to a trading day (mirrors generateOhlcv normalization)
+        while (startDate.getDayOfWeek().getValue() > 5) {
+            startDate = startDate.plusDays(1);
         }
 
         // SMB and HML: synthetic but plausible

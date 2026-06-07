@@ -50,6 +50,12 @@ management:
 # Demo configuration — password is intentionally surfaced on the login screen
 # so first-time visitors can click a persona without typing.  Override via
 # QUANTLENS_DEMO_PASSWORD env var to change in any deployment.
+#
+# WR-07: The default 'demo1234' is intentional for the zero-setup demo UX.
+# SECURITY NOTE: This default must be overridden via QUANTLENS_DEMO_PASSWORD
+# for any non-local deployment. The seeded demo personas (alice/bob/charlie)
+# use this password and the login screen displays it — this is by design for
+# a portfolio showcase app. DO NOT use this default in any production deployment.
 quantlens:
   demo:
     password: ${QUANTLENS_DEMO_PASSWORD:demo1234}

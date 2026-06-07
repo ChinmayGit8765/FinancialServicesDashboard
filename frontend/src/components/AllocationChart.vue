@@ -175,7 +175,7 @@ const option = computed<EChartsOption>(() =>
 
     <!-- Error state — T-03-08: static copy only -->
     <div v-else-if="error" class="chart-error" role="alert">
-      <span>Failed to load allocation.</span>
+      <span>Failed to load allocation. Check your connection and try again.</span>
       <button class="retry-btn" @click="emit('retry')">Retry</button>
     </div>
 

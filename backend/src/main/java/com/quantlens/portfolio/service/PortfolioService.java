@@ -9,8 +9,13 @@ import com.quantlens.portfolio.api.BenchmarkComparisonDto;
 import com.quantlens.portfolio.api.DateValueDto;
 import com.quantlens.portfolio.api.HoldingDto;
 import com.quantlens.portfolio.api.PortfolioPnlDto;
+import com.quantlens.portfolio.api.TransactionDto;
 import com.quantlens.portfolio.domain.Position;
 import com.quantlens.portfolio.domain.PositionRepository;
+import com.quantlens.portfolio.domain.Transaction;
+import com.quantlens.portfolio.domain.TransactionRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +24,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -52,18 +58,60 @@ public class PortfolioService {
     private final PositionRepository positionRepository;
     private final OhlcvBarRepository ohlcvBarRepository;
     private final SecurityRepository securityRepository;
+    private final TransactionRepository transactionRepository;
 
     public PortfolioService(PositionRepository positionRepository,
                             OhlcvBarRepository ohlcvBarRepository,
-                            SecurityRepository securityRepository) {
+                            SecurityRepository securityRepository,
+                            TransactionRepository transactionRepository) {
         this.positionRepository = positionRepository;
         this.ohlcvBarRepository = ohlcvBarRepository;
         this.securityRepository = securityRepository;
+        this.transactionRepository = transactionRepository;
     }
 
     // =========================================================================
     // Public API
     // =========================================================================
+
+    /**
+     * Returns a paginated, most-recent-first transaction history for a portfolio,
+     * with each entry annotated with the running average cost basis at that point.
+     * <p>
+     * Algorithm (two-pass):
+     * <ol>
+     *   <li>Load ALL transactions chronologically (txDate ASC, id ASC) and build a
+     *       {@code Map<Long, BigDecimal>} of transactionId → runningCostBasis via
+     *       the package-private {@link #buildRunningCostMap(List)} helper.</li>
+     *   <li>Load the requested page (txDate DESC, id DESC) and map each
+     *       {@code Transaction} to a {@code TransactionDto} by looking up its
+     *       running cost basis from the map.</li>
+     * </ol>
+     *
+     * @param portfolioId the owning portfolio's primary key (principal-resolved by controller)
+     * @param pageable    page/sort descriptor — caller specifies most-recent-first
+     * @return a page of TransactionDto; never a page of raw Transaction entities (Pitfall 6)
+     */
+    public Page<TransactionDto> getTransactions(Long portfolioId, Pageable pageable) {
+        // Pass 1: chronological scan to build running average-cost map
+        List<Transaction> chronological =
+                transactionRepository.findByPortfolioIdChronological(portfolioId);
+        Map<Long, BigDecimal> runningCostMap = buildRunningCostMap(chronological);
+
+        // Pass 2: fetch the requested display page (most-recent-first) and map to DTOs
+        Page<Transaction> page =
+                transactionRepository.findByPortfolioIdWithSecurity(portfolioId, pageable);
+
+        return page.map(tx -> new TransactionDto(
+                tx.getTxDate(),
+                tx.getTxType(),
+                tx.getSecurity().getTicker(),
+                tx.getQuantity(),
+                tx.getPrice().setScale(6, RoundingMode.HALF_UP),
+                tx.getQuantity().multiply(tx.getPrice()).setScale(2, RoundingMode.HALF_UP),
+                runningCostMap.getOrDefault(tx.getId(), BigDecimal.ZERO)
+        ));
+    }
 
     /**
      * Returns the holdings list for a portfolio.
@@ -273,6 +321,97 @@ public class PortfolioService {
         }
 
         return new BenchmarkComparisonDto(dates, portfolioSeries, benchmarkSeries);
+    }
+
+    // =========================================================================
+    // Package-private static helpers (callable from unit tests in same package)
+    // =========================================================================
+
+    /**
+     * Builds a map of transactionId → runningCostBasis by scanning transactions
+     * chronologically (txDate ASC, id ASC — Pitfall 5).
+     * <p>
+     * Algorithm (RESEARCH.md Pattern 1, GAAP average-cost):
+     * <ul>
+     *   <li>BUY: {@code runningCost += qty × price;  runningQty += qty}</li>
+     *   <li>SELL: {@code avgCostNow = runningCost / runningQty (scale 6);
+     *       runningCost -= sellQty × avgCostNow;  runningQty -= sellQty}</li>
+     *   <li>After each tx: {@code runningCostBasis = runningQty == 0 ? 0 : runningCost / runningQty}</li>
+     * </ul>
+     * CRITICAL: SELL reduces basis by {@code sellQty × avgCostNow}, NEVER by
+     * {@code sellQty × sellPrice} — mixing realized gain with basis reduction is wrong.
+     *
+     * @param chronologicalTxs transactions sorted txDate ASC, id ASC
+     * @return map from transaction id to the running avg cost basis after that transaction
+     */
+    static Map<Long, BigDecimal> buildRunningCostMap(List<Transaction> chronologicalTxs) {
+        Map<Long, BigDecimal> result = new HashMap<>();
+        BigDecimal runningQty  = BigDecimal.ZERO;
+        BigDecimal runningCost = BigDecimal.ZERO;
+
+        for (Transaction tx : chronologicalTxs) {
+            BigDecimal qty   = tx.getQuantity();
+            BigDecimal price = tx.getPrice();
+
+            if ("BUY".equals(tx.getTxType())) {
+                runningCost = runningCost.add(qty.multiply(price));
+                runningQty  = runningQty.add(qty);
+            } else { // SELL
+                BigDecimal avgCostNow = runningQty.signum() == 0
+                        ? BigDecimal.ZERO
+                        : runningCost.divide(runningQty, 6, RoundingMode.HALF_UP);
+                // Basis reduced by sellQty × avgCostNow, NOT sellQty × sellPrice
+                runningCost = runningCost.subtract(qty.multiply(avgCostNow));
+                runningQty  = runningQty.subtract(qty);
+            }
+
+            BigDecimal avgCostAtThisPoint = runningQty.signum() == 0
+                    ? BigDecimal.ZERO
+                    : runningCost.divide(runningQty, 6, RoundingMode.HALF_UP);
+            result.put(tx.getId(), avgCostAtThisPoint);
+        }
+        return result;
+    }
+
+    /**
+     * Unit-test-friendly overload: compute running cost basis from primitive tuples
+     * without requiring JPA entity construction.
+     * <p>
+     * Each element of {@code txTuples} is a {@code String[3]} of {@code {txType, qty, price}}
+     * where txType is "BUY" or "SELL", qty and price are decimal strings.
+     * Returns the running cost basis after each transaction (same index as input).
+     *
+     * @param txTuples list of {txType, qty, price} string triples, chronological order
+     * @return list of running cost basis values (scale 6) after each transaction
+     */
+    public static List<BigDecimal> computeRunningCostBasisFromTuples(List<String[]> txTuples) {
+        List<BigDecimal> result = new ArrayList<>();
+        BigDecimal runningQty  = BigDecimal.ZERO;
+        BigDecimal runningCost = BigDecimal.ZERO;
+
+        for (String[] tuple : txTuples) {
+            String txType = tuple[0];
+            BigDecimal qty   = new BigDecimal(tuple[1]);
+            BigDecimal price = new BigDecimal(tuple[2]);
+
+            if ("BUY".equals(txType)) {
+                runningCost = runningCost.add(qty.multiply(price));
+                runningQty  = runningQty.add(qty);
+            } else { // SELL
+                BigDecimal avgCostNow = runningQty.signum() == 0
+                        ? BigDecimal.ZERO
+                        : runningCost.divide(runningQty, 6, RoundingMode.HALF_UP);
+                // Basis reduced by sellQty × avgCostNow, NOT sellQty × sellPrice
+                runningCost = runningCost.subtract(qty.multiply(avgCostNow));
+                runningQty  = runningQty.subtract(qty);
+            }
+
+            BigDecimal avgCostAtThisPoint = runningQty.signum() == 0
+                    ? BigDecimal.ZERO
+                    : runningCost.divide(runningQty, 6, RoundingMode.HALF_UP);
+            result.add(avgCostAtThisPoint);
+        }
+        return result;
     }
 
     // =========================================================================

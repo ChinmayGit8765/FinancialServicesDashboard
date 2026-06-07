@@ -11,7 +11,6 @@ import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Unit tests for pure computation methods in PortfolioService.
@@ -177,23 +176,67 @@ class PortfolioServiceTest {
     }
 
     // -----------------------------------------------------------------------
-    // PORT-04: Running cost basis after BUY — RED (Plan 04)
+    // PORT-04: Running cost basis after BUY — GREEN (Plan 04)
+    //   After a single BUY of qty Q at price P, runningCostBasis = P
     // -----------------------------------------------------------------------
 
     @Test
     void runningCostBasisAfterBuy() {
-        // RED scaffold: PortfolioService.computeRunningCostBasis() does not exist yet
-        fail("not yet implemented: PortfolioService.computeRunningCostBasis");
+        // Single BUY: qty=100, price=150.00 → runningCostBasis should equal buyPrice=150.000000
+        BigDecimal buyQty   = new BigDecimal("100.0000");
+        BigDecimal buyPrice = new BigDecimal("150.000000");
+
+        List<BigDecimal> result = PortfolioService.computeRunningCostBasisFromTuples(
+                List.<String[]>of(new String[]{"BUY", buyQty.toPlainString(), buyPrice.toPlainString()})
+        );
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0))
+                .as("After a single BUY at price P, runningCostBasis must equal P")
+                .isEqualByComparingTo(buyPrice);
     }
 
     // -----------------------------------------------------------------------
-    // PORT-04: Running cost basis after proportional SELL — RED (Plan 04)
+    // PORT-04: Running cost basis after proportional SELL — GREEN (Plan 04)
+    //   After BUY at P then partial SELL at a different price P2,
+    //   runningCostBasis == P (avg cost of remaining units unchanged by sell)
+    //   SELL reduces basis by sellQty × avgCost, NOT sellQty × sellPrice.
     // -----------------------------------------------------------------------
 
     @Test
     void runningCostBasisAfterProportionalSell() {
-        // RED scaffold: PortfolioService.computeRunningCostBasisAfterSell() does not exist yet
-        fail("not yet implemented: PortfolioService.computeRunningCostBasisAfterSell");
+        // BUY 100 shares at 150.00, then SELL 30 shares at 200.00 (different price).
+        // Avg cost before sell = 150.00; cost removed = 30 × 150.00 = 4500.00
+        // Remaining cost = 15000 - 4500 = 10500; remaining qty = 70
+        // runningCostBasis = 10500 / 70 = 150.000000 (identical to buyPrice)
+        BigDecimal buyQty    = new BigDecimal("100.0000");
+        BigDecimal buyPrice  = new BigDecimal("150.000000");
+        BigDecimal sellQty   = new BigDecimal("30.0000");
+        BigDecimal sellPrice = new BigDecimal("200.000000"); // different from buy price
+
+        List<BigDecimal> result = PortfolioService.computeRunningCostBasisFromTuples(
+                List.<String[]>of(
+                        new String[]{"BUY",  buyQty.toPlainString(),  buyPrice.toPlainString()},
+                        new String[]{"SELL", sellQty.toPlainString(), sellPrice.toPlainString()}
+                )
+        );
+
+        assertThat(result).hasSize(2);
+
+        // After BUY: basis == buyPrice
+        assertThat(result.get(0))
+                .as("After BUY, runningCostBasis must equal buy price")
+                .isEqualByComparingTo(buyPrice);
+
+        // After SELL: basis still == buyPrice (sell price is irrelevant to avg cost)
+        assertThat(result.get(1))
+                .as("After proportional SELL at a different price, runningCostBasis must still equal buy price (SELL reduces basis by sellQty × avgCost, NOT sellPrice)")
+                .isEqualByComparingTo(buyPrice);
+
+        // Confirm result does NOT equal sellPrice (proving we didn't use sell price for basis)
+        assertThat(result.get(1))
+                .as("runningCostBasis after SELL must NOT equal sellPrice")
+                .isNotEqualByComparingTo(sellPrice);
     }
 
     // -----------------------------------------------------------------------

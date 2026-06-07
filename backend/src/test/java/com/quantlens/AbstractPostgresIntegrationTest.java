@@ -43,11 +43,16 @@ public abstract class AbstractPostgresIntegrationTest {
     @BeforeAll
     static void initExtensions() throws Exception {
         // Ensure the vector and uuid-ossp extensions exist before the Spring context
-        // starts. The container runs as postgres superuser so it can CREATE EXTENSION;
-        // the app user (quantlens) cannot.
-        POSTGRES.execInContainer(
-                "psql", "-U", "quantlens", "-d", "quantlens_test",
-                "-c", "CREATE EXTENSION IF NOT EXISTS vector; CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
-        );
+        // starts. Must run as the postgres superuser — the app user (quantlens) does
+        // not have SUPERUSER rights and cannot CREATE EXTENSION.
+        org.testcontainers.containers.Container.ExecResult result =
+                POSTGRES.execInContainer(
+                        "psql", "-U", "postgres", "-d", "quantlens_test",
+                        "-c", "CREATE EXTENSION IF NOT EXISTS vector; CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
+                );
+        if (result.getExitCode() != 0) {
+            throw new IllegalStateException(
+                    "Failed to create extensions: " + result.getStderr());
+        }
     }
 }

@@ -150,7 +150,14 @@ const isEmpty = computed(
 
         <!-- Empty state -->
         <tr v-else-if="isEmpty" class="empty-row">
-          <td colspan="10" class="empty-cell">No holdings in this portfolio.</td>
+          <td colspan="10" class="empty-cell">
+            <svg class="empty-icon" width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+              <rect x="6" y="28" width="8" height="14" rx="1" stroke="currentColor" stroke-width="2"/>
+              <rect x="20" y="18" width="8" height="24" rx="1" stroke="currentColor" stroke-width="2"/>
+              <rect x="34" y="10" width="8" height="32" rx="1" stroke="currentColor" stroke-width="2"/>
+            </svg>
+            <span>No holdings in this portfolio.</span>
+          </td>
         </tr>
 
         <!-- Data rows -->
@@ -277,6 +284,23 @@ td.sector {
   text-align: center;
   color: var(--color-text-muted);
   padding: var(--space-xl) !important;
+  vertical-align: middle;
+}
+
+.empty-cell > svg,
+.empty-cell > span {
+  display: block;
+}
+
+.empty-cell {
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.empty-icon {
+  color: var(--color-text-muted);
 }
 
 .error-cell {

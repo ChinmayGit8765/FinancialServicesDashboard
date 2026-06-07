@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: "Completed 01-03-PLAN.md — Spring Security form login + persona scoping (2 commits: 5c601d5, a5ed5cf)"
-last_updated: "2026-06-07T19:26:10Z"
+status: verifying
+stopped_at: "Completed 01-04-PLAN.md — Vue 3 shell + Dockerfiles + docker-compose + .mcp.json (2 commits: 7e2f52f, 0f0e31c)"
+last_updated: "2026-06-07T01:16:43.675Z"
 last_activity: 2026-06-07
 progress:
   total_phases: 10
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 4
-  completed_plans: 3
-  percent: 0
+  completed_plans: 4
+  percent: 10
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 
 ## Current Position
 
-Phase: 01 (data-foundation) — EXECUTING
-Plan: 4 of 4
-Status: Ready to execute
+Phase: 01 (data-foundation) — COMPLETE
+Plan: 4 of 4 (all plans complete)
+Status: Phase complete — walking skeleton delivered, ready for Phase 2
 Last activity: 2026-06-07
 
-Progress: [███████░░░] 75%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -54,6 +54,7 @@ Progress: [███████░░░] 75%
 *Updated after each plan completion*
 | Phase 01 P02 | 35 minutes | 2 tasks | 29 files |
 | Phase 01 P03 | 16 minutes | 2 tasks | 9 files |
+| Phase 01 P04 | 45 minutes | 2 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -73,6 +74,9 @@ Recent decisions affecting current work:
 - [01-03] CSRF ignoringRequestMatchers on /api/auth/login and /api/auth/logout — login entry point cannot self-supply CSRF token; SameSite=Lax is the CSRF defence at the login boundary
 - [01-03] DaoAuthenticationProvider(UserDetailsService) is the non-deprecated Spring Security 6.5.x constructor; setPasswordEncoder called separately
 - [01-03] security module allowedDependencies = portfolio::domain — cross-module read for UserDetailsService + AuthController
+- [01-04] layertools (not tools extract --layers --launcher) in backend Dockerfile — tools extract outputs to named subdirectory breaking COPY --from=build paths; layertools outputs flat to /workspace
+- [01-04] @henkey/postgres-mcp-server in .mcp.json — replaces deprecated @modelcontextprotocol/server-postgres (archived July 2025, SQL injection CVE)
+- [01-04] Walking skeleton closed: docker compose up → db (healthy) → backend (healthy) → frontend (up); alice/demo1234 login → portfolioId:1 verified live from seeded Postgres
 
 ### Pending Todos
 
@@ -99,6 +103,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-07T19:26:10Z
-Stopped at: Completed 01-03-PLAN.md — Spring Security form login + persona scoping (2 commits: 5c601d5, a5ed5cf)
+Last session: 2026-06-07T01:16:43.652Z
+Stopped at: Completed 01-04-PLAN.md — Vue 3 shell + Dockerfiles + docker-compose + .mcp.json (2 commits: 7e2f52f, 0f0e31c)
 Resume file: None

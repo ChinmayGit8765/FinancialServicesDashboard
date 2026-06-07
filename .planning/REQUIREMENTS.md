@@ -9,7 +9,7 @@ Requirements for the initial release (the screenshot-ready demo). Each maps to r
 
 ### Foundation & Infrastructure
 
-- [ ] **DATA-01**: Developer can launch the full stack (backend, frontend, Postgres+pgvector) with a single `docker compose up`
+- [x] **DATA-01**: Developer can launch the full stack (backend, frontend, Postgres+pgvector) with a single `docker compose up`
 - [x] **DATA-02**: On first start the system seeds demo users, ~15 securities, ~2 years of daily OHLCV price series, plus benchmark and factor-return series
 - [x] **DATA-03**: pgvector schema initializes automatically on a cold start so RAG storage works with no manual setup
 
@@ -65,7 +65,7 @@ Requirements for the initial release (the screenshot-ready demo). Each maps to r
 
 ### Developer Tooling
 
-- [ ] **DEVX-01**: The repo configures dev-side MCP servers for Claude Code (e.g. context7 for current Spring docs, a Postgres MCP) to aid development
+- [x] **DEVX-01**: The repo configures dev-side MCP servers for Claude Code (e.g. context7 for current Spring docs, a Postgres MCP) to aid development
 
 ### Frontend
 
@@ -124,12 +124,12 @@ Which phases cover which requirements. Populated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DATA-01 | Phase 1 | Pending |
+| DATA-01 | Phase 1 | Complete |
 | DATA-02 | Phase 1 | Complete |
 | DATA-03 | Phase 1 | Complete |
 | AUTH-01 | Phase 1 | Complete |
 | AUTH-02 | Phase 1 | Complete |
-| DEVX-01 | Phase 1 | Pending |
+| DEVX-01 | Phase 1 | Complete |
 | PORT-01 | Phase 2 | Pending |
 | PORT-02 | Phase 2 | Pending |
 | PORT-03 | Phase 2 | Pending |

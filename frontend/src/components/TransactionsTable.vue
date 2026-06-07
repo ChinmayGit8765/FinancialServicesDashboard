@@ -29,9 +29,12 @@ const isEmpty = () =>
           <th scope="col" class="col-rcb">Running Cost Basis</th>
         </tr>
       </thead>
-      <tbody>
+      <tbody
+        :aria-busy="loading || undefined"
+        :aria-label="loading ? 'Loading transactions' : undefined"
+      >
         <!-- Loading skeleton rows -->
-        <template v-if="loading" aria-busy="true" aria-label="Loading transactions">
+        <template v-if="loading">
           <tr v-for="i in 5" :key="`skel-${i}`" class="skeleton-row" aria-hidden="true">
             <td v-for="j in 6" :key="`skel-${i}-${j}`">
               <span class="skeleton-pill" />
@@ -158,7 +161,7 @@ td.numeric {
   background: var(--color-up-subtle);
   border-radius: var(--radius-pill);
   padding: 2px 8px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   display: inline-block;
 }
@@ -168,7 +171,7 @@ td.numeric {
   background: var(--color-down-subtle);
   border-radius: var(--radius-pill);
   padding: 2px 8px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   display: inline-block;
 }
@@ -237,7 +240,8 @@ td.numeric {
   padding: 4px 12px;
   cursor: pointer;
   font-size: 13px;
-  min-height: 28px;
+  min-height: 44px;
+  min-width: 44px;
   transition: border-color 0.15s, color 0.15s;
 }
 

@@ -256,7 +256,7 @@ const option = computed<EChartsOption>(() =>
 
 .toggle-btn:focus-visible {
   outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
+  outline-offset: 3px;
 }
 
 @keyframes shimmer {

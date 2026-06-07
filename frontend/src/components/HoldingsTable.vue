@@ -127,9 +127,12 @@ const isEmpty = computed(
           <th scope="col" class="col-pnl-pct">P&amp;L %</th>
         </tr>
       </thead>
-      <tbody>
+      <tbody
+        :aria-busy="loading || undefined"
+        :aria-label="loading ? 'Loading holdings' : undefined"
+      >
         <!-- Loading skeleton rows -->
-        <template v-if="loading" aria-busy="true" aria-label="Loading holdings">
+        <template v-if="loading">
           <tr v-for="i in 5" :key="`skel-${i}`" class="skeleton-row" aria-hidden="true">
             <td v-for="j in 10" :key="`skel-${i}-${j}`">
               <span class="skeleton-pill" />

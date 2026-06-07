@@ -1010,22 +1010,15 @@ describe('formatDate', () => {
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **`@pinia/testing` compatibility with Pinia 3**
-   - What we know: `@pinia/testing@1.0.3` was last published 2025-11-05; Pinia 3.0.4 was released after.
-   - What's unclear: Whether `createTestingPinia()` works with Pinia 3's internal API changes.
-   - Recommendation: Run `npm install -D @pinia/testing` and immediately run `npm test` with a trivial store test to validate. Fallback: use `setActivePinia(createPinia())` + direct `vi.mock('axios')` for store tests (bypasses `@pinia/testing` entirely).
+1. **`@pinia/testing` compatibility with Pinia 3** — **RESOLVED:** Use the fallback path — `setActivePinia(createPinia())` + `vi.mock('axios')` for store tests (no dependency on `@pinia/testing`). Plan 02 adopts this. Avoids the version-compat risk entirely.
 
-2. **`MeResponse.description` field on backend**
-   - What we know: UI-SPEC says "add persona description (strategy label) as a third line below `@username`... if absent, omit gracefully."
-   - What's unclear: Whether the backend `PersonaInfo` / `MeResponse` DTO has a `description` field (not visible in `src/api/auth.ts` currently).
-   - Recommendation: Plan the LoginView persona button with an optional `description?: string` field; render with `v-if="p.description"`. If the backend doesn't expose it, the UI degrades gracefully.
+2. **`MeResponse.description` field on backend** — **RESOLVED:** The backend `PersonaInfo`/`MeResponse` has NO `description` field (verified against the Java records). LoginView renders the description line conditionally (`v-if="p.description"`) and degrades gracefully. Plan 05 implements this.
 
-3. **`PortfolioPnlDto` exact field names for `dailyChange*`**
-   - What we know: Phase 2 Plan 03 summary confirms `dailyChangeAbs` and `dailyChangePct` are computed on the service, but the Java record field names aren't explicitly shown.
-   - What's unclear: Whether the JSON keys are `dailyChangeAbs`/`dailyChangePct` or something else.
-   - Recommendation: Confirm by calling `GET /api/portfolio/pnl` once the backend is running, or check the `PortfolioPnlDto.java` source directly. The types file above uses the Phase 2 summary's terminology.
+3. **`PortfolioPnlDto` exact field names for `dailyChange*`** — **RESOLVED:** Confirmed against `PortfolioPnlDto.java`: the JSON keys are `dailyChangeAbs` and `dailyChangePct`. Also confirmed: `TransactionDto` has NO `id` and DOES have `tradeValue` (7 fields: txDate, txType, ticker, quantity, price, tradeValue, runningCostBasis); `quantity`/`weight`/`pnlPct` are 0–1 fractions. The "API Types Module" code example earlier in this file is stale on `TransactionDto` — Plan 02/04 `<interfaces>` are authoritative.
+
+> **NOTE:** The "Code Examples / API Types Module" `TransactionDto` interface earlier in this document is STALE (shows an `id` field, omits `tradeValue`). Use the corrected shape above / Plan 02 & Plan 04 `<interfaces>` — NOT that example.
 
 ---
 

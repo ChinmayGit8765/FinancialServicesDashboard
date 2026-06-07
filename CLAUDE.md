@@ -26,7 +26,7 @@ An AI-augmented portfolio & market intelligence dashboard that fuses a quantitat
 | Spring Boot | 3.5.13 | Application platform | Latest stable 3.5.x patch (March 2026); pairs with Spring AI 1.1.x. Spring Boot 4.0 / Spring AI 2.0 are milestone-only as of mid-2026 and introduce breaking changes (requires Spring Framework 7); avoid for a portfolio piece until GA |
 | Spring AI | 1.1.6 | AI layer / LLM abstraction | Latest stable 1.1.x patch (May 2026); supports ChatClient, advisors, tool calling, structured output, vector stores, MCP server annotations (@McpTool). Multi-provider: Anthropic + OpenAI both first-class. Do NOT use 2.0.0-Mx milestones — API is still shifting |
 | Vue 3 | 3.x (latest) | Frontend SPA | Composition API, `<script setup>`, excellent TypeScript support. Required by the project brief |
-| Apache ECharts + vue-echarts | ECharts 5.x / vue-echarts 7.x | Data visualisation | Only option with native candlestick, heatmap, and custom fan-chart support out of the box. Renders via Canvas — handles 1M+ points at 60 FPS. Chart.js requires plugins for everything financial |
+| Apache ECharts + vue-echarts | ECharts 6.x / vue-echarts 8.x (installed: echarts 6.1.0 / vue-echarts 8.0.1) | Data visualisation | Only option with native candlestick, heatmap, and custom fan-chart support out of the box. Renders via Canvas — handles 1M+ points at 60 FPS. Chart.js requires plugins for everything financial |
 | PostgreSQL | 16.x | Relational persistence + vector store | pgvector extension ships in the official Docker image; single DB for both relational data and RAG embeddings — no separate Weaviate/Qdrant container needed |
 | pgvector | 0.7.x (bundled with pgvector/pgvector Docker image) | Vector similarity search | Spring AI 1.1 has first-class `spring-ai-starter-vector-store-pgvector`; HNSW index, cosine distance, auto schema init. Eliminates a separate vector DB service |
 | Docker / docker-compose | Latest stable | Container orchestration | From day one per project constraints |
@@ -93,8 +93,8 @@ An AI-augmented portfolio & market intelligence dashboard that fuses a quantitat
 | `org.flywaydb:flyway-core` | 10.x | DB migrations | Managed schema evolution; pgvector extension init can be scripted |
 | `org.springdoc:springdoc-openapi-starter-webmvc-ui` | 2.x | OpenAPI / Swagger UI | Dev convenience |
 | `com.fasterxml.jackson.core:jackson-databind` | (managed by Boot) | JSON serialisation | Spring Boot manages version |
-| `echarts` (npm) | 5.x | Chart engine | Via `vue-echarts` wrapper |
-| `vue-echarts` (npm) | 7.x | Vue 3 ECharts component | Vue 3 Composition API, tree-shakeable |
+| `echarts` (npm) | 6.x (6.1.0) | Chart engine | Via `vue-echarts` wrapper |
+| `vue-echarts` (npm) | 8.x (8.0.1) | Vue 3 ECharts component | Vue 3 Composition API, tree-shakeable |
 | `pinia` (npm) | 2.x | Vue state management | Official Vuex successor |
 | `axios` (npm) | 1.x | HTTP client in Vue | For Spring Boot API calls |
 ### Development Tools (MCP Servers for Claude Code)

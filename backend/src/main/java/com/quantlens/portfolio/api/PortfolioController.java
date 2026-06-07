@@ -1,7 +1,5 @@
 package com.quantlens.portfolio.api;
 
-import com.quantlens.portfolio.domain.AppUserRepository;
-import com.quantlens.portfolio.domain.Portfolio;
 import com.quantlens.portfolio.domain.PortfolioRepository;
 import com.quantlens.portfolio.service.PortfolioService;
 import org.springframework.data.domain.Page;
@@ -51,14 +49,11 @@ import java.util.List;
 @RequestMapping("/api/portfolio")
 public class PortfolioController {
 
-    private final AppUserRepository appUserRepository;
     private final PortfolioRepository portfolioRepository;
     private final PortfolioService portfolioService;
 
-    public PortfolioController(AppUserRepository appUserRepository,
-                               PortfolioRepository portfolioRepository,
+    public PortfolioController(PortfolioRepository portfolioRepository,
                                PortfolioService portfolioService) {
-        this.appUserRepository = appUserRepository;
         this.portfolioRepository = portfolioRepository;
         this.portfolioService = portfolioService;
     }
@@ -112,9 +107,9 @@ public class PortfolioController {
      */
     @GetMapping("/pnl")
     @Transactional(readOnly = true)
-    public PortfolioPnlDto getPnl(Authentication authentication) {
+    public ResponseEntity<PortfolioPnlDto> getPnl(Authentication authentication) {
         Long portfolioId = resolvePortfolioId(authentication);
-        return portfolioService.getPortfolioPnl(portfolioId);
+        return ResponseEntity.ok(portfolioService.getPortfolioPnl(portfolioId));
     }
 
     /**
@@ -153,9 +148,9 @@ public class PortfolioController {
      */
     @GetMapping("/benchmark")
     @Transactional(readOnly = true)
-    public BenchmarkComparisonDto getBenchmark(Authentication authentication) {
+    public ResponseEntity<BenchmarkComparisonDto> getBenchmark(Authentication authentication) {
         Long portfolioId = resolvePortfolioId(authentication);
-        return portfolioService.getBenchmarkComparison(portfolioId);
+        return ResponseEntity.ok(portfolioService.getBenchmarkComparison(portfolioId));
     }
 
     // =========================================================================
@@ -166,31 +161,28 @@ public class PortfolioController {
      * Derives the authenticated user's portfolio ID from the Spring Security principal.
      * <p>
      * This is the ONLY place in {@code PortfolioController} where a portfolio identity
-     * is resolved. The chain:
-     * <ol>
-     *   <li>{@code Authentication.getName()} → username (from session)</li>
-     *   <li>{@code AppUserRepository.findByUsername(username)} → {@code AppUser}</li>
-     *   <li>{@code PortfolioRepository.findByUserId(userId)} → first portfolio</li>
-     * </ol>
+     * is resolved. The chain is now a single correlated-subquery DB round-trip via
+     * {@link PortfolioRepository#findPortfolioIdByUsername(String)}.
+     * <p>
+     * WR-01 fix: replaces the previous two-round-trip pattern (appUserRepository lookup +
+     * portfolioRepository lookup) with a single JPQL correlated-subquery.
+     * <p>
+     * WR-06 fix: both "user not found" and "user has no portfolio" now return 401 (not 401 vs 404),
+     * preventing an attacker from using the status-code difference to enumerate valid usernames.
+     * <p>
      * The portfolioId is NEVER accepted as a {@code @RequestParam} or {@code @PathVariable}
      * (IDOR prevention — RESEARCH.md Security Domain V4, threat T-02-01).
      *
      * @param authentication the Spring Security authentication object
      * @return the resolved portfolio ID
-     * @throws ResponseStatusException 401 if unauthenticated or user not found
-     * @throws ResponseStatusException 404 if the user has no portfolio
+     * @throws ResponseStatusException 401 if unauthenticated, user not found, or no portfolio
      */
     private Long resolvePortfolioId(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         }
         String username = authentication.getName();
-        var user = appUserRepository.findByUsername(username)
+        return portfolioRepository.findPortfolioIdByUsername(username)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
-        List<Portfolio> portfolios = portfolioRepository.findByUserId(user.getId());
-        if (portfolios.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No portfolio found");
-        }
-        return portfolios.get(0).getId();
     }
 }

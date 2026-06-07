@@ -1,0 +1,26 @@
+# Build output
+build/
+**/target/
+**/dist/
+**/dist-ssr/
+
+# Node
+**/node_modules/
+
+# Spring Modulith generated docs
+**/generated-spring-modulith/
+
+# IDE
+.idea/
+*.iml
+.vscode/*
+!.vscode/extensions.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs / env
+*.log
+.env
+.env.local

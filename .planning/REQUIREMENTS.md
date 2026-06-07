@@ -83,7 +83,7 @@ Cross-cutting quality gates that apply to the whole v1, not a single phase:
 - Spring AI dependencies are BOM-pinned to 1.1.6 and artifact IDs validated against the current `spring-ai-starter-*` naming
 - LLM session keys are never logged, echoed to the client, or persisted
 - The app runs end-to-end from `docker compose up` with no API key (full demo mode)
-- `spring.ai.vectorstore.pgvector.initialize-schema=true` is set explicitly; monetary values use `BigDecimal`
+- `spring.ai.vectorstore.pgvector.initialize-schema=false` is set explicitly (Flyway V1 owns the `vector_store` DDL — must stay false in all phases); monetary values use `BigDecimal`
 
 ## v2 Requirements
 

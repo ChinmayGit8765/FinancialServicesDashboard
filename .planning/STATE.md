@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "Completed 02-02-PLAN.md — PortfolioService + PortfolioController /holdings + /allocation (2 commits: dab30d8, 8244180)"
-last_updated: "2026-06-07T03:40:00.000Z"
-last_activity: 2026-06-07 -- Phase 02 Plan 02 complete
+stopped_at: "Completed 02-03-PLAN.md — PortfolioService equity-curve P&L + benchmark rebasing; PortfolioController /pnl + /benchmark (2 commits: 5e1fa02, 2a6d293)"
+last_updated: "2026-06-07T13:10:00.000Z"
+last_activity: 2026-06-07 -- Phase 02 Plan 03 complete
 progress:
   total_phases: 10
   completed_phases: 1
   total_plans: 8
-  completed_plans: 5
+  completed_plans: 6
   percent: 10
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Phase: 02 (portfolio-domain) — EXECUTING
-Plan: 3 of 4
-Status: Executing Phase 02 (Plan 02 complete — /holdings + /allocation live; Plans 03-04 next)
-Last activity: 2026-06-07 -- Phase 02 Plan 02 complete
+Plan: 4 of 4
+Status: Executing Phase 02 (Plan 03 complete — /pnl + /benchmark live; Plan 04 next)
+Last activity: 2026-06-07 -- Phase 02 Plan 03 complete
 
 Progress: [██████████] 100%
 
@@ -58,6 +58,7 @@ Progress: [██████████] 100%
 | Phase 01 P04 | 45 minutes | 2 tasks | 16 files |
 | Phase 02 P01 | 15 minutes | 3 tasks | 12 files |
 | Phase 02 P02 | 10 minutes | 2 tasks | 3 files |
+| Phase 02 P03 | 20 minutes | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -80,6 +81,9 @@ Recent decisions affecting current work:
 - [01-04] layertools (not tools extract --layers --launcher) in backend Dockerfile — tools extract outputs to named subdirectory breaking COPY --from=build paths; layertools outputs flat to /workspace
 - [01-04] @henkey/postgres-mcp-server in .mcp.json — replaces deprecated @modelcontextprotocol/server-postgres (archived July 2025, SQL injection CVE)
 - [01-04] Walking skeleton closed: docker compose up → db (healthy) → backend (healthy) → frontend (up); alice/demo1234 login → portfolioId:1 verified live from seeded Postgres
+- [02-03] buildEquityCurve is private (not public static) — depends on OhlcvBarRepository injection; only pure-math steps (computeDailyChange, rebaseToIndex, computeTotalUnrealizedGainAbs/Pct) are public static for unit tests
+- [02-03] rebaseToIndex is public static to allow unit-test verification that both series[0] == 100.0000 without Spring context
+- [02-03] SPX500 guard throws IllegalStateException on empty/multiple — fail-fast rather than returning silent wrong benchmark data
 
 ### Pending Todos
 

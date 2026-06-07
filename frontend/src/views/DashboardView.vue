@@ -1,62 +1,194 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '../stores/auth'
+import { onMounted, computed } from 'vue'
+import { usePortfolioStore } from '../stores/portfolio'
+import { formatCurrency, formatSignedCurrency, formatSignedPercent } from '../utils/format'
 
-const router = useRouter()
-const authStore = useAuthStore()
+import TopBar from '../components/TopBar.vue'
+import KpiCard from '../components/KpiCard.vue'
+import PnlChart from '../components/PnlChart.vue'
+import BenchmarkChart from '../components/BenchmarkChart.vue'
+import AllocationChart from '../components/AllocationChart.vue'
+import HoldingsTable from '../components/HoldingsTable.vue'
+import TransactionsTable from '../components/TransactionsTable.vue'
+import SlotPlaceholder from '../components/SlotPlaceholder.vue'
 
-async function handleLogout() {
-  await authStore.logout()
-  await router.push('/login')
+const portfolioStore = usePortfolioStore()
+
+onMounted(() => {
+  portfolioStore.refreshAll()
+})
+
+// --- KPI derived values (access pnl resource whole, never destructure) ------
+
+const kpiLoading = computed(() => portfolioStore.pnl.loading)
+
+const marketValuePrimary = computed(() =>
+  portfolioStore.pnl.data ? formatCurrency(portfolioStore.pnl.data.totalMarketValue) : '—'
+)
+
+const unrealizedPrimary = computed(() =>
+  portfolioStore.pnl.data
+    ? formatSignedCurrency(portfolioStore.pnl.data.totalUnrealizedGainAbs)
+    : '—'
+)
+
+const unrealizedSecondary = computed(() =>
+  portfolioStore.pnl.data
+    ? formatSignedPercent(portfolioStore.pnl.data.totalUnrealizedGainPct * 100)
+    : undefined
+)
+
+const unrealizedDelta = computed(() =>
+  portfolioStore.pnl.data ? portfolioStore.pnl.data.totalUnrealizedGainPct * 100 : undefined
+)
+
+const dailyChangePrimary = computed(() =>
+  portfolioStore.pnl.data
+    ? formatSignedCurrency(portfolioStore.pnl.data.dailyChangeAbs)
+    : '—'
+)
+
+const dailyChangeSecondary = computed(() =>
+  portfolioStore.pnl.data
+    ? formatSignedPercent(portfolioStore.pnl.data.dailyChangePct * 100)
+    : undefined
+)
+
+const dailyChangeDelta = computed(() =>
+  portfolioStore.pnl.data ? portfolioStore.pnl.data.dailyChangePct * 100 : undefined
+)
+
+// --- Handlers ---------------------------------------------------------------
+
+function handleTransactionsPage(page: number): void {
+  portfolioStore.fetchTransactions(page)
 }
+
+function retryHoldings(): void { portfolioStore.fetchHoldings() }
+function retryPnl(): void { portfolioStore.fetchPnl() }
+function retryAllocation(): void { portfolioStore.fetchAllocation() }
+function retryBenchmark(): void { portfolioStore.fetchBenchmark() }
 </script>
 
 <template>
   <div class="dashboard-page">
-    <header class="dashboard-header">
-      <div class="brand">
-        <h1>QuantLens</h1>
-        <span class="phase-badge">Phase 1 — Walking Skeleton</span>
-      </div>
-      <div class="user-info">
-        <span class="persona-tag">{{ authStore.persona }}</span>
-        <span class="username">@{{ authStore.username }}</span>
-        <button class="logout-btn" @click="handleLogout">Log out</button>
-      </div>
-    </header>
+    <TopBar />
 
     <main class="dashboard-main">
-      <div class="welcome-card">
-        <h2>Welcome, {{ authStore.persona }}!</h2>
-        <p>You are logged in as <strong>{{ authStore.username }}</strong>.</p>
+      <div class="dashboard-grid">
 
-        <div class="info-grid">
-          <div class="info-item">
-            <span class="info-label">Username</span>
-            <span class="info-value">{{ authStore.username }}</span>
+        <!-- KPI Strip: 3 real + 2 Phase-4 placeholders -->
+        <div class="kpi-strip">
+          <KpiCard
+            label="Market Value"
+            :primary="marketValuePrimary"
+            :loading="kpiLoading"
+          />
+          <KpiCard
+            label="Unrealized P&amp;L"
+            :primary="unrealizedPrimary"
+            :secondary="unrealizedSecondary"
+            :delta="unrealizedDelta"
+            :loading="kpiLoading"
+          />
+          <KpiCard
+            label="Daily Change"
+            :primary="dailyChangePrimary"
+            :secondary="dailyChangeSecondary"
+            :delta="dailyChangeDelta"
+            :loading="kpiLoading"
+          />
+          <!-- Phase 4 placeholder KPI cards -->
+          <div class="kpi-placeholder" title="Available in Phase 4">
+            <KpiCard
+              label="Risk Score — Phase 4"
+              primary="—"
+              :loading="false"
+            />
           </div>
-          <div class="info-item">
-            <span class="info-label">Persona</span>
-            <span class="info-value">{{ authStore.persona }}</span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">Portfolio ID</span>
-            <span class="info-value portfolio-id">{{ authStore.portfolioId }}</span>
+          <div class="kpi-placeholder" title="Available in Phase 4">
+            <KpiCard
+              label="Sharpe Ratio — Phase 4"
+              primary="—"
+              :loading="false"
+            />
           </div>
         </div>
 
-        <div class="placeholder-notice">
-          <p>
-            Dashboard charts and portfolio analytics are coming in Phase 3.
-            This placeholder confirms the full stack is wired end-to-end:
-            Vue SPA → Spring Security session → Postgres seeded data.
-          </p>
-          <p class="tech-note">
-            Portfolio ID <strong>{{ authStore.portfolioId }}</strong> was read live from the
-            seeded Postgres database — the session cookie and CSRF token are working correctly.
-            Refresh the page to confirm the session persists.
-          </p>
+        <!-- Row 2: P&L Chart (col 7) + Benchmark Chart (col 5) -->
+        <div class="col-7">
+          <PnlChart
+            :pnl="portfolioStore.pnl.data"
+            :loading="portfolioStore.pnl.loading"
+            :error="portfolioStore.pnl.error"
+            @retry="retryPnl"
+          />
         </div>
+        <div class="col-5">
+          <BenchmarkChart
+            :benchmark="portfolioStore.benchmark.data"
+            :loading="portfolioStore.benchmark.loading"
+            :error="portfolioStore.benchmark.error"
+            @retry="retryBenchmark"
+          />
+        </div>
+
+        <!-- Row 3: Allocation (col 6) + Risk Scorecard slot (col 6) -->
+        <div class="col-6">
+          <AllocationChart
+            :allocation="portfolioStore.allocation.data"
+            :loading="portfolioStore.allocation.loading"
+            :error="portfolioStore.allocation.error"
+            @retry="retryAllocation"
+          />
+        </div>
+        <div class="col-6">
+          <SlotPlaceholder label="Risk Scorecard — Phase 4" minHeight="280px" />
+        </div>
+
+        <!-- Row 4: Correlation Heatmap slot (col 12) -->
+        <div class="col-12">
+          <SlotPlaceholder label="Correlation Heatmap — Phase 4" minHeight="240px" />
+        </div>
+
+        <!-- Row 5: Monte Carlo slot (col 12) -->
+        <div class="col-12">
+          <SlotPlaceholder label="Monte Carlo Forecast — Phase 5" minHeight="320px" />
+        </div>
+
+        <!-- Row 6: Holdings table (col 12) -->
+        <div class="col-12">
+          <HoldingsTable
+            :holdings="portfolioStore.holdings.data"
+            :loading="portfolioStore.holdings.loading"
+            :error="portfolioStore.holdings.error"
+            @retry="retryHoldings"
+          />
+        </div>
+
+        <!-- Row 7: Transactions table (col 12) — @page-change wired to fetchTransactions -->
+        <div class="col-12">
+          <TransactionsTable
+            :page="portfolioStore.transactions.data"
+            :loading="portfolioStore.transactions.loading"
+            :error="portfolioStore.transactions.error"
+            @page-change="handleTransactionsPage"
+          />
+        </div>
+
+        <!-- Row 8: AI Commentary slot (col 12) -->
+        <div class="col-12">
+          <SlotPlaceholder label="AI Daily Commentary — Phase 6" minHeight="120px" />
+        </div>
+
+        <!-- Row 9: AI Q&A (col 8) + BYO Key (col 4) -->
+        <div class="col-8">
+          <SlotPlaceholder label="AI Q&amp;A — Phase 6" minHeight="400px" />
+        </div>
+        <div class="col-4">
+          <SlotPlaceholder label="LLM Key — Phase 6" minHeight="320px" />
+        </div>
+
       </div>
     </main>
   </div>
@@ -65,162 +197,54 @@ async function handleLogout() {
 <style scoped>
 .dashboard-page {
   min-height: 100vh;
-  background: #0f172a;
-  color: #e2e8f0;
-  display: flex;
-  flex-direction: column;
-}
-
-.dashboard-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 2rem;
-  background: #1e293b;
-  border-bottom: 1px solid #334155;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.brand h1 {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #38bdf8;
-}
-
-.phase-badge {
-  font-size: 0.7rem;
-  padding: 0.2em 0.6em;
-  background: #1e3a5f;
-  border: 1px solid #0ea5e9;
-  border-radius: 9999px;
-  color: #7dd3fc;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.persona-tag {
-  font-size: 0.8rem;
-  padding: 0.2em 0.6em;
-  background: #0f172a;
-  border-radius: 4px;
-  color: #94a3b8;
-}
-
-.username {
-  color: #94a3b8;
-  font-size: 0.9rem;
-}
-
-.logout-btn {
-  padding: 0.4rem 1rem;
-  background: transparent;
-  border: 1px solid #334155;
-  border-radius: 6px;
-  color: #94a3b8;
-  cursor: pointer;
-  font-size: 0.85rem;
-  transition: border-color 0.15s, color 0.15s;
-}
-
-.logout-btn:hover {
-  border-color: #f87171;
-  color: #f87171;
+  background: var(--color-bg-base);
+  color: var(--color-text-primary);
 }
 
 .dashboard-main {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
+  padding-top: 48px; /* top-bar height */
 }
 
-.welcome-card {
-  background: #1e293b;
-  border-radius: 12px;
-  padding: 2.5rem 2rem;
-  max-width: 600px;
-  width: 100%;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
-}
-
-.welcome-card h2 {
-  margin: 0 0 0.5rem;
-  font-size: 1.6rem;
-  color: #f1f5f9;
-}
-
-.welcome-card > p {
-  color: #94a3b8;
-  margin-bottom: 1.5rem;
-}
-
-.info-grid {
+.dashboard-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  grid-template-columns: repeat(12, 1fr);
+  gap: var(--space-xl);
+  padding: var(--space-lg);
 }
 
-.info-item {
-  background: #0f172a;
-  border: 1px solid #334155;
-  border-radius: 8px;
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+/* KPI strip: auto-fit row spanning full width */
+.kpi-strip {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-md);
 }
 
-.info-label {
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #64748b;
+/* Phase-4 KPI placeholders: 50% opacity per UI-SPEC */
+.kpi-placeholder {
+  opacity: 0.5;
 }
 
-.info-value {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #e2e8f0;
-}
+/* Column span utilities */
+.col-4  { grid-column: span 4; }
+.col-5  { grid-column: span 5; }
+.col-6  { grid-column: span 6; }
+.col-7  { grid-column: span 7; }
+.col-8  { grid-column: span 8; }
+.col-12 { grid-column: 1 / -1; }
 
-.portfolio-id {
-  color: #38bdf8;
-  font-size: 1.4rem;
-  font-variant-numeric: tabular-nums;
-}
+/* Responsive: ≤ 1279px — charts stack to full width */
+@media (max-width: 1279px) {
+  .col-4,
+  .col-5,
+  .col-6,
+  .col-7,
+  .col-8 {
+    grid-column: 1 / -1;
+  }
 
-.placeholder-notice {
-  border-top: 1px solid #334155;
-  padding-top: 1.25rem;
-  font-size: 0.85rem;
-  color: #64748b;
-  line-height: 1.6;
-}
-
-.placeholder-notice p + p {
-  margin-top: 0.5rem;
-}
-
-.tech-note {
-  color: #475569;
-  font-size: 0.8rem;
-}
-
-.tech-note strong {
-  color: #38bdf8;
+  .dashboard-grid {
+    padding: var(--space-md);
+  }
 }
 </style>

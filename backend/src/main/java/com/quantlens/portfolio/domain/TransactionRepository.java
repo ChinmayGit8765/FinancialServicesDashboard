@@ -21,17 +21,25 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
      * a stable tiebreaker for same-day transactions (consistent with SeedRunner
      * insertion order). JOIN FETCH is safe for pagination here because
      * {@code Transaction → Security} is a single-valued association (not a
-     * collection join) — no count-query override is needed.
+     * collection join).
+     * <p>
+     * WR-04: An explicit {@code countQuery} is provided to prevent Hibernate 6.x from
+     * auto-deriving a count query from the JOIN FETCH + ORDER BY clause, which can
+     * trigger HHH90003004 warnings and produce a redundant join in some Hibernate 6.2+ builds.
      *
      * @param portfolioId the owning portfolio's primary key
      * @param pageable    Spring Data page/sort descriptor
      * @return a page of transactions with securities eagerly populated
      */
-    @Query("""
+    @Query(value = """
             SELECT t FROM Transaction t
             JOIN FETCH t.security
             WHERE t.portfolio.id = :portfolioId
             ORDER BY t.txDate DESC, t.id DESC
+            """,
+           countQuery = """
+            SELECT count(t) FROM Transaction t
+            WHERE t.portfolio.id = :portfolioId
             """)
     Page<Transaction> findByPortfolioIdWithSecurity(
             @Param("portfolioId") Long portfolioId,

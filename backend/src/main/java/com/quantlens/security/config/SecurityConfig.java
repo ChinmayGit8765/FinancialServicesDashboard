@@ -1,5 +1,6 @@
 package com.quantlens.security.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.quantlens.security.QuantLensUserDetailsService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
@@ -15,6 +16,8 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+
+import java.util.Map;
 
 /**
  * Spring Security configuration for the QuantLens SPA.
@@ -61,6 +64,8 @@ import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final QuantLensUserDetailsService userDetailsService;
     private final PasswordEncoder passwordEncoder;
@@ -138,8 +143,9 @@ public class SecurityConfig {
             response.setStatus(HttpServletResponse.SC_OK);
             response.setContentType("application/json");
             response.setCharacterEncoding("UTF-8");
-            String username = authentication.getName();
-            response.getWriter().write("{\"authenticated\":true,\"username\":\"" + username + "\"}");
+            String body = MAPPER.writeValueAsString(
+                    Map.of("authenticated", true, "username", authentication.getName()));
+            response.getWriter().write(body);
         };
     }
 

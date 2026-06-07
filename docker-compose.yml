@@ -59,7 +59,10 @@ services:
       # nginx listens on :80 inside the container; exposed on host as :5173
       - "5173:80"
     depends_on:
-      - backend
+      backend:
+        # Wait until the backend Spring Boot app has fully started and passed
+        # /actuator/health before nginx comes up — eliminates 502s during seed (WR-08)
+        condition: service_healthy
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Named volumes

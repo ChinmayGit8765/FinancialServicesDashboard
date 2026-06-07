@@ -14,6 +14,7 @@ import com.quantlens.portfolio.domain.Position;
 import com.quantlens.portfolio.domain.PositionRepository;
 import com.quantlens.portfolio.domain.Transaction;
 import com.quantlens.portfolio.domain.TransactionRepository;
+import com.quantlens.seed.GbmGenerator.OhlcvResult;
 import com.quantlens.seed.GbmGenerator.OhlcvRow;
 import com.quantlens.seed.GbmGenerator.SecuritySpec;
 import org.slf4j.Logger;
@@ -114,8 +115,11 @@ public class SeedRunner implements ApplicationRunner {
         // 1. Build the securities universe + benchmark spec
         List<SecuritySpec> specs = buildSpecs();
 
-        // 2. Generate OHLCV via correlated GBM (fixed seed 42)
-        List<List<OhlcvRow>> ohlcvData = gbmGenerator.generateOhlcv(specs, SERIES_START);
+        // 2. Generate OHLCV via correlated GBM (fixed seed 42).
+        // OhlcvResult carries both the OHLCV rows and the market excess-return series
+        // (passed directly into generateFactors — no shared mutable state on GbmGenerator).
+        OhlcvResult ohlcvResult = gbmGenerator.generateOhlcv(specs, SERIES_START);
+        List<List<OhlcvRow>> ohlcvData = ohlcvResult.rows();
 
         // 3. Persist securities and their OHLCV bars
         // The last spec is the benchmark (is_benchmark=true)
@@ -136,11 +140,14 @@ public class SeedRunner implements ApplicationRunner {
             }
             ohlcvBarRepository.saveAll(bars);
         }
+        int totalBars = ohlcvData.stream().mapToInt(List::size).sum();
         log.info("SeedRunner: saved {} securities with {} total OHLCV bars",
-                securities.size(), ohlcvBarRepository.count());
+                securities.size(), totalBars);
 
-        // 4. Persist Fama-French factor returns (after generateOhlcv so mkt series is ready)
-        List<GbmGenerator.FactorRow> factorRows = gbmGenerator.generateFactors(SERIES_START);
+        // 4. Persist Fama-French factor returns. Pass mktExcessReturns from OhlcvResult
+        // so GbmGenerator stays stateless — no side-channel through instance fields.
+        List<GbmGenerator.FactorRow> factorRows =
+                gbmGenerator.generateFactors(ohlcvResult.mktExcessReturns(), SERIES_START);
         List<FactorReturn> factors = new ArrayList<>(factorRows.size());
         for (GbmGenerator.FactorRow fr : factorRows) {
             factors.add(new FactorReturn(fr.date(), fr.mktRf(), fr.smb(), fr.hml(), fr.rf()));

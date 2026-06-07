@@ -34,6 +34,12 @@ import java.util.List;
  * {@code BigDecimal.valueOf(d).setScale(6, RoundingMode.HALF_UP)}.
  * {@code new BigDecimal(double)} is NEVER used — it would capture binary
  * double rounding artefacts into the stored NUMERIC values.
+ *
+ * <h2>Thread safety</h2>
+ * This component is stateless: {@link #generateOhlcv} returns an
+ * {@link OhlcvResult} that bundles the OHLCV rows <em>and</em> the market
+ * excess-return series.  Callers pass that series directly into
+ * {@link #generateFactors} — no shared mutable state.
  */
 @Component
 public class GbmGenerator {
@@ -96,13 +102,19 @@ public class GbmGenerator {
     public record FactorRow(LocalDate date, BigDecimal mktRf,
                             BigDecimal smb, BigDecimal hml, BigDecimal rf) {}
 
-    // ── internal state ────────────────────────────────────────────────────────
-
     /**
-     * Market excess returns captured by {@link #generateOhlcv};
-     * consumed by {@link #generateFactors}.
+     * Result of {@link #generateOhlcv}: the per-security OHLCV row lists plus the
+     * market excess-return series needed by {@link #generateFactors}.
+     * <p>
+     * Carrying the market returns here (instead of storing them as an instance field)
+     * keeps this component stateless and safe for concurrent callers.
+     *
+     * @param rows              per-security OHLCV rows in the same order as the input specs
+     * @param mktExcessReturns  daily market excess returns (mkt gross return minus rf) for
+     *                          each simulated trading day; pass directly to
+     *                          {@link #generateFactors(double[], LocalDate)}
      */
-    private double[] lastMktExcessReturns;
+    public record OhlcvResult(List<List<OhlcvRow>> rows, double[] mktExcessReturns) {}
 
     // ── generation ────────────────────────────────────────────────────────────
 
@@ -116,9 +128,9 @@ public class GbmGenerator {
      *
      * @param specs     ordered list of security specifications
      * @param startDate the first trading date in the generated series
-     * @return list of OHLCV row lists, one inner list per security (same order as specs)
+     * @return {@link OhlcvResult} containing per-security OHLCV rows and market excess returns
      */
-    public List<List<OhlcvRow>> generateOhlcv(List<SecuritySpec> specs, LocalDate startDate) {
+    public OhlcvResult generateOhlcv(List<SecuritySpec> specs, LocalDate startDate) {
         MersenneTwister rng = new MersenneTwister(RNG_SEED);
 
         // Pre-generate market-factor Z draws (one per day) and compute market excess returns
@@ -136,7 +148,6 @@ public class GbmGenerator {
             double grossRet = Math.exp(logRet);
             mktExcessReturns[d] = (grossRet - 1.0) - rfDaily;
         }
-        this.lastMktExcessReturns = mktExcessReturns;
 
         // Per-security: draw idiosyncratic Z series and build OHLCV rows
         List<List<OhlcvRow>> result = new ArrayList<>(specs.size());
@@ -189,23 +200,27 @@ public class GbmGenerator {
             }
             result.add(rows);
         }
-        return result;
+        return new OhlcvResult(result, mktExcessReturns);
     }
 
     /**
      * Generate synthetic Fama-French 3-factor return rows.
      *
-     * <p>Must be called AFTER {@link #generateOhlcv} so that market excess
-     * returns have been captured.  SMB and HML use a separate
-     * {@link MersenneTwister} seeded with {@code RNG_SEED + 1} to keep them
-     * independent of the price-series sequence while remaining reproducible.
+     * <p>The {@code mktExcessReturns} array must be the one returned by
+     * {@link #generateOhlcv} — passing it as a parameter (rather than storing it as an
+     * instance field) keeps this component stateless and safe for concurrent callers.
      *
-     * @param startDate first date in the factor series
+     * <p>SMB and HML use a separate {@link MersenneTwister} seeded with
+     * {@code RNG_SEED + 1} to keep them independent of the price-series sequence while
+     * remaining reproducible.
+     *
+     * @param mktExcessReturns daily market excess returns from {@link OhlcvResult#mktExcessReturns()}
+     * @param startDate        first date in the factor series
      * @return list of {@link FactorRow} of length {@link #TRADING_DAYS}
      */
-    public List<FactorRow> generateFactors(LocalDate startDate) {
-        if (lastMktExcessReturns == null) {
-            throw new IllegalStateException("Call generateOhlcv() before generateFactors()");
+    public List<FactorRow> generateFactors(double[] mktExcessReturns, LocalDate startDate) {
+        if (mktExcessReturns == null) {
+            throw new IllegalArgumentException("mktExcessReturns must not be null — pass OhlcvResult.mktExcessReturns()");
         }
 
         // SMB and HML: synthetic but plausible
@@ -223,7 +238,7 @@ public class GbmGenerator {
             double hml = hmlDailySigma * rngFf.nextGaussian();
             rows.add(new FactorRow(
                     date,
-                    bd(lastMktExcessReturns[d]),
+                    bd(mktExcessReturns[d]),
                     bd(smb),
                     bd(hml),
                     bd(rfDaily)

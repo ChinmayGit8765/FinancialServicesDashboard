@@ -12,5 +12,5 @@ public interface SecurityRepository extends JpaRepository<Security, Long> {
 
     Optional<Security> findByTicker(String ticker);
 
-    List<Security> findByIsBenchmarkTrue();
+    List<Security> findByBenchmarkTrue();
 }

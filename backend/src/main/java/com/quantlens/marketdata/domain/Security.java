@@ -11,7 +11,7 @@ import jakarta.persistence.Table;
  * JPA entity for the {@code securities} table.
  * <p>
  * Represents a tradable equity (or a benchmark pseudo-security when
- * {@code isBenchmark} is {@code true}).  All price/quantity fields use
+ * {@code benchmark} is {@code true}).  All price/quantity fields use
  * {@link java.math.BigDecimal} mapped to NUMERIC columns — never {@code double}.
  */
 @Entity
@@ -32,18 +32,18 @@ public class Security {
     private String sector;
 
     @Column(name = "is_benchmark", nullable = false)
-    private boolean isBenchmark = false;
+    private boolean benchmark = false;
 
     // ── constructors ──────────────────────────────────────────────────────────
 
     protected Security() {
     }
 
-    public Security(String ticker, String name, String sector, boolean isBenchmark) {
+    public Security(String ticker, String name, String sector, boolean benchmark) {
         this.ticker = ticker;
         this.name = name;
         this.sector = sector;
-        this.isBenchmark = isBenchmark;
+        this.benchmark = benchmark;
     }
 
     // ── accessors ─────────────────────────────────────────────────────────────
@@ -59,6 +59,6 @@ public class Security {
     public String getSector() { return sector; }
     public void setSector(String sector) { this.sector = sector; }
 
-    public boolean isIsBenchmark() { return isBenchmark; }
-    public void setIsBenchmark(boolean isBenchmark) { this.isBenchmark = isBenchmark; }
+    public boolean isBenchmark() { return benchmark; }
+    public void setBenchmark(boolean benchmark) { this.benchmark = benchmark; }
 }

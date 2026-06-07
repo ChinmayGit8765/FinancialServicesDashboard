@@ -169,7 +169,7 @@ const isEmpty = computed(
             </td>
             <td class="numeric">
               <SignedValue
-                :value="h.unrealizedPnlPct"
+                :value="h.unrealizedPnlPct * 100"
                 :formatted="formatSignedPercent(h.unrealizedPnlPct * 100)"
               />
             </td>

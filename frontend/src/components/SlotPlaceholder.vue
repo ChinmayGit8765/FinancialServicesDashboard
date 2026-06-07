@@ -1,6 +1,7 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 const props = defineProps<{ label: string; minHeight?: string }>()
-const height = props.minHeight ?? '240px'
+const height = computed(() => props.minHeight ?? '240px')
 </script>
 
 <template>

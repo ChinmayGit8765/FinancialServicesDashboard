@@ -17,7 +17,7 @@ Requirements for the initial release (the screenshot-ready demo). Each maps to r
 
 - [x] **AUTH-01**: User can log in by selecting one of three seeded demo personas (e.g. growth / income / balanced)
 - [x] **AUTH-02**: User session persists across page refresh and scopes which portfolio is shown
-- [ ] **AUTH-03**: README documents how to wire real OAuth (Google/GitHub) as the production upgrade path
+- [x] **AUTH-03**: README documents how to wire real OAuth (Google/GitHub) as the production upgrade path
 
 ### Portfolio
 
@@ -135,7 +135,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | PORT-03 | Phase 2 | Pending |
 | PORT-04 | Phase 2 | Complete |
 | PORT-05 | Phase 2 | Pending |
-| AUTH-03 | Phase 3 | Pending |
+| AUTH-03 | Phase 3 | Complete |
 | UI-01 | Phase 3 | Complete |
 | RISK-01 | Phase 4 | Pending |
 | RISK-02 | Phase 4 | Pending |

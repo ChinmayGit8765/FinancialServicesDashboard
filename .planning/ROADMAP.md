@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Data Foundation** - Docker stack, Postgres+pgvector, Flyway seeds, demo users, price and factor series, dev MCP tooling [IN PROGRESS — 1/4 plans complete] (completed 2026-06-07)
 - [x] **Phase 2: Portfolio Domain** - Holdings, P&L, allocation, transactions, benchmark — full portfolio REST API [IN PROGRESS — 3/4 plans complete] (completed 2026-06-07)
-- [ ] **Phase 3: Frontend Scaffold** - Vue 3 + Pinia + ECharts dashboard, portfolio chart bindings, auth flow, OAuth upgrade path docs
+- [x] **Phase 3: Frontend Scaffold** - Vue 3 + Pinia + ECharts dashboard, portfolio chart bindings, auth flow, OAuth upgrade path docs (completed 2026-06-07)
 - [ ] **Phase 4: Quant Risk Engine** - Sharpe, VaR, beta, volatility, correlation heatmap, Fama-French attribution, cointegration pairs scanner
 - [ ] **Phase 5: Stochastic Forecasting** - Monte Carlo fan charts across four models (GBM, Merton, Heston, bootstrap) plus rationale documentation
 - [ ] **Phase 6: Demo-Mode AI Seam** - DemoModeAdvisor, LlmKeySessionHolder, ChatClientStrategy, seeded fixtures, BYO-key popup, explain-position and commentary in demo mode
@@ -76,7 +76,7 @@ Plans:
 - [x] 03-02-PLAN.md — Data layer: api/portfolio.ts (verified DTO types), portfolio Pinia store + 401 interceptor + store tests (UI-01)
 - [x] 03-03-PLAN.md — Chart components: PnlChart + BenchmarkChart + AllocationChart (donut/treemap) (UI-01)
 - [x] 03-04-PLAN.md — Table/card primitives: SignedValue, SlotPlaceholder, KpiCard, HoldingsTable, TransactionsTable + component tests (UI-01) [COMPLETE 2026-06-07]
-- [ ] 03-05-PLAN.md — Assembly: TopBar + DashboardView grid + persona switch + LoginView polish + README OAuth path (UI-01, AUTH-03)
+- [x] 03-05-PLAN.md — Assembly: TopBar + DashboardView grid + persona switch + LoginView polish + README OAuth path (UI-01, AUTH-03)
 **UI hint**: yes
 
 ### Phase 4: Quant Risk Engine
@@ -171,7 +171,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 |-------|----------------|--------|-----------|
 | 1. Data Foundation | 4/4 | Complete   | 2026-06-07 |
 | 2. Portfolio Domain | 4/4 | Complete   | 2026-06-07 |
-| 3. Frontend Scaffold | 3/5 | In Progress|  |
+| 3. Frontend Scaffold | 5/5 | Complete   | 2026-06-07 |
 | 4. Quant Risk Engine | 0/TBD | Not started | - |
 | 5. Stochastic Forecasting | 0/TBD | Not started | - |
 | 6. Demo-Mode AI Seam | 0/TBD | Not started | - |

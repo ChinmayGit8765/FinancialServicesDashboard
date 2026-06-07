@@ -119,34 +119,74 @@ describe('usePortfolioStore', () => {
     expect(mockedAxios.get).toHaveBeenCalledTimes(5)
   })
 
-  it('rapid double refreshAll: only the latest batch results are authoritative (no thrown error)', async () => {
+  /**
+   * CR-01 regression test: rapid persona switch race condition.
+   *
+   * Scenario: persona A (first refreshAll) is slow; persona B (second refreshAll)
+   * resolves first and writes B-data to the store. Then A's slow fetches resolve.
+   * After the fix, A's writes must be discarded — the store must hold B's data.
+   *
+   * Before the fix, each sub-fetch wrote unconditionally, so A's slow pnl resolve
+   * would overwrite B's pnl data. This test catches that regression.
+   */
+  it('CR-01 race guard: stale first-batch pnl does not overwrite second-batch pnl data', async () => {
     const { usePortfolioStore } = await import('../stores/portfolio')
     const store = usePortfolioStore()
 
-    // First call: all 5 fetches resolve but slowly (we let the second call win)
-    let slowResolvePnl!: (v: any) => void
-    const slowPnlPromise = new Promise<any>(resolve => { slowResolvePnl = resolve })
+    // Distinct pnl payloads so we can assert which batch "won"
+    const personaAPnl = {
+      totalMarketValue: 111111.11,
+      totalCostBasis: 100000,
+      totalUnrealizedGainAbs: 11111.11,
+      totalUnrealizedGainPct: 0.111111,
+      dailyChangeAbs: 111.11,
+      dailyChangePct: 0.001111,
+      equityCurve: [{ date: '2022-01-01', value: 100.0 }],
+    }
+    const personaBPnl = {
+      totalMarketValue: 999999.99,
+      totalCostBasis: 100000,
+      totalUnrealizedGainAbs: 899999.99,
+      totalUnrealizedGainPct: 8.99999,
+      dailyChangeAbs: 999.99,
+      dailyChangePct: 0.009999,
+      equityCurve: [{ date: '2022-12-31', value: 200.0 }],
+    }
 
-    // Second call: fast resolves
+    // Slow promise that we control: represents persona A's pnl fetch (call #2, index 1)
+    let resolveSlowPnlA!: (v: any) => void
+    const slowPnlAPromise = new Promise<any>(resolve => { resolveSlowPnlA = resolve })
+
+    // Track how many axios.get calls have been made total across both batches
     let callCount = 0
     mockedAxios.get = vi.fn().mockImplementation(() => {
-      callCount++
-      // First 5 calls (first refreshAll): the pnl call is slow
-      if (callCount === 2) return slowPnlPromise
-      // All others resolve immediately
+      callCount = callCount + 1
+      const n = callCount
+      // Batch A (calls 1–5): call 2 is pnl — make it slow
+      if (n === 2) return slowPnlAPromise
+      // Batch B (calls 6–10): all fast; call 7 is pnl for batch B
+      if (n === 7) return Promise.resolve({ data: personaBPnl })
+      // Everything else resolves immediately with a generic payload
       return Promise.resolve({ data: pnlPayload() })
     })
 
-    // Start first refreshAll — don't await yet
-    const first = store.refreshAll()
-    // Start second refreshAll immediately (bumps refreshVersion)
-    const second = store.refreshAll()
+    // Launch batch A (persona A) — pnl call hangs
+    const firstRefresh = store.refreshAll()
 
-    // Resolve the slow pnl promise from the first batch
-    slowResolvePnl({ data: pnlPayload() })
+    // Immediately launch batch B (persona B) — this bumps refreshVersion
+    const secondRefresh = store.refreshAll()
 
-    // Await both — neither should throw
-    await expect(first).resolves.toBeUndefined()
-    await expect(second).resolves.toBeUndefined()
+    // Batch B resolves fully first (all fast)
+    await secondRefresh
+    // At this point the store should hold B's pnl data
+    expect(store.pnl.data?.totalMarketValue).toBe(999999.99)
+
+    // Now unblock persona A's slow pnl fetch — after the fix this write is discarded
+    resolveSlowPnlA({ data: personaAPnl })
+    await firstRefresh
+
+    // Store must still hold persona B's data — A's stale write was rejected by the guard
+    expect(store.pnl.data?.totalMarketValue).toBe(999999.99)
+    expect(store.pnl.data?.totalUnrealizedGainPct).toBe(8.99999)
   })
 })

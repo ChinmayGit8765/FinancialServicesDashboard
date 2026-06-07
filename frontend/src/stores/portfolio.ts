@@ -44,14 +44,19 @@ export const usePortfolioStore = defineStore('portfolio', () => {
    * On 401 → sets error "Session expired" (global interceptor also fires /login redirect).
    * On other error → sets error "Failed to load holdings".
    * Never rethrows — errors become .error strings (T-03-05).
+   *
+   * version: if provided, the write is abandoned when a newer refreshAll() has
+   * started — prevents a slow stale batch from overwriting fresh persona data.
    */
-  async function fetchHoldings(): Promise<void> {
+  async function fetchHoldings(version?: number): Promise<void> {
     holdings.loading = true
     holdings.error = null
     try {
       const { data } = await axios.get<HoldingDto[]>('/api/portfolio/holdings')
+      if (version !== undefined && version !== refreshVersion) return
       holdings.data = data
     } catch (e: any) {
+      if (version !== undefined && version !== refreshVersion) return
       holdings.error = e?.response?.status === 401 ? 'Session expired' : 'Failed to load holdings'
     } finally {
       holdings.loading = false
@@ -60,14 +65,18 @@ export const usePortfolioStore = defineStore('portfolio', () => {
 
   /**
    * Fetch P&L summary + equity curve.
+   *
+   * version: see fetchHoldings for race-guard semantics.
    */
-  async function fetchPnl(): Promise<void> {
+  async function fetchPnl(version?: number): Promise<void> {
     pnl.loading = true
     pnl.error = null
     try {
       const { data } = await axios.get<PortfolioPnlDto>('/api/portfolio/pnl')
+      if (version !== undefined && version !== refreshVersion) return
       pnl.data = data
     } catch (e: any) {
+      if (version !== undefined && version !== refreshVersion) return
       pnl.error = e?.response?.status === 401 ? 'Session expired' : 'Failed to load P&L'
     } finally {
       pnl.loading = false
@@ -76,14 +85,18 @@ export const usePortfolioStore = defineStore('portfolio', () => {
 
   /**
    * Fetch allocation slices for the pie / treemap chart.
+   *
+   * version: see fetchHoldings for race-guard semantics.
    */
-  async function fetchAllocation(): Promise<void> {
+  async function fetchAllocation(version?: number): Promise<void> {
     allocation.loading = true
     allocation.error = null
     try {
       const { data } = await axios.get<AllocationSliceDto[]>('/api/portfolio/allocation')
+      if (version !== undefined && version !== refreshVersion) return
       allocation.data = data
     } catch (e: any) {
+      if (version !== undefined && version !== refreshVersion) return
       allocation.error = e?.response?.status === 401 ? 'Session expired' : 'Failed to load allocation'
     } finally {
       allocation.loading = false
@@ -92,8 +105,10 @@ export const usePortfolioStore = defineStore('portfolio', () => {
 
   /**
    * Fetch a single page of transactions (0-indexed).
+   *
+   * version: see fetchHoldings for race-guard semantics.
    */
-  async function fetchTransactions(page = 0): Promise<void> {
+  async function fetchTransactions(page = 0, version?: number): Promise<void> {
     transactions.loading = true
     transactions.error = null
     try {
@@ -101,8 +116,10 @@ export const usePortfolioStore = defineStore('portfolio', () => {
         '/api/portfolio/transactions',
         { params: { page, size: 10 } }
       )
+      if (version !== undefined && version !== refreshVersion) return
       transactions.data = data
     } catch (e: any) {
+      if (version !== undefined && version !== refreshVersion) return
       transactions.error = e?.response?.status === 401 ? 'Session expired' : 'Failed to load transactions'
     } finally {
       transactions.loading = false
@@ -111,14 +128,18 @@ export const usePortfolioStore = defineStore('portfolio', () => {
 
   /**
    * Fetch benchmark comparison series.
+   *
+   * version: see fetchHoldings for race-guard semantics.
    */
-  async function fetchBenchmark(): Promise<void> {
+  async function fetchBenchmark(version?: number): Promise<void> {
     benchmark.loading = true
     benchmark.error = null
     try {
       const { data } = await axios.get<BenchmarkComparisonDto>('/api/portfolio/benchmark')
+      if (version !== undefined && version !== refreshVersion) return
       benchmark.data = data
     } catch (e: any) {
+      if (version !== undefined && version !== refreshVersion) return
       benchmark.error = e?.response?.status === 401 ? 'Session expired' : 'Failed to load benchmark'
     } finally {
       benchmark.loading = false
@@ -130,10 +151,11 @@ export const usePortfolioStore = defineStore('portfolio', () => {
   /**
    * Run all five fetches in parallel.
    *
-   * Race-safe: uses a module-scoped refreshVersion counter. If a newer call
-   * arrives while this one is in-flight (e.g. rapid persona switch), the earlier
-   * call's results are discarded — the store state already reflects the latest
-   * batch's writes because each fetch action updates its resource independently.
+   * Race-safe: increments a module-scoped refreshVersion counter before
+   * launching sub-fetches. Each sub-fetch receives the captured version and
+   * will discard its write if a newer refreshAll() has incremented the counter
+   * in the meantime (e.g. rapid persona switch). This prevents a slow stale
+   * batch from overwriting fresh data written by a faster, newer batch.
    *
    * Promise.allSettled ensures all fetches run even if some fail. Individual
    * errors appear in each resource's .error field; refreshAll itself never throws.
@@ -141,15 +163,12 @@ export const usePortfolioStore = defineStore('portfolio', () => {
   async function refreshAll(): Promise<void> {
     const myVersion = ++refreshVersion
     await Promise.allSettled([
-      fetchHoldings(),
-      fetchPnl(),
-      fetchAllocation(),
-      fetchTransactions(0),
-      fetchBenchmark(),
+      fetchHoldings(myVersion),
+      fetchPnl(myVersion),
+      fetchAllocation(myVersion),
+      fetchTransactions(0, myVersion),
+      fetchBenchmark(myVersion),
     ])
-    // If a newer refreshAll() was called while we were in-flight, return early.
-    // The newer batch has already started/finished writing to the store.
-    if (myVersion !== refreshVersion) return
   }
 
   // --- manual reset -----------------------------------------------------------

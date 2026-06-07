@@ -34,7 +34,7 @@ class PersonaIntegrationTest extends AbstractPostgresIntegrationTest {
     private TestRestTemplate restTemplate;
 
     @Test
-    void aliceBobCharlieHaveDistinctPortfolioIdentities() {
+    void aliceBobCharlieHaveDistinctPortfolioIdentities() throws Exception {
         String alicePortfolioId = getPortfolioIdForUser("alice");
         String bobPortfolioId   = getPortfolioIdForUser("bob");
         String charliePortfolioId = getPortfolioIdForUser("charlie");
@@ -51,19 +51,19 @@ class PersonaIntegrationTest extends AbstractPostgresIntegrationTest {
     }
 
     @Test
-    void alicePersonaIsGrowth() {
+    void alicePersonaIsGrowth() throws Exception {
         String persona = getPersonaForUser("alice");
         assertThat(persona).as("alice's persona should be Growth").containsIgnoringCase("growth");
     }
 
     @Test
-    void bobPersonaIsIncome() {
+    void bobPersonaIsIncome() throws Exception {
         String persona = getPersonaForUser("bob");
         assertThat(persona).as("bob's persona should be Income").containsIgnoringCase("income");
     }
 
     @Test
-    void charliePersonaIsBalanced() {
+    void charliePersonaIsBalanced() throws Exception {
         String persona = getPersonaForUser("charlie");
         assertThat(persona).as("charlie's persona should be Balanced").containsIgnoringCase("balanced");
     }
@@ -104,7 +104,7 @@ class PersonaIntegrationTest extends AbstractPostgresIntegrationTest {
         return response.getBody();
     }
 
-    private String getPortfolioIdForUser(String username) {
+    private String getPortfolioIdForUser(String username) throws Exception {
         String cookie = loginAndGetSessionCookie(username);
         String meBody = getMeResponse(cookie);
         // Expected JSON: {"username":"alice","persona":"Growth","portfolioId":1,...}
@@ -113,7 +113,7 @@ class PersonaIntegrationTest extends AbstractPostgresIntegrationTest {
         return extractJsonField(meBody, "portfolioId");
     }
 
-    private String getPersonaForUser(String username) {
+    private String getPersonaForUser(String username) throws Exception {
         String cookie = loginAndGetSessionCookie(username);
         String meBody = getMeResponse(cookie);
         assertThat(meBody).as("me response should contain persona").contains("persona");
@@ -121,22 +121,16 @@ class PersonaIntegrationTest extends AbstractPostgresIntegrationTest {
     }
 
     /**
-     * Naive JSON field extraction — avoids a JSON library dependency in the test scaffold.
-     * In Plan 03, consider switching to Jackson ObjectMapper for more robust parsing.
+     * Robust JSON field extraction using Jackson ObjectMapper (WR-07).
+     * Returns the field value as a string — numeric fields are returned as their
+     * string representation (e.g., {@code "3"} for {@code portfolioId:3}).
      */
-    private String extractJsonField(String json, String fieldName) {
-        String key = "\"" + fieldName + "\":";
-        int start = json.indexOf(key);
-        assertThat(start).as("field '%s' not found in JSON: %s", fieldName, json).isGreaterThanOrEqualTo(0);
-        int valueStart = start + key.length();
-        // Handle both string values "..." and numeric values
-        if (json.charAt(valueStart) == '"') {
-            int valueEnd = json.indexOf('"', valueStart + 1);
-            return json.substring(valueStart + 1, valueEnd);
-        } else {
-            int valueEnd = json.indexOf(',', valueStart);
-            if (valueEnd == -1) valueEnd = json.indexOf('}', valueStart);
-            return json.substring(valueStart, valueEnd).trim();
-        }
+    private String extractJsonField(String json, String fieldName) throws Exception {
+        com.fasterxml.jackson.databind.JsonNode node =
+                new com.fasterxml.jackson.databind.ObjectMapper().readTree(json);
+        assertThat(node.has(fieldName))
+                .as("field '%s' not found in JSON: %s", fieldName, json)
+                .isTrue();
+        return node.path(fieldName).asText();
     }
 }

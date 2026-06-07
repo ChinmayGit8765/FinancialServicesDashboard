@@ -9,17 +9,37 @@ const props = defineProps<{
   loading: boolean
 }>()
 
+// A delta that rounds to 0.00 (|delta| < 0.005) is treated as flat for both
+// color and display — prevents a tiny negative like -0.003 from showing a red
+// border while the text reads "0.00%" (sign-color contradiction, CR-02).
+const effectiveDelta = computed<number | null>(() => {
+  if (props.delta === undefined || props.delta === null) return null
+  return Math.abs(props.delta) < 0.005 ? 0 : props.delta
+})
+
+// Pre-formatted delta text: "+2.34%", "-1.12%", or "0.00%"
+const deltaFormatted = computed<string | null>(() => {
+  const d = effectiveDelta.value
+  if (d === null) return null
+  const abs = Math.abs(d).toFixed(2)
+  if (d > 0) return `+${abs}%`
+  if (d < 0) return `-${abs}%`
+  return `0.00%`
+})
+
 const deltaColorClass = computed(() => {
-  if (props.delta === undefined || props.delta === null) return 'kpi-flat'
-  if (props.delta > 0) return 'kpi-up'
-  if (props.delta < 0) return 'kpi-down'
+  const d = effectiveDelta.value
+  if (d === null) return 'kpi-flat'
+  if (d > 0) return 'kpi-up'
+  if (d < 0) return 'kpi-down'
   return 'kpi-flat'
 })
 
 const borderClass = computed(() => {
-  if (props.delta === undefined || props.delta === null) return 'border-flat'
-  if (props.delta > 0) return 'border-up'
-  if (props.delta < 0) return 'border-down'
+  const d = effectiveDelta.value
+  if (d === null) return 'border-flat'
+  if (d > 0) return 'border-up'
+  if (d < 0) return 'border-down'
   return 'border-flat'
 })
 </script>
@@ -36,7 +56,7 @@ const borderClass = computed(() => {
     <span class="kpi-primary">{{ primary }}</span>
     <span v-if="secondary" class="kpi-secondary">{{ secondary }}</span>
     <span v-if="delta !== undefined && delta !== null" class="kpi-delta" :class="deltaColorClass">
-      {{ delta > 0 ? '+' : '' }}{{ delta.toFixed(2) }}%
+      {{ deltaFormatted }}
     </span>
   </div>
 </template>

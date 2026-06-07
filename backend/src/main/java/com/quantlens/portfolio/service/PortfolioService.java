@@ -29,7 +29,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 /**
@@ -102,15 +104,27 @@ public class PortfolioService {
         Page<Transaction> page =
                 transactionRepository.findByPortfolioIdWithSecurity(portfolioId, pageable);
 
-        return page.map(tx -> new TransactionDto(
-                tx.getTxDate(),
-                tx.getTxType(),
-                tx.getSecurity().getTicker(),
-                tx.getQuantity(),
-                tx.getPrice().setScale(6, RoundingMode.HALF_UP),
-                tx.getQuantity().multiply(tx.getPrice()).setScale(2, RoundingMode.HALF_UP),
-                runningCostMap.getOrDefault(tx.getId(), BigDecimal.ZERO)
-        ));
+        return page.map(tx -> {
+            // CR-05 fix: tradeValue reflects cash-flow direction.
+            // BUY = cash outflow (positive: money leaves wallet).
+            // SELL = cash inflow (negative: money returns to wallet).
+            // Convention: BUY positive, SELL negative — standard cash-flow sign for a P&L ledger.
+            BigDecimal rawValue = tx.getQuantity()
+                    .multiply(tx.getPrice())
+                    .setScale(2, RoundingMode.HALF_UP);
+            BigDecimal tradeValue = "SELL".equals(tx.getTxType())
+                    ? rawValue.negate()
+                    : rawValue;
+            return new TransactionDto(
+                    tx.getTxDate(),
+                    tx.getTxType(),
+                    tx.getSecurity().getTicker(),
+                    tx.getQuantity(),
+                    tx.getPrice().setScale(6, RoundingMode.HALF_UP),
+                    tradeValue,
+                    runningCostMap.getOrDefault(tx.getId(), BigDecimal.ZERO)
+            );
+        });
     }
 
     /**
@@ -218,6 +232,12 @@ public class PortfolioService {
             return List.of();
         }
 
+        // WR-03 fix: guard zero totalValue (all latest-close prices are 0) to avoid
+        // ArithmeticException: Division by zero in sectorMktValue.divide(totalValue, ...).
+        if (totalValue.signum() == 0) {
+            return List.of();
+        }
+
         // Build slices with last-slice residual absorption (RESEARCH.md Pattern 5)
         List<AllocationSliceDto> slices = new ArrayList<>();
         BigDecimal weightSum = BigDecimal.ZERO;
@@ -250,9 +270,30 @@ public class PortfolioService {
     public PortfolioPnlDto getPortfolioPnl(Long portfolioId) {
         List<Position> positions = positionRepository.findByPortfolioIdWithSecurity(portfolioId);
 
+        // CR-01 fix: guard against empty/zero-qty portfolios to avoid IndexOutOfBoundsException
+        // from equityCurve.get(equityCurve.size()-1) when the curve is empty.
+        List<Position> active = positions.stream()
+                .filter(p -> p.getQuantity().signum() > 0)
+                .toList();
+        if (active.isEmpty()) {
+            return new PortfolioPnlDto(
+                    BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
+                    BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
+                    List.of());
+        }
+
         List<DateValueDto> equityCurve = buildEquityCurve(positions);
 
-        BigDecimal totalMarketValue = equityCurve.get(equityCurve.size() - 1).value();
+        // CR-04 fix: compute totalMarketValue via latestCloseBySecurityId (same as getHoldings)
+        // so both endpoints agree on the portfolio total. Previously the curve's last point
+        // was used, which could be stale if one security had fewer bars than others.
+        Map<Long, BigDecimal> latestCloses = latestCloseBySecurityId(positions);
+        BigDecimal totalMarketValue = active.stream()
+                .map(p -> {
+                    BigDecimal close = latestCloses.getOrDefault(p.getSecurity().getId(), BigDecimal.ZERO);
+                    return p.getQuantity().multiply(close).setScale(2, RoundingMode.HALF_UP);
+                })
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         // totalCostBasis = Σ(qty × avgCostBasis), scale 2
         BigDecimal totalCostBasis = positions.stream()
@@ -263,9 +304,15 @@ public class PortfolioService {
         BigDecimal totalUnrealizedGainAbs = computeTotalUnrealizedGainAbs(totalMarketValue, totalCostBasis);
         BigDecimal totalUnrealizedGainPct = computeTotalUnrealizedGainPct(totalUnrealizedGainAbs, totalCostBasis);
 
-        BigDecimal[] dailyChange = computeDailyChange(equityCurve);
-        BigDecimal dailyChangeAbs = dailyChange[0];
-        BigDecimal dailyChangePct = dailyChange[1];
+        // WR-05 fix: guard single-entry curve to avoid IllegalArgumentException leaking as 500.
+        // If only one bar exists for a security, the curve has 1 entry and daily change is 0.
+        BigDecimal dailyChangeAbs = BigDecimal.ZERO;
+        BigDecimal dailyChangePct = BigDecimal.ZERO;
+        if (equityCurve.size() >= 2) {
+            BigDecimal[] dailyChange = computeDailyChange(equityCurve);
+            dailyChangeAbs = dailyChange[0];
+            dailyChangePct = dailyChange[1];
+        }
 
         return new PortfolioPnlDto(
                 totalMarketValue,
@@ -290,6 +337,12 @@ public class PortfolioService {
     public BenchmarkComparisonDto getBenchmarkComparison(Long portfolioId) {
         List<Position> positions = positionRepository.findByPortfolioIdWithSecurity(portfolioId);
 
+        // CR-01 fix: guard empty portfolio — buildEquityCurve would throw on empty positions
+        boolean hasActivePositions = positions.stream().anyMatch(p -> p.getQuantity().signum() > 0);
+        if (!hasActivePositions) {
+            return new BenchmarkComparisonDto(List.of(), List.of(), List.of());
+        }
+
         List<DateValueDto> equityCurve = buildEquityCurve(positions);
 
         // Load SPX500 (the single benchmark security)
@@ -306,18 +359,42 @@ public class PortfolioService {
         List<OhlcvBar> spxBars = ohlcvBarRepository.findAllBySecurityIdsOrdered(
                 List.of(spx.getId()));
 
-        // Build parallel arrays aligned by position (both share the same 504-day calendar)
+        // CR-02 fix: align by DATE not by position. Build a date→close map for SPX so
+        // that a missing/extra SPX bar or a calendar mismatch cannot cause:
+        //   (a) ArrayIndexOutOfBoundsException when spxBars.size() < equityCurve.size()
+        //   (b) silently wrong pairings when SPX and portfolio have different trading calendars.
+        // Only dates present in BOTH the equity curve AND the SPX bars are emitted.
+        Map<LocalDate, BigDecimal> spxByDate = spxBars.stream()
+                .collect(Collectors.toMap(OhlcvBar::getBarDate, OhlcvBar::getClosePrice));
+
+        // Determine the rebase base from the first equity-curve date that also has an SPX bar
+        BigDecimal portfolioBase = null;
+        BigDecimal benchmarkBase = null;
+        for (DateValueDto point : equityCurve) {
+            BigDecimal spxClose = spxByDate.get(point.date());
+            if (spxClose != null) {
+                portfolioBase = point.value();
+                benchmarkBase = spxClose;
+                break;
+            }
+        }
+        if (portfolioBase == null) {
+            // No common dates between equity curve and SPX — return empty arrays
+            return new BenchmarkComparisonDto(List.of(), List.of(), List.of());
+        }
+
         List<String> dates = new ArrayList<>(equityCurve.size());
         List<BigDecimal> portfolioSeries = new ArrayList<>(equityCurve.size());
         List<BigDecimal> benchmarkSeries = new ArrayList<>(equityCurve.size());
 
-        BigDecimal portfolioBase = equityCurve.get(0).value();
-        BigDecimal benchmarkBase = spxBars.get(0).getClosePrice();
-
-        for (int i = 0; i < equityCurve.size(); i++) {
-            dates.add(equityCurve.get(i).date().toString());
-            portfolioSeries.add(rebaseToIndex(equityCurve.get(i).value(), portfolioBase));
-            benchmarkSeries.add(rebaseToIndex(spxBars.get(i).getClosePrice(), benchmarkBase));
+        for (DateValueDto point : equityCurve) {
+            BigDecimal spxClose = spxByDate.get(point.date());
+            if (spxClose == null) {
+                continue; // skip portfolio dates with no corresponding SPX bar
+            }
+            dates.add(point.date().toString());
+            portfolioSeries.add(rebaseToIndex(point.value(), portfolioBase));
+            benchmarkSeries.add(rebaseToIndex(spxClose, benchmarkBase));
         }
 
         return new BenchmarkComparisonDto(dates, portfolioSeries, benchmarkSeries);
@@ -344,14 +421,21 @@ public class PortfolioService {
      * @param chronologicalTxs transactions sorted txDate ASC, id ASC
      * @return map from transaction id to the running avg cost basis after that transaction
      */
-    static Map<Long, BigDecimal> buildRunningCostMap(List<Transaction> chronologicalTxs) {
+    public static Map<Long, BigDecimal> buildRunningCostMap(List<Transaction> chronologicalTxs) {
         Map<Long, BigDecimal> result = new HashMap<>();
-        BigDecimal runningQty  = BigDecimal.ZERO;
-        BigDecimal runningCost = BigDecimal.ZERO;
+        // CR-03 fix: track running qty and cost PER SECURITY (keyed by securityId) so
+        // multi-ticker portfolios compute independent average-cost bases for each ticker.
+        // The old code shared a single runningQty/runningCost across all tickers, causing
+        // MSFT purchases to inflate the AAPL running cost (and vice versa).
+        Map<Long, BigDecimal> runningQtyMap  = new HashMap<>();
+        Map<Long, BigDecimal> runningCostMap = new HashMap<>();
 
         for (Transaction tx : chronologicalTxs) {
+            Long secId = tx.getSecurity().getId();
             BigDecimal qty   = tx.getQuantity();
             BigDecimal price = tx.getPrice();
+            BigDecimal runningQty  = runningQtyMap.getOrDefault(secId, BigDecimal.ZERO);
+            BigDecimal runningCost = runningCostMap.getOrDefault(secId, BigDecimal.ZERO);
 
             if ("BUY".equals(tx.getTxType())) {
                 runningCost = runningCost.add(qty.multiply(price));
@@ -364,6 +448,9 @@ public class PortfolioService {
                 runningCost = runningCost.subtract(qty.multiply(avgCostNow));
                 runningQty  = runningQty.subtract(qty);
             }
+
+            runningQtyMap.put(secId, runningQty);
+            runningCostMap.put(secId, runningCost);
 
             BigDecimal avgCostAtThisPoint = runningQty.signum() == 0
                     ? BigDecimal.ZERO
@@ -586,12 +673,25 @@ public class PortfolioService {
                 .min(Comparator.naturalOrder())
                 .orElseThrow(() -> new IllegalStateException("No OHLCV bars found for portfolio positions"));
 
-        // Collect all trading dates in the common range from any security's map
-        // (all securities share the same calendar — safe to take any one)
-        NavigableMap<LocalDate, BigDecimal> referenceDates = closesBySecId.values().iterator().next();
+        // WR-02 fix: compute the reference date set as the TRUE intersection of all securities'
+        // date sets within [firstDate, lastDate]. Previously an arbitrary security's map was used
+        // as the reference, which could omit valid trading dates if that security had a gap.
+        // Using the intersection ensures we only emit dates where ALL held securities have a bar.
+        Set<LocalDate> commonDates = null;
+        for (NavigableMap<LocalDate, BigDecimal> secMap : closesBySecId.values()) {
+            Set<LocalDate> secDates = new TreeSet<>(secMap.subMap(firstDate, true, lastDate, true).keySet());
+            if (commonDates == null) {
+                commonDates = secDates;
+            } else {
+                commonDates.retainAll(secDates);
+            }
+        }
+        if (commonDates == null) {
+            commonDates = new TreeSet<>();
+        }
 
         List<DateValueDto> curve = new ArrayList<>();
-        for (LocalDate date : referenceDates.subMap(firstDate, true, lastDate, true).keySet()) {
+        for (LocalDate date : commonDates) {
             BigDecimal dayValue = BigDecimal.ZERO;
             for (Position pos : positions) {
                 if (pos.getQuantity().signum() <= 0) {

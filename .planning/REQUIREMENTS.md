@@ -69,7 +69,7 @@ Requirements for the initial release (the screenshot-ready demo). Each maps to r
 
 ### Frontend
 
-- [ ] **UI-01**: The Vue 3 (Composition API) front end presents all the above in a cohesive single-page dashboard using ECharts visualizations
+- [x] **UI-01**: The Vue 3 (Composition API) front end presents all the above in a cohesive single-page dashboard using ECharts visualizations
 
 ### Documentation
 
@@ -136,7 +136,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | PORT-04 | Phase 2 | Complete |
 | PORT-05 | Phase 2 | Pending |
 | AUTH-03 | Phase 3 | Pending |
-| UI-01 | Phase 3 | Pending |
+| UI-01 | Phase 3 | Complete |
 | RISK-01 | Phase 4 | Pending |
 | RISK-02 | Phase 4 | Pending |
 | RISK-03 | Phase 4 | Pending |

@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: ready_to_plan
-stopped_at: Phase 02 complete (4/4) — ready to discuss Phase 3
-last_updated: 2026-06-07T03:19:07.471Z
+status: executing
+stopped_at: "Completed 03-01-PLAN.md — frontend foundation: @ alias, Vitest, dark tokens, format.ts, ECharts"
+last_updated: "2026-06-07T05:49:09.272Z"
 last_activity: 2026-06-07
 progress:
   total_phases: 10
   completed_phases: 2
-  total_plans: 8
-  completed_plans: 8
+  total_plans: 13
+  completed_plans: 9
   percent: 20
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-07)
 
 **Core value:** A working, screenshot-ready dashboard that demonstrates real quantitative-finance analytics narrated by a real Spring AI layer — convincing with zero setup, genuinely live when you add a key.
-**Current focus:** Phase 3 — frontend scaffold
+**Current focus:** Phase 03 — frontend-scaffold
 
 ## Current Position
 
-Phase: 3
-Plan: Not started
-Status: Ready to plan
+Phase: 03 (frontend-scaffold) — EXECUTING
+Plan: 2 of 5
+Status: Ready to execute
 Last activity: 2026-06-07
 
-Progress: [██████████] 100%
+Progress: [███████░░░] 69%
 
 ## Performance Metrics
 
@@ -61,6 +61,7 @@ Progress: [██████████] 100%
 | Phase 02 P02 | 10 minutes | 2 tasks | 3 files |
 | Phase 02 P03 | 20 minutes | 2 tasks | 4 files |
 | Phase 02-portfolio-domain P04 | 15 | 2 tasks | 4 files |
+| Phase 03-frontend-scaffold P01 | 5 | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -88,6 +89,9 @@ Recent decisions affecting current work:
 - [02-03] SPX500 guard throws IllegalStateException on empty/multiple — fail-fast rather than returning silent wrong benchmark data
 - [Phase ?]: computeRunningCostBasisFromTuples is public static to allow cross-subpackage access from PortfolioServiceTest
 - [Phase ?]: Two-pass getTransactions: chronological scan for cost map + paginated query for display
+- [Phase ?]: [03-01] ignoreDeprecations:6.0 for TS6 baseUrl compat
+- [Phase ?]: [03-01] MONTH_ABBR array in formatDate — locale-stable 3-char months on Windows
+- [Phase ?]: [03-01] globalThis cast in setup.ts — portable cross-env ResizeObserver mock
 
 ### Pending Todos
 
@@ -114,6 +118,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-07T03:15:31.344Z
-Stopped at: Completed 02-02-PLAN.md — PortfolioService + PortfolioController /holdings + /allocation (2 commits: dab30d8, 8244180)
+Last session: 2026-06-07T05:49:09.250Z
+Stopped at: Completed 03-01-PLAN.md — frontend foundation: @ alias, Vitest, dark tokens, format.ts, ECharts
 Resume file: None

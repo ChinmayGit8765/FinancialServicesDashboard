@@ -70,7 +70,13 @@ Plans:
   1. The dashboard renders all portfolio views (holdings, P&L, allocation, transactions, benchmark) in a single-page layout using ECharts, driven by Pinia stores that fetch from the REST API
   2. User can switch between the three demo personas (Alice, Bob, Charlie) and the dashboard re-scopes all data to the selected user's portfolio without a full page reload
   3. The README documents the four-step upgrade path to add real OAuth (Google/GitHub) without code changes to `LlmKeySessionHolder` or downstream AI features
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+- [ ] 03-01-PLAN.md — Wave 0: Vitest infra + dev deps, dark-theme tokens, format.ts util + tests, ECharts plugin/theme + App.vue THEME_KEY (UI-01)
+- [ ] 03-02-PLAN.md — Data layer: api/portfolio.ts (verified DTO types), portfolio Pinia store + 401 interceptor + store tests (UI-01)
+- [ ] 03-03-PLAN.md — Chart components: PnlChart + BenchmarkChart + AllocationChart (donut/treemap) (UI-01)
+- [ ] 03-04-PLAN.md — Table/card primitives: SignedValue, SlotPlaceholder, KpiCard, HoldingsTable, TransactionsTable + component tests (UI-01)
+- [ ] 03-05-PLAN.md — Assembly: TopBar + DashboardView grid + persona switch + LoginView polish + README OAuth path (UI-01, AUTH-03)
 **UI hint**: yes
 
 ### Phase 4: Quant Risk Engine
@@ -165,7 +171,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 |-------|----------------|--------|-----------|
 | 1. Data Foundation | 4/4 | Complete   | 2026-06-07 |
 | 2. Portfolio Domain | 4/4 | Complete   | 2026-06-07 |
-| 3. Frontend Scaffold | 0/TBD | Not started | - |
+| 3. Frontend Scaffold | 0/5 | Planned | - |
 | 4. Quant Risk Engine | 0/TBD | Not started | - |
 | 5. Stochastic Forecasting | 0/TBD | Not started | - |
 | 6. Demo-Mode AI Seam | 0/TBD | Not started | - |

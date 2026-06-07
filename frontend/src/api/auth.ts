@@ -10,36 +10,45 @@ function getCsrfToken(): string | null {
   return match ? decodeURIComponent(match[1]) : null
 }
 
-// Attach X-XSRF-TOKEN header to every mutating request
-axios.interceptors.request.use(config => {
-  const token = getCsrfToken()
-  if (token && ['post', 'put', 'delete', 'patch'].includes(config.method?.toLowerCase() ?? '')) {
-    config.headers['X-XSRF-TOKEN'] = token
-  }
-  return config
-})
+// Guard against double-registration during Vite HMR re-evaluation (CR-03).
+// Interceptors are side effects on the shared axios singleton — without this
+// flag, every HMR cycle that re-evaluates this module appends a new pair of
+// interceptors, causing duplicate CSRF headers and N redirect calls per 401.
+// Using globalThis keeps the flag stable across module re-evaluations.
+if (!(globalThis as any).__axiosInterceptorsRegistered__) {
+  ;(globalThis as any).__axiosInterceptorsRegistered__ = true
 
-// Global 401 response interceptor — redirects to /login on session expiry.
-// Excludes /auth/me (used silently at startup) and /auth/login (the login endpoint
-// itself) to prevent a redirect loop (T-03-04).
-axios.interceptors.response.use(
-  response => response,
-  (error: any) => {
-    if (error?.response?.status === 401) {
-      const url: string = error.config?.url ?? ''
-      if (!url.includes('/auth/me') && !url.includes('/auth/login')) {
-        // router may be undefined if there is a circular-import edge case at build
-        // time; fall back to window.location in that scenario (T-03-06 / A2)
-        if (router) {
-          router.push('/login')
-        } else {
-          window.location.href = '/login'
+  // Attach X-XSRF-TOKEN header to every mutating request
+  axios.interceptors.request.use(config => {
+    const token = getCsrfToken()
+    if (token && ['post', 'put', 'delete', 'patch'].includes(config.method?.toLowerCase() ?? '')) {
+      config.headers['X-XSRF-TOKEN'] = token
+    }
+    return config
+  })
+
+  // Global 401 response interceptor — redirects to /login on session expiry.
+  // Excludes /auth/me (used silently at startup) and /auth/login (the login endpoint
+  // itself) to prevent a redirect loop (T-03-04).
+  axios.interceptors.response.use(
+    response => response,
+    (error: any) => {
+      if (error?.response?.status === 401) {
+        const url: string = error.config?.url ?? ''
+        if (!url.includes('/auth/me') && !url.includes('/auth/login')) {
+          // router may be undefined if there is a circular-import edge case at build
+          // time; fall back to window.location in that scenario (T-03-06 / A2)
+          if (router) {
+            router.push('/login')
+          } else {
+            window.location.href = '/login'
+          }
         }
       }
+      return Promise.reject(error)
     }
-    return Promise.reject(error)
-  }
-)
+  )
+}
 
 export interface PersonaInfo {
   username: string

@@ -43,7 +43,7 @@ const isEmpty = () =>
         <tr v-else-if="error" class="error-row">
           <td colspan="6" class="error-cell">
             Failed to load transactions.
-            <button class="retry-btn" @click="$emit('page-change', 0)">Retry</button>
+            <button class="retry-btn" @click="emit('page-change', props.page?.number ?? 0)">Retry</button>
           </td>
         </tr>
 
@@ -54,7 +54,7 @@ const isEmpty = () =>
 
         <!-- Data rows -->
         <template v-else-if="page">
-          <tr v-for="(tx, idx) in page.content" :key="idx" class="data-row">
+          <tr v-for="tx in page.content" :key="`${tx.txDate}-${tx.txType}-${tx.ticker}-${tx.quantity}-${tx.tradeValue}`" class="data-row">
             <td class="col-date-cell">{{ formatDate(tx.txDate) }}</td>
             <td class="col-side-cell">
               <span :class="tx.txType === 'BUY' ? 'badge-buy' : 'badge-sell'">
@@ -72,7 +72,7 @@ const isEmpty = () =>
 
     <!-- Pagination controls -->
     <div
-      v-if="page && !loading && !error"
+      v-if="page && !loading && !error && page.totalPages > 0"
       class="pagination"
       role="navigation"
       aria-label="Transactions pagination"

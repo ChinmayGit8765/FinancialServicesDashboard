@@ -2,8 +2,13 @@ package com.quantlens.portfolio.service;
 
 import com.quantlens.marketdata.domain.OhlcvBar;
 import com.quantlens.marketdata.domain.OhlcvBarRepository;
+import com.quantlens.marketdata.domain.Security;
+import com.quantlens.marketdata.domain.SecurityRepository;
 import com.quantlens.portfolio.api.AllocationSliceDto;
+import com.quantlens.portfolio.api.BenchmarkComparisonDto;
+import com.quantlens.portfolio.api.DateValueDto;
 import com.quantlens.portfolio.api.HoldingDto;
+import com.quantlens.portfolio.api.PortfolioPnlDto;
 import com.quantlens.portfolio.domain.Position;
 import com.quantlens.portfolio.domain.PositionRepository;
 import org.springframework.stereotype.Service;
@@ -11,10 +16,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 /**
@@ -32,6 +41,7 @@ import java.util.stream.Collectors;
  * <ul>
  *   <li>Display money (market values, P&amp;L absolute): scale 2, {@code HALF_UP}</li>
  *   <li>Prices, ratios, percentages, weights: scale 6, {@code HALF_UP}</li>
+ *   <li>Equity-curve index values: scale 4, {@code HALF_UP}</li>
  *   <li>Every {@code divide()} call MUST specify scale and {@link RoundingMode}.</li>
  * </ul>
  */
@@ -41,11 +51,14 @@ public class PortfolioService {
 
     private final PositionRepository positionRepository;
     private final OhlcvBarRepository ohlcvBarRepository;
+    private final SecurityRepository securityRepository;
 
     public PortfolioService(PositionRepository positionRepository,
-                            OhlcvBarRepository ohlcvBarRepository) {
+                            OhlcvBarRepository ohlcvBarRepository,
+                            SecurityRepository securityRepository) {
         this.positionRepository = positionRepository;
         this.ohlcvBarRepository = ohlcvBarRepository;
+        this.securityRepository = securityRepository;
     }
 
     // =========================================================================
@@ -177,8 +190,93 @@ public class PortfolioService {
         return slices;
     }
 
+    /**
+     * Returns portfolio-level P&amp;L with a full constant-current-holdings equity curve.
+     * <p>
+     * Computes: total market value (from equity curve's last point), total cost basis,
+     * total unrealized gain, and daily change (curve[last] − curve[last−1]).
+     *
+     * @param portfolioId the owning portfolio's primary key (principal-resolved by controller)
+     * @return P&amp;L summary with 504-entry equity curve starting 2022-09-12
+     */
+    public PortfolioPnlDto getPortfolioPnl(Long portfolioId) {
+        List<Position> positions = positionRepository.findByPortfolioIdWithSecurity(portfolioId);
+
+        List<DateValueDto> equityCurve = buildEquityCurve(positions);
+
+        BigDecimal totalMarketValue = equityCurve.get(equityCurve.size() - 1).value();
+
+        // totalCostBasis = Σ(qty × avgCostBasis), scale 2
+        BigDecimal totalCostBasis = positions.stream()
+                .filter(p -> p.getQuantity().signum() > 0)
+                .map(p -> p.getQuantity().multiply(p.getAvgCostBasis()).setScale(2, RoundingMode.HALF_UP))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalUnrealizedGainAbs = computeTotalUnrealizedGainAbs(totalMarketValue, totalCostBasis);
+        BigDecimal totalUnrealizedGainPct = computeTotalUnrealizedGainPct(totalUnrealizedGainAbs, totalCostBasis);
+
+        BigDecimal[] dailyChange = computeDailyChange(equityCurve);
+        BigDecimal dailyChangeAbs = dailyChange[0];
+        BigDecimal dailyChangePct = dailyChange[1];
+
+        return new PortfolioPnlDto(
+                totalMarketValue,
+                totalCostBasis,
+                totalUnrealizedGainAbs,
+                totalUnrealizedGainPct,
+                dailyChangeAbs,
+                dailyChangePct,
+                equityCurve
+        );
+    }
+
+    /**
+     * Returns a benchmark comparison with both portfolio and SPX500 series rebased to 100 on day 0.
+     * <p>
+     * Both series use the full 504-day seeded window. Dates are ISO-8601 strings ascending.
+     * Rebasing: {@code idx(i) = value(i) / value(0) × 100}, scale 4 HALF_UP.
+     *
+     * @param portfolioId the owning portfolio's primary key (principal-resolved by controller)
+     * @return parallel arrays: dates, portfolioSeries, benchmarkSeries — all same length
+     */
+    public BenchmarkComparisonDto getBenchmarkComparison(Long portfolioId) {
+        List<Position> positions = positionRepository.findByPortfolioIdWithSecurity(portfolioId);
+
+        List<DateValueDto> equityCurve = buildEquityCurve(positions);
+
+        // Load SPX500 (the single benchmark security)
+        List<Security> benchmarkSecurities = securityRepository.findByBenchmarkTrue();
+        if (benchmarkSecurities.isEmpty()) {
+            throw new IllegalStateException("No benchmark security found (findByBenchmarkTrue returned empty)");
+        }
+        if (benchmarkSecurities.size() > 1) {
+            throw new IllegalStateException("Multiple benchmark securities found — expected exactly one SPX500");
+        }
+        Security spx = benchmarkSecurities.get(0);
+
+        // Load SPX500 bars (504 bars ordered by barDate ASC)
+        List<OhlcvBar> spxBars = ohlcvBarRepository.findAllBySecurityIdsOrdered(
+                List.of(spx.getId()));
+
+        // Build parallel arrays aligned by position (both share the same 504-day calendar)
+        List<String> dates = new ArrayList<>(equityCurve.size());
+        List<BigDecimal> portfolioSeries = new ArrayList<>(equityCurve.size());
+        List<BigDecimal> benchmarkSeries = new ArrayList<>(equityCurve.size());
+
+        BigDecimal portfolioBase = equityCurve.get(0).value();
+        BigDecimal benchmarkBase = spxBars.get(0).getClosePrice();
+
+        for (int i = 0; i < equityCurve.size(); i++) {
+            dates.add(equityCurve.get(i).date().toString());
+            portfolioSeries.add(rebaseToIndex(equityCurve.get(i).value(), portfolioBase));
+            benchmarkSeries.add(rebaseToIndex(spxBars.get(i).getClosePrice(), benchmarkBase));
+        }
+
+        return new BenchmarkComparisonDto(dates, portfolioSeries, benchmarkSeries);
+    }
+
     // =========================================================================
-    // Package-private static helpers (callable from unit tests without Spring)
+    // Public static helpers (callable from unit tests without Spring)
     // =========================================================================
 
     /**
@@ -214,9 +312,163 @@ public class PortfolioService {
         return unrealizedPnlAbs.divide(costBasisTotal, 6, RoundingMode.HALF_UP);
     }
 
+    /**
+     * Computes total unrealized gain absolute: {@code totalMarketValue − totalCostBasis}.
+     *
+     * @param totalMarketValue the portfolio's current total market value (scale 2)
+     * @param totalCostBasis   Σ(qty × avgCostBasis) across all positions (scale 2)
+     * @return total unrealized gain absolute, scale 2
+     */
+    public static BigDecimal computeTotalUnrealizedGainAbs(BigDecimal totalMarketValue,
+                                                            BigDecimal totalCostBasis) {
+        return totalMarketValue.subtract(totalCostBasis).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * Computes total unrealized gain percentage: {@code gainAbs / totalCostBasis}.
+     * <p>
+     * Guards against a zero {@code totalCostBasis} by returning {@link BigDecimal#ZERO}.
+     *
+     * @param totalUnrealizedGainAbs the absolute total gain (scale 2)
+     * @param totalCostBasis         Σ(qty × avgCostBasis); must not be null
+     * @return percentage (decimal), scale 6 {@code HALF_UP}; ZERO if divisor is zero
+     */
+    public static BigDecimal computeTotalUnrealizedGainPct(BigDecimal totalUnrealizedGainAbs,
+                                                            BigDecimal totalCostBasis) {
+        if (totalCostBasis.signum() == 0) {
+            return BigDecimal.ZERO;
+        }
+        return totalUnrealizedGainAbs.divide(totalCostBasis, 6, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * Computes daily change (absolute and percentage) from an equity curve.
+     * <p>
+     * {@code dailyChangeAbs = curve[last].value − curve[last−1].value} (scale 2).
+     * {@code dailyChangePct = dailyChangeAbs / curve[last−1].value} (scale 6).
+     * <p>
+     * <strong>PITFALL (RESEARCH.md Pitfall 3):</strong> Daily change uses the last TWO
+     * entries of the curve — NOT first-to-last. Using curve[0] as "previous" would return
+     * the change over the full historical window, not one day.
+     *
+     * @param equityCurve list of date-value points sorted ascending by date; must have ≥ 2 entries
+     * @return two-element array: {@code [dailyChangeAbs, dailyChangePct]}
+     * @throws IllegalArgumentException if the curve has fewer than 2 entries
+     */
+    public static BigDecimal[] computeDailyChange(List<DateValueDto> equityCurve) {
+        if (equityCurve.size() < 2) {
+            throw new IllegalArgumentException(
+                    "Equity curve must have at least 2 entries to compute daily change; got "
+                    + equityCurve.size());
+        }
+        BigDecimal latestValue   = equityCurve.get(equityCurve.size() - 1).value();
+        BigDecimal previousValue = equityCurve.get(equityCurve.size() - 2).value();
+
+        BigDecimal dailyChangeAbs = latestValue.subtract(previousValue).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal dailyChangePct = previousValue.signum() == 0
+                ? BigDecimal.ZERO
+                : dailyChangeAbs.divide(previousValue, 6, RoundingMode.HALF_UP);
+
+        return new BigDecimal[]{dailyChangeAbs, dailyChangePct};
+    }
+
+    /**
+     * Rebases a value to an index relative to a base value: {@code value / base × 100}.
+     * <p>
+     * Both portfolio and benchmark series are independently rebased so that
+     * {@code portfolioSeries[0] == benchmarkSeries[0] == 100.0000} (RESEARCH.md Pattern 4).
+     *
+     * @param value the value at position i in the series
+     * @param base  the value at position 0 in the same series (day-0 denominator)
+     * @return index value, scale 4 {@code HALF_UP}; ZERO if base is zero
+     */
+    public static BigDecimal rebaseToIndex(BigDecimal value, BigDecimal base) {
+        if (base.signum() == 0) {
+            return BigDecimal.ZERO;
+        }
+        return value.divide(base, 6, RoundingMode.HALF_UP)
+                .multiply(new BigDecimal("100"))
+                .setScale(4, RoundingMode.HALF_UP);
+    }
+
     // =========================================================================
-    // Private helper
+    // Private helpers
     // =========================================================================
+
+    /**
+     * Constant-current-holdings equity curve.
+     *
+     * <p>This curve values the portfolio's CURRENT (final) holdings across every
+     * historical trading day in the seeded window, as if those shares were held
+     * throughout. This is a dashboard equity curve — it shows how the current
+     * portfolio WOULD have performed, not how it DID perform (the latter requires
+     * reconstructing historical holdings from transactions, which is deferred).
+     *
+     * <p>Assumption: defensible for a demo dashboard. Limitation: overstates
+     * performance if high-performing stocks were bought late. Must be labelled
+     * in the UI with a tooltip: "Based on current holdings valued historically".
+     *
+     * <p>Algorithm (RESEARCH.md Pattern 2):
+     * <ol>
+     *   <li>Fetch all bars for the portfolio's security IDs via {@code findAllBySecurityIdsOrdered}
+     *       (one JDBC round-trip, ordered by securityId ASC, barDate ASC).</li>
+     *   <li>Group into {@code Map<securityId, TreeMap<date, close>>}.</li>
+     *   <li>Determine the common date range: max of per-security firstKey, min of lastKey.</li>
+     *   <li>For each date: {@code dayValue = Σ position.qty × close(date)}, scale 2.</li>
+     * </ol>
+     *
+     * @param positions list of active positions with security already JOIN-FETCHed
+     * @return 504-entry list of DateValueDto sorted ascending by date
+     */
+    private List<DateValueDto> buildEquityCurve(List<Position> positions) {
+        List<Long> securityIds = positions.stream()
+                .filter(p -> p.getQuantity().signum() > 0)
+                .map(p -> p.getSecurity().getId())
+                .distinct()
+                .collect(Collectors.toList());
+
+        List<OhlcvBar> allBars = ohlcvBarRepository.findAllBySecurityIdsOrdered(securityIds);
+
+        // Group bars into Map<securityId, TreeMap<date, close>>
+        Map<Long, NavigableMap<LocalDate, BigDecimal>> closesBySecId = new TreeMap<>();
+        for (OhlcvBar bar : allBars) {
+            closesBySecId
+                    .computeIfAbsent(bar.getSecurity().getId(), id -> new TreeMap<>())
+                    .put(bar.getBarDate(), bar.getClosePrice());
+        }
+
+        // Find common date range: intersection of all per-security date sets
+        LocalDate firstDate = closesBySecId.values().stream()
+                .map(NavigableMap::firstKey)
+                .max(Comparator.naturalOrder())
+                .orElseThrow(() -> new IllegalStateException("No OHLCV bars found for portfolio positions"));
+        LocalDate lastDate = closesBySecId.values().stream()
+                .map(NavigableMap::lastKey)
+                .min(Comparator.naturalOrder())
+                .orElseThrow(() -> new IllegalStateException("No OHLCV bars found for portfolio positions"));
+
+        // Collect all trading dates in the common range from any security's map
+        // (all securities share the same calendar — safe to take any one)
+        NavigableMap<LocalDate, BigDecimal> referenceDates = closesBySecId.values().iterator().next();
+
+        List<DateValueDto> curve = new ArrayList<>();
+        for (LocalDate date : referenceDates.subMap(firstDate, true, lastDate, true).keySet()) {
+            BigDecimal dayValue = BigDecimal.ZERO;
+            for (Position pos : positions) {
+                if (pos.getQuantity().signum() <= 0) {
+                    continue;
+                }
+                NavigableMap<LocalDate, BigDecimal> secMap = closesBySecId.get(pos.getSecurity().getId());
+                BigDecimal close = secMap != null ? secMap.get(date) : null;
+                if (close == null) {
+                    continue; // defensive guard — should not happen with shared calendar
+                }
+                dayValue = dayValue.add(pos.getQuantity().multiply(close));
+            }
+            curve.add(new DateValueDto(date, dayValue.setScale(2, RoundingMode.HALF_UP)));
+        }
+        return curve;
+    }
 
     /**
      * Fetches the latest OHLCV close for each security in the given positions list.

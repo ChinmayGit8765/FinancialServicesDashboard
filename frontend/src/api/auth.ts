@@ -1,4 +1,5 @@
 import axios from 'axios'
+import router from '../router'
 
 // All requests send cookies (JSESSIONID) — required for session auth
 axios.defaults.withCredentials = true
@@ -17,6 +18,28 @@ axios.interceptors.request.use(config => {
   }
   return config
 })
+
+// Global 401 response interceptor — redirects to /login on session expiry.
+// Excludes /auth/me (used silently at startup) and /auth/login (the login endpoint
+// itself) to prevent a redirect loop (T-03-04).
+axios.interceptors.response.use(
+  response => response,
+  (error: any) => {
+    if (error?.response?.status === 401) {
+      const url: string = error.config?.url ?? ''
+      if (!url.includes('/auth/me') && !url.includes('/auth/login')) {
+        // router may be undefined if there is a circular-import edge case at build
+        // time; fall back to window.location in that scenario (T-03-06 / A2)
+        if (router) {
+          router.push('/login')
+        } else {
+          window.location.href = '/login'
+        }
+      }
+    }
+    return Promise.reject(error)
+  }
+)
 
 export interface PersonaInfo {
   username: string

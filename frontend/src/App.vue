@@ -1,5 +1,7 @@
 <script setup lang="ts">
-// Root component — just the router-view; each view owns its own layout
+import { provide } from 'vue'
+import { THEME_KEY } from 'vue-echarts'
+provide(THEME_KEY, 'quantlens-dark')
 </script>
 
 <template>

@@ -18,8 +18,8 @@ provide(THEME_KEY, 'quantlens-dark')
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
-  background: #0f172a;
-  color: #e2e8f0;
+  background: var(--color-bg-elevated);
+  color: var(--color-text-primary);
   line-height: 1.5;
 }
 </style>

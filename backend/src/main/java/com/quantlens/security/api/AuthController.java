@@ -62,7 +62,8 @@ public class AuthController {
      */
     @GetMapping("/personas")
     public List<PersonaDto> personas() {
-        return appUserRepository.findAll().stream()
+        // Use a bounded query (top 10) to cap the response size on this public endpoint (WR-03)
+        return appUserRepository.findTop10ByOrderByIdAsc().stream()
                 .map(user -> new PersonaDto(user.getUsername(), user.getPersona(), demoPasswordHint))
                 .toList();
     }

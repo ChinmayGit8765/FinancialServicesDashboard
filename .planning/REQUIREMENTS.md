@@ -24,7 +24,7 @@ Requirements for the initial release (the screenshot-ready demo). Each maps to r
 - [ ] **PORT-01**: User can view holdings with current value, weight, cost basis, and unrealized P&L per position
 - [ ] **PORT-02**: User can view portfolio-level P&L (total unrealized gain/loss and daily change) as a time-series curve
 - [ ] **PORT-03**: User can view an allocation breakdown by sector / asset class (pie or treemap)
-- [ ] **PORT-04**: User can view transaction history (buy/sell log with date, quantity, price, running cost basis)
+- [x] **PORT-04**: User can view transaction history (buy/sell log with date, quantity, price, running cost basis)
 - [ ] **PORT-05**: User can compare portfolio return against an S&P 500 proxy benchmark on the same chart
 
 ### Risk Metrics
@@ -133,7 +133,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | PORT-01 | Phase 2 | Pending |
 | PORT-02 | Phase 2 | Pending |
 | PORT-03 | Phase 2 | Pending |
-| PORT-04 | Phase 2 | Pending |
+| PORT-04 | Phase 2 | Complete |
 | PORT-05 | Phase 2 | Pending |
 | AUTH-03 | Phase 3 | Pending |
 | UI-01 | Phase 3 | Pending |

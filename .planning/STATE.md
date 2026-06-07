@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: "Completed 02-03-PLAN.md — PortfolioService equity-curve P&L + benchmark rebasing; PortfolioController /pnl + /benchmark (2 commits: 5e1fa02, 2a6d293)"
-last_updated: "2026-06-07T13:10:00.000Z"
-last_activity: 2026-06-07 -- Phase 02 Plan 03 complete
+status: verifying
+stopped_at: "Completed 02-02-PLAN.md — PortfolioService + PortfolioController /holdings + /allocation (2 commits: dab30d8, 8244180)"
+last_updated: "2026-06-07T03:15:37.319Z"
+last_activity: 2026-06-07
 progress:
   total_phases: 10
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 8
-  completed_plans: 6
-  percent: 10
+  completed_plans: 8
+  percent: 20
 ---
 
 # Project State
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 
 Phase: 02 (portfolio-domain) — EXECUTING
 Plan: 4 of 4
-Status: Executing Phase 02 (Plan 03 complete — /pnl + /benchmark live; Plan 04 next)
-Last activity: 2026-06-07 -- Phase 02 Plan 03 complete
+Status: Phase complete — ready for verification
+Last activity: 2026-06-07
 
 Progress: [██████████] 100%
 
@@ -59,6 +59,7 @@ Progress: [██████████] 100%
 | Phase 02 P01 | 15 minutes | 3 tasks | 12 files |
 | Phase 02 P02 | 10 minutes | 2 tasks | 3 files |
 | Phase 02 P03 | 20 minutes | 2 tasks | 4 files |
+| Phase 02-portfolio-domain P04 | 15 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -84,6 +85,8 @@ Recent decisions affecting current work:
 - [02-03] buildEquityCurve is private (not public static) — depends on OhlcvBarRepository injection; only pure-math steps (computeDailyChange, rebaseToIndex, computeTotalUnrealizedGainAbs/Pct) are public static for unit tests
 - [02-03] rebaseToIndex is public static to allow unit-test verification that both series[0] == 100.0000 without Spring context
 - [02-03] SPX500 guard throws IllegalStateException on empty/multiple — fail-fast rather than returning silent wrong benchmark data
+- [Phase ?]: computeRunningCostBasisFromTuples is public static to allow cross-subpackage access from PortfolioServiceTest
+- [Phase ?]: Two-pass getTransactions: chronological scan for cost map + paginated query for display
 
 ### Pending Todos
 
@@ -110,6 +113,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-07T03:40:00.000Z
+Last session: 2026-06-07T03:15:31.344Z
 Stopped at: Completed 02-02-PLAN.md — PortfolioService + PortfolioController /holdings + /allocation (2 commits: dab30d8, 8244180)
 Resume file: None

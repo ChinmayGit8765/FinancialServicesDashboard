@@ -13,7 +13,7 @@ QuantLens is built in 10 phases that respect a hard dependency order enforced by
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Data Foundation** - Docker stack, Postgres+pgvector, Flyway seeds, demo users, price and factor series, dev MCP tooling [IN PROGRESS — 1/4 plans complete] (completed 2026-06-07)
-- [ ] **Phase 2: Portfolio Domain** - Holdings, P&L, allocation, transactions, benchmark — full portfolio REST API [IN PROGRESS — 1/4 plans complete]
+- [ ] **Phase 2: Portfolio Domain** - Holdings, P&L, allocation, transactions, benchmark — full portfolio REST API [IN PROGRESS — 2/4 plans complete]
 - [ ] **Phase 3: Frontend Scaffold** - Vue 3 + Pinia + ECharts dashboard, portfolio chart bindings, auth flow, OAuth upgrade path docs
 - [ ] **Phase 4: Quant Risk Engine** - Sharpe, VaR, beta, volatility, correlation heatmap, Fama-French attribution, cointegration pairs scanner
 - [ ] **Phase 5: Stochastic Forecasting** - Monte Carlo fan charts across four models (GBM, Merton, Heston, bootstrap) plus rationale documentation
@@ -57,7 +57,7 @@ Plans:
 **Plans**: 4 plans
 Plans:
 - [x] 02-01-PLAN.md — Wave 0: 6 DTO contracts + 3 N+1-safe repository extensions + RED test scaffolds + golden-value printer (PORT-01..05 foundation) [COMPLETE 2026-06-07]
-- [ ] 02-02-PLAN.md — PortfolioService + Controller: /holdings + /allocation, principal-scoped (PORT-01, PORT-03)
+- [x] 02-02-PLAN.md — PortfolioService + Controller: /holdings + /allocation, principal-scoped (PORT-01, PORT-03) [COMPLETE 2026-06-07]
 - [ ] 02-03-PLAN.md — Equity-curve P&L + benchmark rebasing: /pnl + /benchmark (PORT-02, PORT-05)
 - [ ] 02-04-PLAN.md — Running cost basis + paginated /transactions + page-size cap; full suite green (PORT-04)
 
@@ -164,7 +164,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Data Foundation | 4/4 | Complete   | 2026-06-07 |
-| 2. Portfolio Domain | 0/4 | Planned | - |
+| 2. Portfolio Domain | 2/4 | In Progress | - |
 | 3. Frontend Scaffold | 0/TBD | Not started | - |
 | 4. Quant Risk Engine | 0/TBD | Not started | - |
 | 5. Stochastic Forecasting | 0/TBD | Not started | - |

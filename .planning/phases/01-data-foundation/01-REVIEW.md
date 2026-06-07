@@ -59,7 +59,13 @@ findings:
   warning: 8
   info: 4
   total: 19
-status: issues_found
+status: fixed
+fixed_at: 2026-06-07T12:02:00Z
+fix_report: 01-REVIEW-FIX.md
+false_positives:
+  - CR-06: VectorStoreSchemaTest passes as-written (2/2 green) — atttypmod=1536 is correct for pgvector image
+  - CR-03-partial: postgres superuser does not exist in pgvector/pgvector:pg16 with custom POSTGRES_USER;
+      quantlens IS the superuser — exit code check added, username kept as quantlens
 ---
 
 # Phase 01: Code Review Report
@@ -195,6 +201,8 @@ If a production HTTPS deployment is added later, the `Secure` flag should be set
 ---
 
 ### CR-06: `VectorStoreSchemaTest.embeddingColumnIsVector1536` uses wrong `atttypmod` — test passes trivially or never
+
+> **VERIFIED FALSE POSITIVE — test passes as written (2/2 green).** The test already uses `JOIN pg_type pt ON pa.atttypid = pt.oid` with `pt.typname = 'vector'` in addition to `pa.atttypmod = 1536`. In the `pgvector/pgvector:pg16` image used by Testcontainers, `atttypmod` for `vector(1536)` is stored as `1536` (not 1540), so the assertion is correct. Test left unchanged.
 
 **File:** `backend/src/test/java/com/quantlens/infra/VectorStoreSchemaTest.java:44`
 **Issue:** The query checks `pa.atttypmod = 1536`. In PostgreSQL, `atttypmod` for a `vector(n)` column is **not** stored as `n` directly. The pgvector extension encodes the dimension as `n + 4` in `atttypmod` (following the same `typmod` convention as `varchar(n)` which stores `n + 4`). For `vector(1536)` the actual `atttypmod` value is `1540`, not `1536`. The current assertion will therefore always return 0 rows, causing the test to assert `count == 1` against 0 — this test **always fails** (or, if the assertion is `isEqualTo(1L)` and returns 0, it will be a test failure that was presumably missed during the scaffold phase).

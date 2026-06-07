@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03-03-PLAN.md — PnlChart, BenchmarkChart, AllocationChart ECharts components
-last_updated: "2026-06-07T06:00:47.044Z"
+stopped_at: Completed 03-04-PLAN.md — SignedValue, SlotPlaceholder, KpiCard, HoldingsTable, TransactionsTable + component tests
+last_updated: "2026-06-07T06:09:00Z"
 last_activity: 2026-06-07
 progress:
   total_phases: 10
   completed_phases: 2
   total_plans: 13
-  completed_plans: 11
-  percent: 20
+  completed_plans: 12
+  percent: 22
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Phase: 03 (frontend-scaffold) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-06-07
 
@@ -64,6 +64,7 @@ Progress: [█████████░] 85%
 | Phase 03-frontend-scaffold P01 | 5 | 3 tasks | 12 files |
 | Phase 03-frontend-scaffold P02 | 3 | 2 tasks | 4 files |
 | Phase 03-frontend-scaffold P03 | 8 | 3 tasks | 3 files |
+| Phase 03-frontend-scaffold P04 | 5 | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -97,6 +98,8 @@ Recent decisions affecting current work:
 - [03-02] asyncState<T>() casts return as AsyncState<T> — vue reactive() returns UnwrapRef<T>; cast is safe (runtime shape identical)
 - [03-02] 401 interceptor in api/auth.ts excludes /auth/me and /auth/login; falls back to window.location.href (T-03-06/A2)
 - [03-02] fetchTransactions uses size:10 for dashboard panel (backend default is 20)
+- [03-04] TransactionsTable emits 'page-change' (not 'page') to avoid Vue prop/emit name collision
+- [03-04] HoldingsTable sort: 3-state cycle asc→desc→default(null); fraction*100 before formatSignedPercent for unrealizedPnlPct
 
 ### Pending Todos
 
@@ -123,6 +126,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-07T06:00:47.017Z
-Stopped at: Completed 03-02-PLAN.md — portfolio API module, Pinia store, 401 interceptor, store tests
+Last session: 2026-06-07T06:09:00Z
+Stopped at: Completed 03-04-PLAN.md — SignedValue, SlotPlaceholder, KpiCard, HoldingsTable, TransactionsTable + 17 component tests
 Resume file: None

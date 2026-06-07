@@ -15,7 +15,7 @@ import SlotPlaceholder from '../components/SlotPlaceholder.vue'
 const portfolioStore = usePortfolioStore()
 
 onMounted(() => {
-  portfolioStore.refreshAll()
+  void portfolioStore.refreshAll()
 })
 
 // --- KPI derived values (access pnl resource whole, never destructure) ------

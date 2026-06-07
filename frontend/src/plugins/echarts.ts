@@ -3,7 +3,6 @@
 // IMPORTANT: import from 'echarts/core' NOT 'echarts' (avoids full ~1MB bundle)
 
 import * as echarts from 'echarts/core'
-import { use } from 'echarts/core'
 import { LineChart, PieChart, TreemapChart } from 'echarts/charts'
 import {
   GridComponent,
@@ -16,7 +15,7 @@ import { CanvasRenderer } from 'echarts/renderers'
 import { quantlensDarkTheme } from './echarts-theme'
 
 // Register modules — called once at app startup via side-effect import in main.ts
-use([
+echarts.use([
   LineChart,
   PieChart,
   TreemapChart,

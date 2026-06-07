@@ -170,6 +170,8 @@ The current auth uses Spring Security form login with seeded BCrypt users — in
 
 No architectural changes to the authorization rules (route protection, session scoping, portfolio isolation) are required.
 
+**AI feature seam — no code changes needed (AUTH-03):** The Spring AI layer (Phases 6–8) stores the user-supplied LLM key in `LlmKeySessionHolder`, which reads the key from the HTTP session. Because `LlmKeySessionHolder` and all downstream Spring AI features depend on the _HTTP session_, not on the login mechanism, replacing form login with OAuth2 login leaves the AI key-session seam and portfolio-scoping seam entirely intact. No changes to `LlmKeySessionHolder` or any AI component are required when upgrading authentication.
+
 ---
 
 ## Production Notes

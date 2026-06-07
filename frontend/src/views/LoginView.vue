@@ -2,7 +2,16 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import { personas, type PersonaInfo } from '../api/auth'
+import { personas } from '../api/auth'
+
+// PersonaInfo extended locally with optional description (backend currently omits it;
+// the v-if below degrades gracefully when description is absent).
+interface PersonaInfo {
+  username: string
+  persona: string
+  passwordHint: string
+  description?: string
+}
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -75,8 +84,9 @@ async function loginAsPersona(p: PersonaInfo) {
             :disabled="loading"
             @click="loginAsPersona(p)"
           >
-            <span class="persona-name">{{ p.persona }}</span>
+            <span class="persona-name">Log in as {{ p.persona }}</span>
             <span class="persona-username">@{{ p.username }}</span>
+            <span v-if="p.description" class="persona-desc">{{ p.description }}</span>
           </button>
         </div>
       </section>
@@ -122,32 +132,32 @@ async function loginAsPersona(p: PersonaInfo) {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #0f172a;
+  background: var(--color-bg-base);
   padding: 1rem;
 }
 
 .login-card {
-  background: #1e293b;
-  border-radius: 12px;
+  background: var(--color-bg-surface);
+  border-radius: var(--radius-lg);
   padding: 2.5rem 2rem;
   width: 100%;
   max-width: 420px;
-  color: #e2e8f0;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-modal);
 }
 
 .app-title {
   margin: 0 0 0.25rem;
   font-size: 2rem;
   font-weight: 700;
-  color: #38bdf8;
+  color: var(--color-accent);
   text-align: center;
 }
 
 .app-subtitle {
   margin: 0 0 2rem;
   font-size: 0.85rem;
-  color: #94a3b8;
+  color: var(--color-text-secondary);
   text-align: center;
 }
 
@@ -155,7 +165,7 @@ async function loginAsPersona(p: PersonaInfo) {
   margin: 0 0 0.25rem;
   font-size: 0.9rem;
   font-weight: 600;
-  color: #94a3b8;
+  color: var(--color-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -163,14 +173,14 @@ async function loginAsPersona(p: PersonaInfo) {
 .hint {
   margin: 0 0 0.75rem;
   font-size: 0.8rem;
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .hint code {
-  background: #0f172a;
+  background: var(--color-bg-elevated);
   padding: 0.1em 0.4em;
-  border-radius: 4px;
-  color: #38bdf8;
+  border-radius: var(--radius-sm);
+  color: var(--color-accent);
 }
 
 .persona-buttons {
@@ -183,26 +193,33 @@ async function loginAsPersona(p: PersonaInfo) {
 .persona-btn {
   flex: 1;
   min-width: 110px;
+  min-height: 44px;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   padding: 0.75rem 0.5rem;
-  background: #0f172a;
-  border: 1px solid #334155;
-  border-radius: 8px;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  color: #e2e8f0;
+  color: var(--color-text-primary);
   transition: border-color 0.15s, background 0.15s;
 }
 
 .persona-btn:hover:not(:disabled) {
-  border-color: #38bdf8;
-  background: #1e3a5f;
+  border-color: var(--color-accent-light);
+  background: var(--color-accent-subtle);
 }
 
 .persona-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.persona-btn:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
 }
 
 .persona-name {
@@ -212,13 +229,19 @@ async function loginAsPersona(p: PersonaInfo) {
 
 .persona-username {
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--color-text-muted);
   margin-top: 0.15rem;
+}
+
+.persona-desc {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-top: 0.1rem;
 }
 
 .divider {
   text-align: center;
-  color: #475569;
+  color: var(--color-text-muted);
   font-size: 0.8rem;
   margin: 1.25rem 0;
   position: relative;
@@ -231,7 +254,7 @@ async function loginAsPersona(p: PersonaInfo) {
   top: 50%;
   width: 35%;
   height: 1px;
-  background: #334155;
+  background: var(--color-border);
 }
 
 .divider::before { left: 0; }
@@ -251,44 +274,50 @@ async function loginAsPersona(p: PersonaInfo) {
 
 .field label {
   font-size: 0.8rem;
-  color: #94a3b8;
+  color: var(--color-text-secondary);
 }
 
 .field input {
   padding: 0.6rem 0.75rem;
-  background: #0f172a;
-  border: 1px solid #334155;
-  border-radius: 6px;
-  color: #e2e8f0;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
   font-size: 0.95rem;
   outline: none;
   transition: border-color 0.15s;
 }
 
 .field input:focus {
-  border-color: #38bdf8;
+  border-color: var(--color-accent);
+}
+
+.field input:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 
 .error {
-  color: #f87171;
+  color: var(--color-destructive);
   font-size: 0.85rem;
   margin: 0;
 }
 
 .submit-btn {
   padding: 0.7rem;
-  background: #0ea5e9;
+  background: var(--color-accent);
   border: none;
-  border-radius: 6px;
-  color: #fff;
+  border-radius: var(--radius-md);
+  color: var(--color-text-inverse);
   font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.15s;
+  min-height: 44px;
 }
 
 .submit-btn:hover:not(:disabled) {
-  background: #38bdf8;
+  background: var(--color-accent-light);
 }
 
 .submit-btn:disabled {

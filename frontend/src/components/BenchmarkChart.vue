@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import VChart from 'vue-echarts'
 import type { EChartsOption } from 'echarts/types/dist/shared'
 import type { BenchmarkComparisonDto } from '@/api/portfolio'
+import { CHART_COLORS } from '@/plugins/chart-colors'
 
 // T-03-07: tooltip formatters use typed numbers/ISO dates only — no v-html, no raw API strings
 // T-03-08: error state shows static copy from UI-SPEC, never the raw error object
@@ -50,11 +51,11 @@ const option = computed<EChartsOption>(() => {
         data: props.benchmark.portfolioSeries.map(Number),
         smooth: true,
         symbol: 'none',
-        lineStyle: { color: '#0ea5e9', width: 2 },
+        lineStyle: { color: CHART_COLORS.accent, width: 2 },
         markLine: {
           silent: true,
           symbol: 'none',
-          lineStyle: { color: '#334155', type: 'dashed', width: 1 },
+          lineStyle: { color: CHART_COLORS.border, type: 'dashed', width: 1 },
           data: [{ yAxis: 100 }],
           label: { show: false },
         },
@@ -65,7 +66,7 @@ const option = computed<EChartsOption>(() => {
         data: props.benchmark.benchmarkSeries.map(Number),
         smooth: true,
         symbol: 'none',
-        lineStyle: { color: '#94a3b8', width: 1.5, type: 'dashed' },
+        lineStyle: { color: CHART_COLORS.textSecondary, width: 1.5, type: 'dashed' },
       },
     ],
     tooltip: {

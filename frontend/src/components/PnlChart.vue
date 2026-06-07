@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import VChart from 'vue-echarts'
 import type { EChartsOption } from 'echarts/types/dist/shared'
 import type { PortfolioPnlDto } from '@/api/portfolio'
+import { CHART_COLORS } from '@/plugins/chart-colors'
 
 // T-03-07: tooltip/axis formatters use typed numbers/ISO dates only — no v-html, no raw API strings injected into DOM
 // T-03-08: error state shows static copy from UI-SPEC, never the raw error object
@@ -52,7 +53,7 @@ const option = computed<EChartsOption>(() => {
         data: values,
         smooth: true,
         symbol: 'none',
-        lineStyle: { color: '#0ea5e9', width: 2 },
+        lineStyle: { color: CHART_COLORS.accent, width: 2 },
         areaStyle: {
           color: {
             type: 'linear',

@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import VChart from 'vue-echarts'
 import type { EChartsOption } from 'echarts/types/dist/shared'
 import type { AllocationSliceDto } from '@/api/portfolio'
+import { CHART_COLORS } from '@/plugins/chart-colors'
 
 // T-03-07: label formatters use typed numbers only — no v-html, no raw API strings
 // T-03-08: error state shows static copy from UI-SPEC, never the raw error object
@@ -112,7 +113,7 @@ const treemapOption = computed<EChartsOption>(() => {
         },
         itemStyle: {
           borderWidth: 2,
-          borderColor: '#0b0f1a',
+          borderColor: CHART_COLORS.bgBase,
         },
         emphasis: {
           itemStyle: { shadowBlur: 8, shadowColor: 'rgba(0,0,0,0.5)' },

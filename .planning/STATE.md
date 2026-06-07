@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "Completed 03-01-PLAN.md — frontend foundation: @ alias, Vitest, dark tokens, format.ts, ECharts"
-last_updated: "2026-06-07T05:49:09.272Z"
+stopped_at: "Completed 03-02-PLAN.md — portfolio API module, Pinia store, 401 interceptor, store tests"
+last_updated: "2026-06-07T05:54:18.594Z"
 last_activity: 2026-06-07
 progress:
   total_phases: 10
   completed_phases: 2
   total_plans: 13
-  completed_plans: 9
+  completed_plans: 10
   percent: 20
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Phase: 03 (frontend-scaffold) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-06-07
 
-Progress: [███████░░░] 69%
+Progress: [████████░░] 77%
 
 ## Performance Metrics
 
@@ -62,6 +62,7 @@ Progress: [███████░░░] 69%
 | Phase 02 P03 | 20 minutes | 2 tasks | 4 files |
 | Phase 02-portfolio-domain P04 | 15 | 2 tasks | 4 files |
 | Phase 03-frontend-scaffold P01 | 5 | 3 tasks | 12 files |
+| Phase 03-frontend-scaffold P02 | 3 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -92,6 +93,9 @@ Recent decisions affecting current work:
 - [Phase ?]: [03-01] ignoreDeprecations:6.0 for TS6 baseUrl compat
 - [Phase ?]: [03-01] MONTH_ABBR array in formatDate — locale-stable 3-char months on Windows
 - [Phase ?]: [03-01] globalThis cast in setup.ts — portable cross-env ResizeObserver mock
+- [03-02] asyncState<T>() casts return as AsyncState<T> — vue reactive() returns UnwrapRef<T>; cast is safe (runtime shape identical)
+- [03-02] 401 interceptor in api/auth.ts excludes /auth/me and /auth/login; falls back to window.location.href (T-03-06/A2)
+- [03-02] fetchTransactions uses size:10 for dashboard panel (backend default is 20)
 
 ### Pending Todos
 
@@ -118,6 +122,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-07T05:49:09.250Z
-Stopped at: Completed 03-01-PLAN.md — frontend foundation: @ alias, Vitest, dark tokens, format.ts, ECharts
+Last session: 2026-06-07T05:57:00.000Z
+Stopped at: Completed 03-02-PLAN.md — portfolio API module, Pinia store, 401 interceptor, store tests
 Resume file: None

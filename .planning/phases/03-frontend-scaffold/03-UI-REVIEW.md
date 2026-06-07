@@ -6,6 +6,8 @@ auditor: ui-review agent
 baseline: 03-UI-SPEC.md
 screenshots: not captured (no dev server detected at localhost:3000 / 5173 / 8080)
 registry_audit: skipped — shadcn not initialized; no third-party registries declared
+fix_date: 2026-06-07
+fix_status: fixed
 ---
 
 # Phase 3 — UI Review

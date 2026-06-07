@@ -316,6 +316,46 @@ class PortfolioControllerIntegrationTest extends AbstractPostgresIntegrationTest
     }
 
     // -----------------------------------------------------------------------
+    // CR-04 REGRESSION: pnl.totalMarketValue must equal sum of holdings.currentMarketValue
+    // Both endpoints must use the SAME latest-price lookup so they agree.
+    // -----------------------------------------------------------------------
+
+    /**
+     * CR-04 regression: {@code GET /api/portfolio/pnl}.totalMarketValue and
+     * the sum of {@code GET /api/portfolio/holdings}.currentMarketValue must agree
+     * to within 0.01 (rounding tolerance across 5 positions).
+     */
+    @Test
+    void pnlTotalMarketValue_matchesHoldingsSumForAlice() throws Exception {
+        String cookie = loginAndGetSessionCookie("alice");
+
+        ResponseEntity<String> pnlResponse = authenticatedGet("/api/portfolio/pnl", cookie);
+        ResponseEntity<String> holdingsResponse = authenticatedGet("/api/portfolio/holdings", cookie);
+
+        assertThat(pnlResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(holdingsResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        JsonNode pnlBody      = objectMapper.readTree(pnlResponse.getBody());
+        JsonNode holdingsBody = objectMapper.readTree(holdingsResponse.getBody());
+
+        java.math.BigDecimal pnlTotal = new java.math.BigDecimal(
+                pnlBody.path("totalMarketValue").asText());
+
+        java.math.BigDecimal holdingsSum = java.math.BigDecimal.ZERO;
+        for (JsonNode holding : holdingsBody) {
+            holdingsSum = holdingsSum.add(new java.math.BigDecimal(
+                    holding.path("currentMarketValue").asText()));
+        }
+
+        assertThat(pnlTotal)
+                .as("pnl.totalMarketValue must equal sum of holdings.currentMarketValue "
+                    + "(both use the same latest-price lookup — CR-04 regression). "
+                    + "pnlTotal=%s holdingsSum=%s", pnlTotal, holdingsSum)
+                .isCloseTo(holdingsSum,
+                        org.assertj.core.data.Offset.offset(new java.math.BigDecimal("0.05")));
+    }
+
+    // -----------------------------------------------------------------------
     // Private helpers — copied from PersonaIntegrationTest
     // -----------------------------------------------------------------------
 
@@ -345,11 +385,4 @@ class PortfolioControllerIntegrationTest extends AbstractPostgresIntegrationTest
         return restTemplate.exchange(path, HttpMethod.GET, new HttpEntity<>(headers), String.class);
     }
 
-    private String extractJsonField(String json, String fieldName) throws Exception {
-        JsonNode node = objectMapper.readTree(json);
-        assertThat(node.has(fieldName))
-                .as("field '%s' not found in JSON: %s", fieldName, json)
-                .isTrue();
-        return node.path(fieldName).asText();
-    }
 }

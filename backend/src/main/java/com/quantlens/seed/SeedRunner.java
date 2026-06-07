@@ -295,30 +295,31 @@ public class SeedRunner implements ApplicationRunner {
             // Early buy at bar 50
             int buyBar = Math.min(50, rows.size() - 1);
             BigDecimal buyPrice = rows.get(buyBar).close();
-            double qty = shares[i];
-            BigDecimal quantity = BigDecimal.valueOf(qty).setScale(4, RoundingMode.HALF_UP);
+            // Use BigDecimal throughout for all quantity arithmetic (WR-06)
+            BigDecimal bdQty = BigDecimal.valueOf(shares[i]);
+            BigDecimal quantity = bdQty.setScale(4, RoundingMode.HALF_UP);
             LocalDate buyDate = rows.get(buyBar).date();
 
             transactionRepository.save(new Transaction(
                     portfolio, sec, buyDate, "BUY", quantity, buyPrice));
 
-            // Partial sell at bar 200 (sell ~30% of position)
+            // Partial sell at bar 200 (sell ~30% of position).
             if (rows.size() > 200) {
                 int sellBar = 200;
                 BigDecimal sellPrice = rows.get(sellBar).close();
-                double sellQty = Math.floor(qty * 0.3);
-                if (sellQty >= 1.0) {
-                    BigDecimal sellQuantity = BigDecimal.valueOf(sellQty)
-                            .setScale(4, RoundingMode.HALF_UP);
+                BigDecimal sellQty = bdQty.multiply(new BigDecimal("0.3"))
+                        .setScale(0, RoundingMode.FLOOR);
+                if (sellQty.compareTo(BigDecimal.ONE) >= 0) {
+                    BigDecimal sellQuantity = sellQty.setScale(4, RoundingMode.HALF_UP);
                     LocalDate sellDate = rows.get(sellBar).date();
                     transactionRepository.save(new Transaction(
                             portfolio, sec, sellDate, "SELL", sellQuantity, sellPrice));
-                    qty -= sellQty;
+                    bdQty = bdQty.subtract(sellQty);
                 }
             }
 
             // Current position: remaining shares at original buy cost basis
-            BigDecimal finalQty = BigDecimal.valueOf(qty).setScale(4, RoundingMode.HALF_UP);
+            BigDecimal finalQty = bdQty.setScale(4, RoundingMode.HALF_UP);
             positionRepository.save(new Position(portfolio, sec, finalQty, buyPrice));
         }
     }

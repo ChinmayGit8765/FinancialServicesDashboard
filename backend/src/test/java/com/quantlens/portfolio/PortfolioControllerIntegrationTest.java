@@ -267,8 +267,9 @@ class PortfolioControllerIntegrationTest extends AbstractPostgresIntegrationTest
     }
 
     /**
-     * The dates array in the benchmark response must be sorted ascending.
-     * RED — endpoint returns 404 until Plan 04 adds the benchmark endpoint.
+     * The dates array in the benchmark response must be sorted ascending,
+     * and both series must start at exactly 100.0000 on day 0 (rebasing verification).
+     * RED — endpoint returns 404 until Plan 03 adds the benchmark endpoint.
      */
     @Test
     void getBenchmark_datesSortedAscending() throws Exception {
@@ -298,6 +299,20 @@ class PortfolioControllerIntegrationTest extends AbstractPostgresIntegrationTest
         assertThat(dates.get(0).asText())
                 .as("benchmark dates[0] should be the series start date 2022-09-12")
                 .isEqualTo("2022-09-12");
+
+        // Both series[0] must equal exactly 100.0000 (rebasing to common base on day 0)
+        java.math.BigDecimal portfolioDay0 = new java.math.BigDecimal(
+                body.path("portfolioSeries").get(0).asText());
+        java.math.BigDecimal benchmarkDay0 = new java.math.BigDecimal(
+                body.path("benchmarkSeries").get(0).asText());
+        java.math.BigDecimal expected = new java.math.BigDecimal("100.0000");
+
+        assertThat(portfolioDay0.compareTo(expected))
+                .as("portfolioSeries[0] must be exactly 100.0000 after rebasing")
+                .isEqualTo(0);
+        assertThat(benchmarkDay0.compareTo(expected))
+                .as("benchmarkSeries[0] must be exactly 100.0000 after rebasing")
+                .isEqualTo(0);
     }
 
     // -----------------------------------------------------------------------

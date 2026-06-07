@@ -18,12 +18,18 @@ import java.util.List;
 /**
  * REST controller exposing portfolio analytics endpoints under {@code /api/portfolio}.
  *
- * <h3>Endpoints (this plan)</h3>
+ * <h3>Endpoints (Plans 02–03)</h3>
  * <dl>
  *   <dt>GET /api/portfolio/holdings</dt>
  *   <dd>Authenticated — returns the current user's holdings with per-position P&amp;L and weights.</dd>
  *   <dt>GET /api/portfolio/allocation</dt>
  *   <dd>Authenticated — returns sector allocation slices whose weights sum to exactly 1.000000.</dd>
+ *   <dt>GET /api/portfolio/pnl</dt>
+ *   <dd>Authenticated — returns portfolio-level P&amp;L totals and a 504-entry constant-current-holdings
+ *       equity curve starting 2022-09-12.</dd>
+ *   <dt>GET /api/portfolio/benchmark</dt>
+ *   <dd>Authenticated — returns parallel date/portfolioSeries/benchmarkSeries arrays, both series
+ *       independently rebased to 100.0000 on day 0.</dd>
  * </dl>
  *
  * <h3>IDOR prevention (T-02-01)</h3>
@@ -87,6 +93,41 @@ public class PortfolioController {
     public ResponseEntity<List<AllocationSliceDto>> getAllocation(Authentication authentication) {
         Long portfolioId = resolvePortfolioId(authentication);
         return ResponseEntity.ok(portfolioService.getAllocation(portfolioId));
+    }
+
+    /**
+     * Returns the authenticated user's portfolio-level P&amp;L with a full equity curve.
+     * <p>
+     * The equity curve uses the constant-current-holdings assumption: current position
+     * quantities valued across every historical trading day in the seeded 504-day window
+     * starting 2022-09-12. Dates in the {@link DateValueDto} entries serialize as ISO-8601
+     * strings (e.g. {@code "2022-09-12"}) via Spring Boot's auto-registered JavaTimeModule.
+     *
+     * @param authentication injected by Spring Security from the current session
+     * @return 200 with P&amp;L summary and 504-entry equity curve; 401/404 on auth/portfolio errors
+     */
+    @GetMapping("/pnl")
+    @Transactional(readOnly = true)
+    public PortfolioPnlDto getPnl(Authentication authentication) {
+        Long portfolioId = resolvePortfolioId(authentication);
+        return portfolioService.getPortfolioPnl(portfolioId);
+    }
+
+    /**
+     * Returns a benchmark comparison for the authenticated user's portfolio vs SPX500.
+     * <p>
+     * Both series are independently rebased to exactly {@code 100.0000} on day 0
+     * (the first shared trading day: 2022-09-12). The {@code dates} array contains ISO-8601
+     * strings for ECharts xAxis binding. All three arrays have the same length (504).
+     *
+     * @param authentication injected by Spring Security from the current session
+     * @return 200 with parallel arrays: dates, portfolioSeries, benchmarkSeries; 401/404 on errors
+     */
+    @GetMapping("/benchmark")
+    @Transactional(readOnly = true)
+    public BenchmarkComparisonDto getBenchmark(Authentication authentication) {
+        Long portfolioId = resolvePortfolioId(authentication);
+        return portfolioService.getBenchmarkComparison(portfolioId);
     }
 
     // =========================================================================

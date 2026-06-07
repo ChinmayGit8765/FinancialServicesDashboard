@@ -117,7 +117,7 @@ async function loginAsPersona(p: PersonaInfo) {
             :disabled="loading"
           />
         </div>
-        <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
+        <p v-if="errorMessage" class="error" role="alert">{{ errorMessage }}</p>
         <button type="submit" class="submit-btn" :disabled="loading">
           {{ loading ? 'Logging in…' : 'Log In' }}
         </button>
@@ -133,7 +133,7 @@ async function loginAsPersona(p: PersonaInfo) {
   align-items: center;
   justify-content: center;
   background: var(--color-bg-base);
-  padding: 1rem;
+  padding: var(--space-md);
 }
 
 .login-card {
@@ -147,22 +147,22 @@ async function loginAsPersona(p: PersonaInfo) {
 }
 
 .app-title {
-  margin: 0 0 0.25rem;
-  font-size: 2rem;
+  margin: 0 0 var(--space-xs);
+  font-size: 24px;
   font-weight: 700;
   color: var(--color-accent);
   text-align: center;
 }
 
 .app-subtitle {
-  margin: 0 0 2rem;
+  margin: 0 0 var(--space-xl);
   font-size: 0.85rem;
   color: var(--color-text-secondary);
   text-align: center;
 }
 
 .persona-switcher h2 {
-  margin: 0 0 0.25rem;
+  margin: 0 0 var(--space-xs);
   font-size: 0.9rem;
   font-weight: 600;
   color: var(--color-text-secondary);
@@ -269,7 +269,7 @@ async function loginAsPersona(p: PersonaInfo) {
 .field {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: var(--space-xs);
 }
 
 .field label {
@@ -284,7 +284,6 @@ async function loginAsPersona(p: PersonaInfo) {
   border-radius: var(--radius-md);
   color: var(--color-text-primary);
   font-size: 0.95rem;
-  outline: none;
   transition: border-color 0.15s;
 }
 

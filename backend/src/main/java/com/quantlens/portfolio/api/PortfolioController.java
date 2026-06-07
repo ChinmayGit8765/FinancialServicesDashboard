@@ -4,6 +4,10 @@ import com.quantlens.portfolio.domain.AppUserRepository;
 import com.quantlens.portfolio.domain.Portfolio;
 import com.quantlens.portfolio.domain.PortfolioRepository;
 import com.quantlens.portfolio.service.PortfolioService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -111,6 +115,30 @@ public class PortfolioController {
     public PortfolioPnlDto getPnl(Authentication authentication) {
         Long portfolioId = resolvePortfolioId(authentication);
         return portfolioService.getPortfolioPnl(portfolioId);
+    }
+
+    /**
+     * Returns a paginated, most-recent-first transaction history for the authenticated user's portfolio.
+     * <p>
+     * Each {@link TransactionDto} carries the running average cost basis after that trade,
+     * computed chronologically (BUY increases basis; SELL reduces by sellQty × avgCostNow,
+     * never by sell price — RESEARCH.md Pattern 1).
+     * <p>
+     * Page size is capped by {@code spring.data.web.pageable.max-page-size} in application.yml
+     * (prevents {@code ?size=10000} DoS — threat T-02-05).
+     *
+     * @param authentication injected by Spring Security from the current session
+     * @param pageable       page/sort descriptor; defaults: size=20, sort=txDate DESC
+     * @return 200 with a Page of TransactionDto; 401 if unauthenticated; 404 if no portfolio found
+     */
+    @GetMapping("/transactions")
+    @Transactional(readOnly = true)
+    public Page<TransactionDto> getTransactions(
+            Authentication authentication,
+            @PageableDefault(size = 20, sort = "txDate", direction = Sort.Direction.DESC)
+            Pageable pageable) {
+        Long portfolioId = resolvePortfolioId(authentication);
+        return portfolioService.getTransactions(portfolioId, pageable);
     }
 
     /**

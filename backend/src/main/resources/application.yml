@@ -3,6 +3,12 @@ spring:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/quantlens}
     username: ${SPRING_DATASOURCE_USERNAME:quantlens}
     password: ${SPRING_DATASOURCE_PASSWORD:quantlens_dev}
+  data:
+    web:
+      pageable:
+        # Cap page size to prevent ?size=10000 DoS abuse (threat T-02-05)
+        max-page-size: 500
+        default-page-size: 20
   jpa:
     hibernate:
       ddl-auto: validate

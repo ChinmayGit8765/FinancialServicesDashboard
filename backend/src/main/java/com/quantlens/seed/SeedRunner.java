@@ -19,6 +19,7 @@ import com.quantlens.seed.GbmGenerator.OhlcvRow;
 import com.quantlens.seed.GbmGenerator.SecuritySpec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.annotation.Order;
@@ -61,10 +62,18 @@ public class SeedRunner implements ApplicationRunner {
     private static final Logger log = LoggerFactory.getLogger(SeedRunner.class);
 
     private static final String SEED_VERSION = "v1";
-    private static final String DEMO_PASSWORD = "demo1234";
 
     // Trading-day calendar anchor: first Monday of 2023 series (~504 days to ~end 2024)
     private static final LocalDate SERIES_START = LocalDate.of(2022, 9, 12);
+
+    /**
+     * Demo password injected from {@code quantlens.demo.password} (default: demo1234).
+     * Override with {@code QUANTLENS_DEMO_PASSWORD} env var.  Kept out of compiled
+     * bytecode as a static final — only materialized at runtime via the Spring
+     * property system.
+     */
+    @Value("${quantlens.demo.password:demo1234}")
+    private String demoPassword;
 
     private final SeedLogRepository seedLogRepository;
     private final SecurityRepository securityRepository;
@@ -156,7 +165,7 @@ public class SeedRunner implements ApplicationRunner {
         log.info("SeedRunner: saved {} factor_returns rows", factors.size());
 
         // 5. Seed demo users (BCrypt-hashed via the injected PasswordEncoder bean)
-        String hashedPassword = passwordEncoder.encode(DEMO_PASSWORD);
+        String hashedPassword = passwordEncoder.encode(demoPassword);
         AppUser alice   = appUserRepository.save(new AppUser("alice",   hashedPassword, "Growth"));
         AppUser bob     = appUserRepository.save(new AppUser("bob",     hashedPassword, "Income"));
         AppUser charlie = appUserRepository.save(new AppUser("charlie", hashedPassword, "Balanced"));

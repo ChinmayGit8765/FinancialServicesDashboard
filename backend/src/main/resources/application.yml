@@ -40,3 +40,10 @@ management:
   endpoint:
     health:
       show-details: never
+
+# Demo configuration — password is intentionally surfaced on the login screen
+# so first-time visitors can click a persona without typing.  Override via
+# QUANTLENS_DEMO_PASSWORD env var to change in any deployment.
+quantlens:
+  demo:
+    password: ${QUANTLENS_DEMO_PASSWORD:demo1234}

@@ -3,8 +3,10 @@ package com.quantlens.security.api;
 import com.quantlens.portfolio.domain.AppUserRepository;
 import com.quantlens.portfolio.domain.Portfolio;
 import com.quantlens.portfolio.domain.PortfolioRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -34,7 +36,13 @@ import java.util.List;
 @RequestMapping("/api/auth")
 public class AuthController {
 
-    private static final String DEMO_PASSWORD_HINT = "demo1234";
+    /**
+     * Injected from {@code quantlens.demo.password} in application.yml (default: demo1234).
+     * Surfaced in the public {@code /api/auth/personas} response so the login screen can show
+     * a one-click hint.  Override with {@code QUANTLENS_DEMO_PASSWORD} env var if needed.
+     */
+    @Value("${quantlens.demo.password:demo1234}")
+    private String demoPasswordHint;
 
     private final AppUserRepository appUserRepository;
     private final PortfolioRepository portfolioRepository;
@@ -55,7 +63,7 @@ public class AuthController {
     @GetMapping("/personas")
     public List<PersonaDto> personas() {
         return appUserRepository.findAll().stream()
-                .map(user -> new PersonaDto(user.getUsername(), user.getPersona(), DEMO_PASSWORD_HINT))
+                .map(user -> new PersonaDto(user.getUsername(), user.getPersona(), demoPasswordHint))
                 .toList();
     }
 
@@ -65,11 +73,15 @@ public class AuthController {
      * The portfolio ID proves AUTH-02: each persona's session is scoped to their own
      * portfolio.  Calling this endpoint with different session cookies (alice, bob, charlie)
      * must return three distinct portfolio IDs.
+     * <p>
+     * {@code @Transactional(readOnly = true)} ensures both the user lookup and the
+     * portfolio lookup see a consistent snapshot (WR-04).
      *
      * @param authentication injected by Spring Security from the current session
      * @return 200 with {@link MeDto}, or 401 if unauthenticated (handled by SecurityConfig)
      */
     @GetMapping("/me")
+    @Transactional(readOnly = true)
     public ResponseEntity<MeDto> me(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
             return ResponseEntity.status(401).build();

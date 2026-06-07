@@ -13,8 +13,6 @@ const errorMessage = ref('')
 const loading = ref(false)
 const personaList = ref<PersonaInfo[]>([])
 
-const DEMO_PASSWORD = 'demo1234'
-
 onMounted(async () => {
   // Fetch persona list for the one-click switcher
   try {
@@ -47,7 +45,7 @@ async function loginAsPersona(p: PersonaInfo) {
   loading.value = true
   errorMessage.value = ''
   try {
-    const ok = await authStore.loginAs(p.username, DEMO_PASSWORD)
+    const ok = await authStore.loginAs(p.username, p.passwordHint)
     if (ok) {
       await router.push('/')
     } else {
@@ -68,7 +66,7 @@ async function loginAsPersona(p: PersonaInfo) {
       <!-- One-click persona switcher -->
       <section v-if="personaList.length > 0" class="persona-switcher">
         <h2>Quick Login</h2>
-        <p class="hint">Demo password: <code>{{ DEMO_PASSWORD }}</code></p>
+        <p class="hint">Demo password: <code>{{ personaList[0]?.passwordHint }}</code></p>
         <div class="persona-buttons">
           <button
             v-for="p in personaList"

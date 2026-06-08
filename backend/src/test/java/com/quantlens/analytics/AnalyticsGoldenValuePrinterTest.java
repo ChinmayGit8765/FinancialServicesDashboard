@@ -2,6 +2,7 @@ package com.quantlens.analytics;
 
 import com.quantlens.AbstractPostgresIntegrationTest;
 import com.quantlens.analytics.service.CointegrationScanner;
+import com.quantlens.analytics.service.CorrelationCalculator;
 import com.quantlens.analytics.service.FamaFrenchCalculator;
 import com.quantlens.analytics.service.RiskCalculator;
 import com.quantlens.portfolio.domain.AppUserRepository;
@@ -26,14 +27,14 @@ import java.util.List;
  * <p>
  * The seed is fully deterministic (MersenneTwister seed=42, SERIES_START=2022-09-12)
  * so values printed by this test will be identical on every machine.
- * <p>
- * The printer currently references stub services that return zeroed DTOs.
- * It becomes meaningful after Plans 04-02/03 implement the real Hipparchus math.
  */
 class AnalyticsGoldenValuePrinterTest extends AbstractPostgresIntegrationTest {
 
     @Autowired
     RiskCalculator riskCalculator;
+
+    @Autowired
+    CorrelationCalculator correlationCalculator;
 
     @Autowired
     FamaFrenchCalculator ffCalc;
@@ -88,6 +89,16 @@ class AnalyticsGoldenValuePrinterTest extends AbstractPostgresIntegrationTest {
                 .filter(v -> "PARAMETRIC".equals(v.method()))
                 .findFirst()
                 .ifPresent(v -> System.out.printf("PARAM_VAR_PCT=%.8f%n", v.percentage()));
+        System.out.println();
+
+        // --- Correlation matrix (AAPL-MSFT golden value) ---
+        var corrDto = correlationCalculator.computeCorrelationMatrix(portfolioId);
+        int aaplIdx = corrDto.tickers().indexOf("AAPL");
+        int msftIdx = corrDto.tickers().indexOf("MSFT");
+        System.out.printf("CORRELATION_TICKERS=%s%n", corrDto.tickers());
+        if (aaplIdx >= 0 && msftIdx >= 0) {
+            System.out.printf("CORR_AAPL_MSFT=%.8f%n", corrDto.matrix().get(aaplIdx).get(msftIdx));
+        }
         System.out.println();
 
         // --- Fama-French attribution ---

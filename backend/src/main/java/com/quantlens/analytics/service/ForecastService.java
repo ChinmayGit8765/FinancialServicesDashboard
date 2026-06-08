@@ -367,8 +367,11 @@ public class ForecastService {
         // Block length: max(10, √H) — preserves ~monthly autocorrelation / volatility clustering
         int L = Math.max(10, (int) Math.sqrt(H));
 
-        // Guard: if history is too short to form even one block, fall back to L=H/2 minimum
-        if (H < L) {
+        // CR-02 fix: guard H <= L (not just H < L) to catch degenerate maxBlockStart=0 case.
+        // When H==L (e.g., H=10, L=max(10,sqrt(10))=10), maxBlockStart=0 and all 5000 paths
+        // are identical (rng.nextInt(1) always returns 0). Change guard to H <= L so L=H/2
+        // is applied, ensuring maxBlockStart >= 1 and the bootstrap produces distinct paths.
+        if (H <= L) {
             L = Math.max(1, H / 2);
         }
 

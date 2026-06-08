@@ -180,4 +180,66 @@ class ForecastStructuralTest extends AbstractPostgresIntegrationTest {
                     "If all 4 are equal, model switching is not working correctly.")
                 .isGreaterThanOrEqualTo(3);
     }
+
+    // -----------------------------------------------------------------------
+    // WR-01: Bootstrap reproducibility — two runs with seed=42 are byte-identical
+    // -----------------------------------------------------------------------
+
+    /**
+     * WR-01 regression: two calls to forecast() with BOOTSTRAP model and the same
+     * inputs must produce byte-identical p50 arrays, proving that MersenneTwister
+     * is correctly reset to MC_SEED=42 at the start of each runBootstrap call.
+     * Mirrors reproducibility_fixedSeed_gbm for the Bootstrap model.
+     */
+    @Test
+    void reproducibility_fixedSeed_bootstrap() {
+        ForecastDto run1 = forecastService.forecast(alicePortfolioId, ModelType.BOOTSTRAP, 252);
+        ForecastDto run2 = forecastService.forecast(alicePortfolioId, ModelType.BOOTSTRAP, 252);
+
+        assertThat(run1.p50())
+                .as("WR-01: Bootstrap with seed=42 must produce byte-identical p50 arrays " +
+                    "across two calls. If they differ, the RNG is not being reset to MC_SEED=42 " +
+                    "at the start of each runBootstrap call.")
+                .isEqualTo(run2.p50());
+    }
+
+    // -----------------------------------------------------------------------
+    // CR-02: Bootstrap non-degenerate spread
+    // -----------------------------------------------------------------------
+
+    /**
+     * CR-02 regression: Bootstrap must produce non-zero band spread.
+     * Before the H<=L fix, H==L caused maxBlockStart=0 and all paths identical.
+     * alice has plenty of history (H >> 10) so this confirms normal operation.
+     */
+    @Test
+    void bootstrap_bandSpread_nonZero_at21Days() {
+        ForecastDto dto = forecastService.forecast(alicePortfolioId, ModelType.BOOTSTRAP, 21);
+
+        double spreadAtDay21 = dto.p95()[20] - dto.p5()[20];
+        assertThat(spreadAtDay21)
+                .as("CR-02: Bootstrap must produce non-zero p95-p5 spread at day 21 (actual=%.4f). " +
+                    "Zero spread means all 5000 paths are identical (degenerate H<=L case).",
+                    spreadAtDay21)
+                .isGreaterThan(0.0);
+    }
+
+    // -----------------------------------------------------------------------
+    // WR-02: Alice has positive value — WR-02 guard does not fire for valid portfolio
+    // -----------------------------------------------------------------------
+
+    /**
+     * WR-02 regression: forecast() for alice's valid long portfolio must succeed and
+     * return positive p50 values (the WR-02 guard must NOT fire for a normal portfolio).
+     */
+    @Test
+    void wr02_validPortfolio_returnsPositiveForecast() {
+        ForecastDto dto = forecastService.forecast(alicePortfolioId, ModelType.BOOTSTRAP, 5);
+
+        for (int t = 0; t < 5; t++) {
+            assertThat(dto.p50()[t])
+                    .as("WR-02: p50[%d] must be > 0 for alice's non-zero portfolio", t)
+                    .isGreaterThan(0.0);
+        }
+    }
 }

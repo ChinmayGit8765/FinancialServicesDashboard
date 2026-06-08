@@ -15,6 +15,7 @@ import RiskScorecard from '../components/RiskScorecard.vue'
 import CorrelationHeatmap from '../components/CorrelationHeatmap.vue'
 import AttributionChart from '../components/AttributionChart.vue'
 import PairsTable from '../components/PairsTable.vue'
+import MonteCarloFanChart from '../components/MonteCarloFanChart.vue'
 
 const portfolioStore = usePortfolioStore()
 
@@ -92,6 +93,7 @@ function retryRisk(): void { portfolioStore.fetchRisk() }
 function retryCorrelation(): void { portfolioStore.fetchCorrelation() }
 function retryAttribution(): void { portfolioStore.fetchAttribution() }
 function retryPairs(): void { portfolioStore.fetchPairs() }
+function retryForecast(): void { portfolioStore.fetchForecast() }
 </script>
 
 <template>
@@ -199,9 +201,15 @@ function retryPairs(): void { portfolioStore.fetchPairs() }
           />
         </div>
 
-        <!-- Row 5: Monte Carlo slot (col 12) -->
+        <!-- Row 5: Monte Carlo fan chart (col 12) — Phase 5 -->
         <div class="col-12">
-          <SlotPlaceholder label="Monte Carlo Forecast — Phase 5" minHeight="320px" />
+          <MonteCarloFanChart
+            :forecast="portfolioStore.forecast.data"
+            :loading="portfolioStore.forecast.loading"
+            :error="portfolioStore.forecast.error"
+            @retry="retryForecast"
+            @update:model="(m) => portfolioStore.fetchForecast(m)"
+          />
         </div>
 
         <!-- Row 6: Holdings table (col 12) -->

@@ -25,18 +25,32 @@ export const CHART_COLORS = {
 } as const
 
 /**
- * Fan-chart color constants resolved from CSS design tokens.
+ * Fan-chart color getter resolved from CSS design tokens.
+ *
+ * WR-05 fix: replaced module-level `const FAN_COLORS` with a getter function
+ * so that CSS token values are re-read each time the chart option is computed.
+ * This allows runtime theme switching (dark/light) to be reflected in chart colors
+ * without a page reload. The computed option in MonteCarloFanChart.vue calls
+ * getFanColors() inside the computed body, so it re-evaluates on theme change.
  *
  * ECharts renders on <canvas> and CANNOT resolve CSS custom properties at
- * paint time — getComputedStyle must be called at module-init time.
+ * paint time — getComputedStyle must be called at JS runtime.
  * These tokens are defined in style.css lines 65-68.
  *
- * median    = --color-fan-p50    (#0ea5e9)         — median line
+ * median    = --color-fan-p50    (#0ea5e9)              — median line
  * bandInner = --color-fan-band-1 (rgba 14,165,233,0.25) — IQR p25-p75
  * bandOuter = --color-fan-band-2 (rgba 14,165,233,0.12) — outer p5-p25, p75-p95
  */
-export const FAN_COLORS = {
-  median:    cssVar('--color-fan-p50',    '#0ea5e9'),
-  bandInner: cssVar('--color-fan-band-1', 'rgba(14,165,233,0.25)'),
-  bandOuter: cssVar('--color-fan-band-2', 'rgba(14,165,233,0.12)'),
-} as const
+export function getFanColors() {
+  return {
+    median:    cssVar('--color-fan-p50',    '#0ea5e9'),
+    bandInner: cssVar('--color-fan-band-1', 'rgba(14,165,233,0.25)'),
+    bandOuter: cssVar('--color-fan-band-2', 'rgba(14,165,233,0.12)'),
+  }
+}
+
+/**
+ * @deprecated Use getFanColors() instead. Kept for backward compatibility.
+ * Will be removed in a future cleanup pass.
+ */
+export const FAN_COLORS = getFanColors()

@@ -35,8 +35,8 @@ Requirements for the initial release (the screenshot-ready demo). Each maps to r
 
 ### Stochastic Forecasting ("Potential Futures")
 
-- [ ] **SIM-01**: User can view a Monte Carlo fan chart of projected portfolio value with percentile bands (p5/p25/p50/p75/p95)
-- [ ] **SIM-02**: User can switch the forecast between four models — GBM, Merton jump-diffusion, Heston, and historical block bootstrap
+- [x] **SIM-01**: User can view a Monte Carlo fan chart of projected portfolio value with percentile bands (p5/p25/p50/p75/p95)
+- [x] **SIM-02**: User can switch the forecast between four models — GBM, Merton jump-diffusion, Heston, and historical block bootstrap
 - [ ] **SIM-03**: Documentation explains the rationale, assumptions, and limitations of each stochastic model and why it was chosen
 
 ### Causation & Attribution
@@ -142,8 +142,8 @@ Which phases cover which requirements. Populated during roadmap creation.
 | RISK-03 | Phase 4 | Complete |
 | ATTR-01 | Phase 4 | Complete |
 | ARB-01 | Phase 4 | Complete |
-| SIM-01 | Phase 5 | Pending |
-| SIM-02 | Phase 5 | Pending |
+| SIM-01 | Phase 5 | Complete |
+| SIM-02 | Phase 5 | Complete |
 | SIM-03 | Phase 5 | Pending |
 | AI-01 | Phase 6 | Pending |
 | AI-02 | Phase 6 | Pending |

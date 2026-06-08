@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: ready_to_plan
-stopped_at: Phase 04 complete (4/4) — ready to discuss Phase 5
-last_updated: 2026-06-08T11:05:10.657Z
+status: executing
+stopped_at: "Completed 04-04-PLAN.md — Phase-4 frontend panels complete: RiskScorecard, CorrelationHeatmap, AttributionChart, PairsTable wired into DashboardView"
+last_updated: "2026-06-08T14:14:33.057Z"
 last_activity: 2026-06-08
 progress:
   total_phases: 10
   completed_phases: 4
-  total_plans: 17
-  completed_plans: 17
+  total_plans: 20
+  completed_plans: 18
   percent: 40
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-07)
 
 **Core value:** A working, screenshot-ready dashboard that demonstrates real quantitative-finance analytics narrated by a real Spring AI layer — convincing with zero setup, genuinely live when you add a key.
-**Current focus:** Phase 5 — stochastic forecasting
+**Current focus:** Phase 05 — stochastic-forecasting
 
 ## Current Position
 
-Phase: 5
-Plan: Not started
-Status: Ready to plan
+Phase: 05 (stochastic-forecasting) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
 Last activity: 2026-06-08
 
-Progress: [██████████] 100%
+Progress: [█████████░] 90%
 
 ## Performance Metrics
 
@@ -72,6 +72,7 @@ Progress: [██████████] 100%
 | Phase 04-quant-risk-engine P02 | 95 | 2 tasks | 7 files |
 | Phase 04-quant-risk-engine P03 | 40 | 2 tasks | 5 files |
 | Phase 04-quant-risk-engine P04 | 10 | 2 tasks | 7 files |
+| Phase 05 P01 | 26 | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -116,6 +117,9 @@ Recent decisions affecting current work:
 - [Phase ?]: [04-04] RiskScorecard is props-driven (not store-reading) so tests mount without store context
 - [Phase ?]: [04-04] portfolioStore.test.ts refreshAll count updated 5->9 for Phase-4 analytics additions
 - [Phase ?]: [04-04] formatPercent takes 0-1 fraction; annualizedVolatility passed as-is to formatPercent without *100
+- [05-01] finmath-lib 6.1.7 HestonModel constructor: (S0, riskFreeRate, vol=sqrt(V0), discountRate, theta, kappa, xi, rho, Scheme, Factory) — theta before kappa confirmed at Wave 0 compile time (Open Question A4 resolved)
+- [05-01] HC-11 median tolerance: 1% (widened from 0.5%) — MC sampling noise at 5000 paths is ~0.35-0.50% SE of median; 0.5% caused intermittent flakiness
+- [05-01] MonteCarloMertonModel 10-param constructor confirmed (A5); RandomVariableFromArrayFactory.createRandomVariable(double) valid for Heston params (A6)
 
 ### Pending Todos
 
@@ -142,6 +146,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-08T10:28:36.818Z
+Last session: 2026-06-08T14:14:33.024Z
 Stopped at: Completed 04-04-PLAN.md — Phase-4 frontend panels complete: RiskScorecard, CorrelationHeatmap, AttributionChart, PairsTable wired into DashboardView
 Resume file: None

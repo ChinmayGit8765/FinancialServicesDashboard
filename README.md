@@ -93,6 +93,14 @@ curl -s -b cookies.txt http://localhost:8080/api/auth/me
 
 ---
 
+## Stochastic Forecasting Models
+
+The Monte Carlo fan chart supports four models: Geometric Brownian Motion (GBM), Merton Jump-Diffusion, Heston Stochastic Volatility, and Historical Block Bootstrap.
+
+See [Model documentation](docs/MODELS.md) for rationale, key assumptions, parameters used, and known limitations of each model — written for a non-specialist audience.
+
+---
+
 ## Architecture
 
 ```

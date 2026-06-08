@@ -5,7 +5,6 @@ import com.quantlens.portfolio.domain.PortfolioRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -77,10 +76,13 @@ public class ForecastController {
      * @param authentication injected by Spring Security from the current session
      * @param model          stochastic model to use (default GBM; unknown → 400 automatically)
      * @param horizon        trading days to project (default 252; clamped to [1, 504])
-     * @return 200 with {@link ForecastDto}; 401 if unauthenticated or portfolio not found
+     * @return 200 with {@link ForecastDto};
+     *         401 if unauthenticated, user not found, or user has no portfolio
+     *         (both not-found and unauthenticated return 401 deliberately to prevent
+     *          username enumeration — IDOR mitigation T-05-01)
+     * @throws org.springframework.web.server.ResponseStatusException (401) on auth failure
      */
     @GetMapping("/forecast")
-    @Transactional(readOnly = true)
     public ResponseEntity<ForecastDto> getForecast(
             Authentication authentication,
             @RequestParam(defaultValue = "GBM") ModelType model,

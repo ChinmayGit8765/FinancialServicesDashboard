@@ -1282,7 +1282,7 @@ No new external dependencies. All tools confirmed present:
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should `portfolio::domain` or `portfolio::service` be the named interface for analytics?**
    - What we know: `portfolio::domain` is already a named interface (entities + repos). Using it directly from analytics avoids adding `@NamedInterface("service")` to `portfolio/service/package-info.java`.

@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: ready_to_plan
-stopped_at: Phase 03 complete (5/5) — ready to discuss Phase 4
-last_updated: 2026-06-07T06:53:19.930Z
-last_activity: 2026-06-07
+status: executing
+stopped_at: Completed 04-01-PLAN.md — analytics module + 5 DTOs + 4 stubs + AnalyticsController + RED tests + @Disabled printer
+last_updated: "2026-06-08T09:24:28.723Z"
+last_activity: 2026-06-08
 progress:
   total_phases: 10
   completed_phases: 3
-  total_plans: 13
-  completed_plans: 13
+  total_plans: 17
+  completed_plans: 14
   percent: 30
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-07)
 
 **Core value:** A working, screenshot-ready dashboard that demonstrates real quantitative-finance analytics narrated by a real Spring AI layer — convincing with zero setup, genuinely live when you add a key.
-**Current focus:** Phase 4 — quant risk engine
+**Current focus:** Phase 04 — quant-risk-engine
 
 ## Current Position
 
-Phase: 4
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-06-07
+Phase: 04 (quant-risk-engine) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-06-08
 
-Progress: [██████████] 100%
+Progress: [████████░░] 82%
 
 ## Performance Metrics
 
@@ -67,6 +67,7 @@ Progress: [██████████] 100%
 | Phase 03-frontend-scaffold P03 | 8 | 3 tasks | 3 files |
 | Phase 03-frontend-scaffold P04 | 5 | 3 tasks | 8 files |
 | Phase 03 P05 | 4 minutes | 3 tasks | 4 files |
+| Phase 04 P01 | 20 | 3 tasks | 24 files |
 
 ## Accumulated Context
 
@@ -102,6 +103,9 @@ Recent decisions affecting current work:
 - [03-02] fetchTransactions uses size:10 for dashboard panel (backend default is 20)
 - [03-04] TransactionsTable emits 'page-change' (not 'page') to avoid Vue prop/emit name collision
 - [03-04] HoldingsTable sort: 3-state cycle asc→desc→default(null); fraction*100 before formatSignedPercent for unrealizedPnlPct
+- [Phase ?]: [04-01] analytics Modulith module: separate com.quantlens.analytics, no portfolio::service dependency
+- [Phase ?]: [04-01] resolvePortfolioId copied verbatim from PortfolioController — IDOR T-04-01 mitigation, no portfolioId from request
+- [Phase ?]: [04-01] tsconfig.app.json exclude __tests__ — test files excluded from vue-tsc production build to allow RED scaffolds importing non-existent components
 
 ### Pending Todos
 
@@ -128,6 +132,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-07T06:15:13.417Z
-Stopped at: Completed 03-04-PLAN.md — SignedValue, SlotPlaceholder, KpiCard, HoldingsTable, TransactionsTable + 17 component tests
+Last session: 2026-06-08T09:24:28.686Z
+Stopped at: Completed 04-01-PLAN.md — analytics module + 5 DTOs + 4 stubs + AnalyticsController + RED tests + @Disabled printer
 Resume file: None

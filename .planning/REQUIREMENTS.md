@@ -29,9 +29,9 @@ Requirements for the initial release (the screenshot-ready demo). Each maps to r
 
 ### Risk Metrics
 
-- [ ] **RISK-01**: User can view a risk scorecard — Sharpe ratio, annualized volatility, max drawdown, beta vs benchmark, and 95% VaR
-- [ ] **RISK-02**: User can view a pairwise return-correlation heatmap across holdings
-- [ ] **RISK-03**: User can view VaR computed by both parametric and historical methods side by side
+- [x] **RISK-01**: User can view a risk scorecard — Sharpe ratio, annualized volatility, max drawdown, beta vs benchmark, and 95% VaR
+- [x] **RISK-02**: User can view a pairwise return-correlation heatmap across holdings
+- [x] **RISK-03**: User can view VaR computed by both parametric and historical methods side by side
 
 ### Stochastic Forecasting ("Potential Futures")
 
@@ -41,11 +41,11 @@ Requirements for the initial release (the screenshot-ready demo). Each maps to r
 
 ### Causation & Attribution
 
-- [ ] **ATTR-01**: User can view Fama-French 3-factor attribution of portfolio returns (alpha + factor betas as a contribution chart) explaining what drives returns
+- [x] **ATTR-01**: User can view Fama-French 3-factor attribution of portfolio returns (alpha + factor betas as a contribution chart) explaining what drives returns
 
 ### Arbitrage Detection
 
-- [ ] **ARB-01**: User can view a cointegration-based pairs scanner listing candidate pairs with cointegration p-value, current spread Z-score, and mean-reversion signal
+- [x] **ARB-01**: User can view a cointegration-based pairs scanner listing candidate pairs with cointegration p-value, current spread Z-score, and mean-reversion signal
 
 ### AI Layer (Spring AI, multi-provider)
 
@@ -137,11 +137,11 @@ Which phases cover which requirements. Populated during roadmap creation.
 | PORT-05 | Phase 2 | Pending |
 | AUTH-03 | Phase 3 | Complete |
 | UI-01 | Phase 3 | Complete |
-| RISK-01 | Phase 4 | Pending |
-| RISK-02 | Phase 4 | Pending |
-| RISK-03 | Phase 4 | Pending |
-| ATTR-01 | Phase 4 | Pending |
-| ARB-01 | Phase 4 | Pending |
+| RISK-01 | Phase 4 | Complete |
+| RISK-02 | Phase 4 | Complete |
+| RISK-03 | Phase 4 | Complete |
+| ATTR-01 | Phase 4 | Complete |
+| ARB-01 | Phase 4 | Complete |
 | SIM-01 | Phase 5 | Pending |
 | SIM-02 | Phase 5 | Pending |
 | SIM-03 | Phase 5 | Pending |

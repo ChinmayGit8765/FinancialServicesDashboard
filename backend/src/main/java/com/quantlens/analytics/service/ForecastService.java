@@ -194,6 +194,18 @@ public class ForecastService {
 
         log.debug("Portfolio initial value for portfolioId={}: {}", portfolioId, initialValue);
 
+        // --- WR-02 guard: refuse to simulate from a non-positive base value ---
+        // A short-only portfolio or zero-value portfolio returns initialValue=0.0, which causes
+        // GBM/Heston/Merton to produce S_t=0 for all t, and Bootstrap to stay flat at 0.
+        // Surface this as a clear error rather than silently returning a misleading zero fan.
+        if (initialValue <= 0.0) {
+            throw new IllegalArgumentException(
+                    "Portfolio initial value is zero or negative (portfolioId=" + portfolioId +
+                    ", value=" + initialValue + "). Cannot run Monte Carlo simulation from " +
+                    "a non-positive base value. Portfolio must contain long positions with " +
+                    "available price data.");
+        }
+
         // --- Step 5: Dispatch to model runner ---
         return switch (model) {
             case GBM             -> runGbm(horizonDays, annualizedMu, annualizedSigma, initialValue, model);

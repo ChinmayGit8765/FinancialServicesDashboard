@@ -15,6 +15,7 @@ import type {
   AttributionDto,
   PairResultDto,
 } from '../api/analytics'
+import type { ForecastDto, ModelType } from '../api/forecast'
 
 // Per-resource async state shape.
 // Components access resources whole — do NOT destructure (Pitfall 5, loses reactivity).
@@ -48,6 +49,9 @@ export const usePortfolioStore = defineStore('portfolio', () => {
   const correlation = asyncState<CorrelationMatrixDto>(null)
   const attribution = asyncState<AttributionDto>(null)
   const pairs       = asyncState<PairResultDto[]>(null)
+
+  // --- Phase-5 forecast state -------------------------------------------------
+  const forecast    = asyncState<ForecastDto>(null)
 
   // --- fetch actions ----------------------------------------------------------
 
@@ -236,6 +240,36 @@ export const usePortfolioStore = defineStore('portfolio', () => {
     }
   }
 
+  // --- Phase-5 forecast fetch action ------------------------------------------
+
+  /**
+   * Fetch Monte Carlo forecast bands.
+   * model: stochastic model selector — switching model re-fetches.
+   * horizon: trading days to project (default 252 = 1 year).
+   * version: race-guard — see fetchHoldings for semantics.
+   */
+  async function fetchForecast(
+    model: ModelType = 'GBM',
+    horizon = 252,
+    version?: number
+  ): Promise<void> {
+    forecast.loading = true
+    forecast.error = null
+    try {
+      const { data } = await axios.get<ForecastDto>(
+        '/api/portfolio/forecast',
+        { params: { model, horizon } }
+      )
+      if (version !== undefined && version !== refreshVersion) return
+      forecast.data = data
+    } catch (e: any) {
+      if (version !== undefined && version !== refreshVersion) return
+      forecast.error = e?.response?.status === 401 ? 'Session expired' : 'Failed to load forecast'
+    } finally {
+      forecast.loading = false
+    }
+  }
+
   // --- refreshAll ------------------------------------------------------------
 
   /**
@@ -262,6 +296,7 @@ export const usePortfolioStore = defineStore('portfolio', () => {
       fetchCorrelation(myVersion),
       fetchAttribution(myVersion),
       fetchPairs(myVersion),
+      fetchForecast('GBM', 252, myVersion),
     ])
   }
 
@@ -281,6 +316,7 @@ export const usePortfolioStore = defineStore('portfolio', () => {
     correlation.data = null; correlation.loading = false; correlation.error = null
     attribution.data = null; attribution.loading = false; attribution.error = null
     pairs.data       = null; pairs.loading       = false; pairs.error       = null
+    forecast.data    = null; forecast.loading    = false; forecast.error    = null
   }
 
   return {
@@ -294,6 +330,7 @@ export const usePortfolioStore = defineStore('portfolio', () => {
     correlation,
     attribution,
     pairs,
+    forecast,
     // actions
     fetchHoldings,
     fetchPnl,
@@ -304,6 +341,7 @@ export const usePortfolioStore = defineStore('portfolio', () => {
     fetchCorrelation,
     fetchAttribution,
     fetchPairs,
+    fetchForecast,
     refreshAll,
     $reset,
   }

@@ -23,3 +23,20 @@ export const CHART_COLORS = {
   textSecondary: cssVar('--color-text-secondary',  '#94a3b8'),
   bgBase:        cssVar('--color-bg-base',         '#0b0f1a'),
 } as const
+
+/**
+ * Fan-chart color constants resolved from CSS design tokens.
+ *
+ * ECharts renders on <canvas> and CANNOT resolve CSS custom properties at
+ * paint time — getComputedStyle must be called at module-init time.
+ * These tokens are defined in style.css lines 65-68.
+ *
+ * median    = --color-fan-p50    (#0ea5e9)         — median line
+ * bandInner = --color-fan-band-1 (rgba 14,165,233,0.25) — IQR p25-p75
+ * bandOuter = --color-fan-band-2 (rgba 14,165,233,0.12) — outer p5-p25, p75-p95
+ */
+export const FAN_COLORS = {
+  median:    cssVar('--color-fan-p50',    '#0ea5e9'),
+  bandInner: cssVar('--color-fan-band-1', 'rgba(14,165,233,0.25)'),
+  bandOuter: cssVar('--color-fan-band-2', 'rgba(14,165,233,0.12)'),
+} as const

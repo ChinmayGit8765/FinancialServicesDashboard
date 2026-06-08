@@ -90,7 +90,13 @@ Plans:
   3. User can view a pairwise return-correlation heatmap across holdings (color scale -1 to +1)
   4. User can view Fama-French 3-factor attribution showing alpha and factor betas (Mkt-RF, SMB, HML) as a contribution bar chart
   5. User can view a cointegration pairs scanner listing candidate pairs with Engle-Granger p-value, current spread Z-score, and mean-reversion signal
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+- [ ] 04-01-PLAN.md — Wave 0: analytics Modulith module + 5 DTOs + 4 stub services + 4-endpoint controller + FactorReturnRepository query + all RED test scaffolds + @Disabled golden-value printer (RISK-01/02/03, ATTR-01, ARB-01)
+- [ ] 04-02-PLAN.md — RiskCalculator (Sharpe/vol/drawdown/beta + dual VaR) + CorrelationCalculator; /risk + /correlation; golden values baked (RISK-01, RISK-02, RISK-03)
+- [ ] 04-03-PLAN.md — FamaFrenchCalculator (FF 3-factor OLS) + CointegrationScanner (Engle-Granger + ADF + MacKinnon); /attribution + /pairs (ATTR-01, ARB-01)
+- [ ] 04-04-PLAN.md — Frontend: store extension + RiskScorecard/CorrelationHeatmap/AttributionChart/PairsTable + DashboardView wiring + human-verify (RISK-01/02/03, ATTR-01, ARB-01)
+**UI hint**: yes
 
 ### Phase 5: Stochastic Forecasting
 **Goal**: Users can view a Monte Carlo fan chart of projected portfolio value across four switchable models (GBM, Merton jump-diffusion, Heston, block bootstrap) with percentile bands, and read the documented rationale for each model's assumptions and limitations.
@@ -172,7 +178,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 1. Data Foundation | 4/4 | Complete   | 2026-06-07 |
 | 2. Portfolio Domain | 4/4 | Complete   | 2026-06-07 |
 | 3. Frontend Scaffold | 5/5 | Complete   | 2026-06-07 |
-| 4. Quant Risk Engine | 0/TBD | Not started | - |
+| 4. Quant Risk Engine | 0/4 | Planned | - |
 | 5. Stochastic Forecasting | 0/TBD | Not started | - |
 | 6. Demo-Mode AI Seam | 0/TBD | Not started | - |
 | 7. RAG Pipeline | 0/TBD | Not started | - |

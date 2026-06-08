@@ -18,12 +18,19 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
 /**
- * Integration tests for FamaFrenchCalculator golden-value assertions.
+ * Integration tests for FamaFrenchCalculator — REGRESSION anchors.
  * <p>
  * Uses the seeded Testcontainers Postgres database (MersenneTwister seed=42,
  * SERIES_START=2022-09-12) — results are fully deterministic.
  * <p>
- * Golden-value constants captured from AnalyticsGoldenValuePrinterTest on 2026-06-08.
+ * Golden-value constants recaptured from AnalyticsGoldenValuePrinterTest on 2026-06-08
+ * after applying CR-03 (date-based factor alignment). Values are unchanged because the
+ * seeded 504-bar portfolio aligns exactly with the 504 FactorReturn rows — positional
+ * i+1 and date-based lookups give identical results for this dataset.
+ * <p>
+ * These tests are REGRESSION anchors (detect regressions in the seed path).
+ * For correctness anchors with independently derived expected values, see
+ * {@link RiskMathHandComputedTest}.
  * <p>
  * ATTR-01 correctness requirements verified:
  * <ul>

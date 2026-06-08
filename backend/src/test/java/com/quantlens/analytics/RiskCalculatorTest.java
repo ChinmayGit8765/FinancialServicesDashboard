@@ -20,12 +20,22 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
 /**
- * Integration tests for RiskCalculator golden-value assertions.
+ * Integration tests for RiskCalculator — REGRESSION anchors.
  * <p>
  * Uses the seeded Testcontainers Postgres database (MersenneTwister seed=42,
  * SERIES_START=2022-09-12) — results are fully deterministic.
  * <p>
- * Golden-value constants captured from AnalyticsGoldenValuePrinterTest on 2026-06-08.
+ * Golden-value constants recaptured from AnalyticsGoldenValuePrinterTest on 2026-06-08
+ * after applying CR-01 (Sharpe denominator), CR-02 (beta date alignment), and
+ * CR-03 (FF date-based factor lookup) fixes. Values are unchanged from pre-fix run
+ * because: (a) the seeded RF series is near-constant so std(excess)≈std(portfolio)
+ * within ±0.001 tolerance; (b) the seeded benchmark and portfolio share the same
+ * start date so date-alignment and trimToSameLength give the same result.
+ * <p>
+ * These tests are REGRESSION anchors — they detect regressions in the seed path.
+ * They cannot detect systematic formula bugs on their own because the expected
+ * values are derived from the same implementation. For correctness anchors, see
+ * {@link RiskMathHandComputedTest} which uses independently derived expected values.
  * <p>
  * Tolerances from 04-RESEARCH.md tolerance table:
  * <ul>

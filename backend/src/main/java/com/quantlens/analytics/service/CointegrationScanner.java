@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -62,6 +63,9 @@ public class CointegrationScanner {
 
     /** Maximum candidate pairs to evaluate (DoS guard — T-04-06). */
     private static final int MAX_CANDIDATE_PAIRS = 20;
+
+    /** Shared N(0,1) instance — IN-02: avoid re-allocating on every mackinnonPValue call. */
+    private static final NormalDistribution STANDARD_NORMAL = new NormalDistribution(0, 1);
 
     /** Minimum spread length to run ADF (guard against degenerate pairs). */
     private static final int MIN_SPREAD_LENGTH = 10;
@@ -195,10 +199,15 @@ public class CointegrationScanner {
             if (pValue >= 0.05) continue;
 
             // --- Spread Z-score (for signal computation) ---
-            DescriptiveStatistics ds = new DescriptiveStatistics(residuals);
+            // WR-02 fix: Exclude the current (last) spread from the mean/std normalization to
+            // avoid look-ahead contamination. The Z-score uses the current spread as the query
+            // point; including it in the normalization statistics biases the normalization,
+            // especially for short series near MIN_SPREAD_LENGTH=10 where the effect is ~10%.
+            double currentSpread = residuals[residuals.length - 1];
+            DescriptiveStatistics ds = new DescriptiveStatistics(
+                    Arrays.copyOf(residuals, residuals.length - 1));
             double spreadMean = ds.getMean();
             double spreadStd  = ds.getStandardDeviation();
-            double currentSpread = residuals[residuals.length - 1];
             double zScore = (spreadStd == 0.0) ? 0.0 : (currentSpread - spreadMean) / spreadStd;
 
             // --- Mean-reversion signal ---
@@ -294,8 +303,6 @@ public class CointegrationScanner {
         if (tau > TAU_MAX)  return 1.0;
         if (tau < TAU_MIN)  return 0.0;
 
-        NormalDistribution nd = new NormalDistribution(0, 1);
-
         double lstar;
         if (tau <= TAU_STAR) {
             // Small p regime: tau <= -1.61
@@ -307,6 +314,6 @@ public class CointegrationScanner {
             lstar = LARGE_P_0 + LARGE_P_1 * tau + LARGE_P_2 * tau * tau + LARGE_P_3 * tau * tau * tau;
         }
 
-        return nd.cumulativeProbability(lstar);
+        return STANDARD_NORMAL.cumulativeProbability(lstar);
     }
 }

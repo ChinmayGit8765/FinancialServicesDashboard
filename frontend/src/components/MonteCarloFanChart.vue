@@ -4,7 +4,7 @@ import VChart from 'vue-echarts'
 import type { EChartsOption } from 'echarts/types/dist/shared'
 import type { ForecastDto } from '@/api/forecast'
 import type { ModelType } from '@/api/forecast'
-import { FAN_COLORS } from '@/plugins/chart-colors'
+import { getFanColors } from '@/plugins/chart-colors'
 
 // T-03-07: axis/tooltip formatters use typed numbers only — no v-html, no raw API strings
 // T-03-08: error state shows static copy from UI-SPEC, never the raw error object
@@ -27,12 +27,13 @@ watch(selectedModel, (model) => {
 const MODEL_LABELS: ModelType[] = ['GBM', 'JUMP_DIFFUSION', 'HESTON', 'BOOTSTRAP']
 
 // NOTE: ECharts renders on <canvas> and CANNOT resolve CSS custom properties at paint time.
-// FAN_COLORS resolves the --color-fan-* tokens ONCE via getComputedStyle at module init
-// (chart-colors.ts). Use FAN_COLORS.* here — do NOT pass 'var(--color-fan-*)' strings
+// getFanColors() re-reads the --color-fan-* CSS tokens on each computed evaluation (WR-05 fix)
+// supporting runtime theme switching. Do NOT pass 'var(--color-fan-*)' strings
 // (they render as transparent/black on canvas — Pitfall 4, 05-RESEARCH.md).
 const option = computed<EChartsOption>(() => {
   if (!props.forecast?.p50?.length) return {}
 
+  const FAN_COLORS = getFanColors()  // WR-05: re-read CSS tokens on each compute (supports theme switching)
   const { p5, p25, p50, p75, p95 } = props.forecast
   const steps = p50.map((_, i) => `Day ${i + 1}`)
 
@@ -70,7 +71,8 @@ const option = computed<EChartsOption>(() => {
       // Series 1: band p5 → p25 (outer, lighter)  — DIFFERENCE, not absolute
       {
         type: 'line',
-        data: p25.map((v, i) => v - p5[i]),
+        // CR-03 fix: clamp to >= 0 — ECharts stacks negative values downward (inverted bands)
+        data: p25.map((v, i) => Math.max(0, v - p5[i])),
         stack: 'fan',
         symbol: 'none',
         lineStyle: { opacity: 0 },
@@ -79,7 +81,8 @@ const option = computed<EChartsOption>(() => {
       // Series 2: band p25 → p75 (IQR, more opaque)  — DIFFERENCE
       {
         type: 'line',
-        data: p75.map((v, i) => v - p25[i]),
+        // CR-03 fix: clamp to >= 0
+        data: p75.map((v, i) => Math.max(0, v - p25[i])),
         stack: 'fan',
         symbol: 'none',
         lineStyle: { opacity: 0 },
@@ -88,7 +91,8 @@ const option = computed<EChartsOption>(() => {
       // Series 3: band p75 → p95 (outer, lighter)  — DIFFERENCE
       {
         type: 'line',
-        data: p95.map((v, i) => v - p75[i]),
+        // CR-03 fix: clamp to >= 0
+        data: p95.map((v, i) => Math.max(0, v - p75[i])),
         stack: 'fan',
         symbol: 'none',
         lineStyle: { opacity: 0 },

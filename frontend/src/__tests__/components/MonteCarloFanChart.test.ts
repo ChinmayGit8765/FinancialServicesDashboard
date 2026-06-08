@@ -137,4 +137,100 @@ describe('MonteCarloFanChart', () => {
     const gbmButton = wrapper.findAll('.toggle-btn').find(btn => btn.text() === 'GBM')
     expect(gbmButton!.classes()).not.toContain('active')
   })
+
+  // -----------------------------------------------------------------------
+  // CR-03: Non-monotone percentiles must not produce negative series values
+  // -----------------------------------------------------------------------
+
+  /**
+   * CR-03 regression: when the forecast DTO contains a non-monotone percentile array
+   * (e.g., p25[i] < p5[i] for some i), the computed band difference must be clamped
+   * to >= 0. Before the fix, a negative difference would cause ECharts to stack downward,
+   * rendering an inverted band below the floor.
+   *
+   * We verify this by inspecting the computed `option` on the component instance.
+   */
+  it('CR-03: non-monotone percentiles produce non-negative series data (Math.max(0,...) clamp)', async () => {
+    // Deliberately non-monotone forecast: p25 < p5 at index 1, p75 < p25 at index 2
+    const nonMonotoneForecast = {
+      model: 'GBM',
+      horizonDays: 3,
+      p5:  [100, 105, 100],
+      p25: [102, 100, 103],  // p25[1] = 100 < p5[1] = 105 → difference would be -5 (negative!)
+      p50: [105, 108, 106],
+      p75: [108, 112, 100],  // p75[2] = 100 < p25[2] = 103 → difference would be -3 (negative!)
+      p95: [112, 115, 115],
+    }
+
+    const wrapper = mount(MonteCarloFanChart, {
+      props: {
+        forecast: nonMonotoneForecast as any,
+        loading: false,
+        error: null,
+      },
+    })
+
+    // Retrieve the computed ECharts option from the component
+    const vm = wrapper.vm as any
+    const option = vm.option
+
+    expect(option).toBeTruthy()
+    expect(option.series).toHaveLength(5)
+
+    // Series 1 (p5→p25 band): index 1 difference is 100-105 = -5, must be clamped to 0
+    const series1Data = option.series[1].data as number[]
+    expect(series1Data[1])
+      .toBeGreaterThanOrEqual(0) // CR-03: must NOT be -5
+
+    // Series 2 (p25→p75 band): index 2 difference is 100-103 = -3, must be clamped to 0
+    const series2Data = option.series[2].data as number[]
+    expect(series2Data[2])
+      .toBeGreaterThanOrEqual(0) // CR-03: must NOT be -3
+
+    // All series data values must be non-negative (no inverted bands)
+    for (const series of option.series.slice(1, 4)) {
+      const data = series.data as number[]
+      for (const val of data) {
+        expect(val)
+          .toBeGreaterThanOrEqual(0)
+      }
+    }
+  })
+
+  /**
+   * CR-03 regression (positive case): normal monotone forecast must produce
+   * positive differences unchanged (the Math.max(0,...) clamp does not affect valid data).
+   */
+  it('CR-03: monotone percentiles produce correct positive differences (clamp is transparent)', () => {
+    const wrapper = mount(MonteCarloFanChart, {
+      props: {
+        forecast: makeForecastData(),
+        loading: false,
+        error: null,
+      },
+    })
+
+    const vm = wrapper.vm as any
+    const option = vm.option
+
+    expect(option.series).toHaveLength(5)
+
+    // series[1] = p25 - p5 band; with increasing data these must all be positive
+    const series1Data = option.series[1].data as number[]
+    for (const val of series1Data) {
+      expect(val).toBeGreaterThan(0)
+    }
+
+    // series[2] = p75 - p25 band
+    const series2Data = option.series[2].data as number[]
+    for (const val of series2Data) {
+      expect(val).toBeGreaterThan(0)
+    }
+
+    // series[3] = p95 - p75 band
+    const series3Data = option.series[3].data as number[]
+    for (const val of series3Data) {
+      expect(val).toBeGreaterThan(0)
+    }
+  })
 })

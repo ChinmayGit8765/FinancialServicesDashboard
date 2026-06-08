@@ -370,15 +370,6 @@ public class RiskCalculator {
     }
 
     /**
-     * Trims {@code arr} to the first {@code length} elements.
-     * If arr is already shorter, returns it unchanged.
-     */
-    private static double[] trimToSameLength(double[] arr, int length) {
-        if (arr.length <= length) return arr;
-        return Arrays.copyOf(arr, length);
-    }
-
-    /**
      * Fetches the latest close price for each security ID.
      * Delegates to OhlcvBarRepository.findLatestBarBySecurityIds — single round-trip.
      */

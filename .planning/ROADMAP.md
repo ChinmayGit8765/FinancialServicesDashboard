@@ -107,7 +107,11 @@ Plans:
   1. User can view a fan chart of projected portfolio value showing p5/p25/p50/p75/p95 percentile bands over a forward horizon
   2. User can switch the forecast between four models (GBM, Merton jump-diffusion, Heston with fixed illustrative parameters, historical block bootstrap) and the fan chart updates accordingly
   3. Documentation (README or dedicated page) explains each model's rationale, key assumptions, parameter choices, and known limitations — readable by a non-specialist hiring manager
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 05-01-PLAN.md — Wave 0: finmath-lib 6.1.7 dep + ModelType/ForecastDto contracts + ForecastService stub + ForecastController endpoint + 5 RED test scaffolds (HC-11, structural, finmath smoke, controller integration, frontend) (SIM-01, SIM-02)
+- [ ] 05-02-PLAN.md — Backend MC engine: GBM/Merton/Heston (finmath) + historical block bootstrap runners + per-step percentile bands; backend suite green (SIM-01, SIM-02)
+- [ ] 05-03-PLAN.md — Frontend: forecast types + store extension + MonteCarloFanChart (band-difference fan + model selector) + DashboardView wiring + docs/MODELS.md + human-verify (SIM-01, SIM-02, SIM-03)
 **UI hint**: yes
 
 ### Phase 6: Demo-Mode AI Seam
@@ -179,7 +183,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 2. Portfolio Domain | 4/4 | Complete   | 2026-06-07 |
 | 3. Frontend Scaffold | 5/5 | Complete   | 2026-06-07 |
 | 4. Quant Risk Engine | 4/4 | Complete   | 2026-06-08 |
-| 5. Stochastic Forecasting | 0/TBD | Not started | - |
+| 5. Stochastic Forecasting | 0/3 | Not started | - |
 | 6. Demo-Mode AI Seam | 0/TBD | Not started | - |
 | 7. RAG Pipeline | 0/TBD | Not started | - |
 | 8. Live AI Features | 0/TBD | Not started | - |

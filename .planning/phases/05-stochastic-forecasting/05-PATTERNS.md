@@ -77,11 +77,14 @@ public class ForecastService {
 
     private final PositionRepository positionRepository;
     private final RiskCalculator riskCalculator;           // reuse equity-curve helpers
+    private final OhlcvBarRepository ohlcvBarRepository;    // REQUIRED for current portfolio value (latest closes)
 
     public ForecastService(PositionRepository positionRepository,
-                           RiskCalculator riskCalculator) {
+                           RiskCalculator riskCalculator,
+                           OhlcvBarRepository ohlcvBarRepository) {
         this.positionRepository = positionRepository;
         this.riskCalculator = riskCalculator;
+        this.ohlcvBarRepository = ohlcvBarRepository;
         // Feller condition guard — fail-fast at startup
         if (2.0 * HESTON_KAPPA * HESTON_THETA <= HESTON_XI * HESTON_XI) {
             throw new IllegalStateException(
@@ -686,6 +689,9 @@ const option = computed<EChartsOption>(() => {
           }).format(v),
       },
     },
+    // NOTE: ECharts renders on <canvas> and CANNOT resolve CSS custom properties at paint time.
+    // Resolve the fan tokens ONCE via getComputedStyle into a FAN_COLORS object (see chart-colors.ts / 05-03 Task 1)
+    // and use FAN_COLORS.* below — do NOT pass 'var(--color-fan-*)' strings (they render transparent/black on canvas).
     series: [
       // Base (p5 floor, invisible fill)
       { type: 'line', data: p5, stack: 'fan', symbol: 'none',
@@ -693,19 +699,19 @@ const option = computed<EChartsOption>(() => {
       // Band p5→p25 (outer)
       { type: 'line', data: p25.map((v, i) => v - p5[i]), stack: 'fan',
         symbol: 'none', lineStyle: { opacity: 0 },
-        areaStyle: { color: 'var(--color-fan-band-2)' } },
+        areaStyle: { color: FAN_COLORS.bandOuter } },
       // Band p25→p75 (IQR, more opaque)
       { type: 'line', data: p75.map((v, i) => v - p25[i]), stack: 'fan',
         symbol: 'none', lineStyle: { opacity: 0 },
-        areaStyle: { color: 'var(--color-fan-band-1)' } },
+        areaStyle: { color: FAN_COLORS.bandInner } },
       // Band p75→p95 (outer)
       { type: 'line', data: p95.map((v, i) => v - p75[i]), stack: 'fan',
         symbol: 'none', lineStyle: { opacity: 0 },
-        areaStyle: { color: 'var(--color-fan-band-2)' } },
+        areaStyle: { color: FAN_COLORS.bandOuter } },
       // Median line (NOT stacked — absolute p50 values)
       { type: 'line', name: 'Median (p50)', data: p50,
         symbol: 'none',
-        lineStyle: { color: 'var(--color-fan-p50)', width: 2 } },
+        lineStyle: { color: FAN_COLORS.median, width: 2 } },
     ],
     tooltip: { trigger: 'axis', formatter: (params: any) => { ... } },
   }

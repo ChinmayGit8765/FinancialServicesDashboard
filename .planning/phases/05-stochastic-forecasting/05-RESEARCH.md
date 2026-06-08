@@ -984,22 +984,13 @@ The file should be at `docs/MODELS.md` and linked from README. Target audience: 
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **finmath 6.1.7 exact HestonModel constructor parameter order**
-   - What we know: constructor takes `(initialValue, riskFreeRate, volatility, discountRate, theta, kappa, xi, rho, Scheme, RandomVariableFactory)` — verified from GitHub source
-   - What's unclear: whether the parameter order for `theta`/`kappa` vs `kappa`/`theta` matches the documentation (some finmath versions had these swapped)
-   - Recommendation: Write a Wave 0 integration test that verifies `E[variance_t] → theta` as `t → ∞` for the instantiated model. If mean-reversion is going the wrong way, swap kappa/theta.
+1. **finmath 6.1.7 HestonModel constructor parameter order** — **RESOLVED (gated at Wave 0):** constructor `(initialValue, riskFreeRate, volatility, discountRate, theta, kappa, xi, rho, Scheme, RandomVariableFactory)` verified from GitHub source. Resolution is confirmed at Wave-0 compile + the ForecastFinmathIntegrationTest which asserts variance mean-reverts to `theta` as t→∞ (if reversed, swap kappa/theta). 05-01-SUMMARY records the confirmed order for 05-02. This is an acceptable compile-time gate, not an open risk.
 
-2. **ForecastController: new controller vs extend AnalyticsController**
-   - What we know: `AnalyticsController` handles 4 endpoints under `analytics` module; forecast is closely related
-   - What's unclear: whether `/api/portfolio/forecast` belongs in `AnalyticsController` or a new `ForecastController`
-   - Recommendation: Create a separate `ForecastController` to keep `AnalyticsController` focused. Both are in `com.quantlens.analytics.api`.
+2. **ForecastController vs extend AnalyticsController** — **RESOLVED:** create a separate `ForecastController` in `com.quantlens.analytics.api` to keep AnalyticsController focused.
 
-3. **Caching strategy for simulation results**
-   - What we know: Fixed seed means results are deterministic per (portfolioId, model, horizon)
-   - What's unclear: whether Spring `@Cacheable` (requiring a CacheManager bean) or a simple `ConcurrentHashMap` is preferred
-   - Recommendation: Use a private `ConcurrentHashMap<String, ForecastDto>` with a manual TTL check. Avoids Spring cache configuration overhead for a demo-mode project.
+3. **Caching strategy** — **RESOLVED:** synchronous is acceptable for the demo (per Performance section); caching is OPTIONAL. If added, use a private `ConcurrentHashMap<String,ForecastDto>` keyed on (portfolioId,model,horizon) with a manual TTL — NOT Spring `@Cacheable` (avoids CacheManager config). Deferred as non-blocking.
 
 ---
 

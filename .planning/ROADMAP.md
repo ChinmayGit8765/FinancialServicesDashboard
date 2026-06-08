@@ -93,7 +93,7 @@ Plans:
 **Plans**: 4 plans
 Plans:
 - [x] 04-01-PLAN.md — Wave 0: analytics Modulith module + 5 DTOs + 4 stub services + 4-endpoint controller + FactorReturnRepository query + all RED test scaffolds + @Disabled golden-value printer (RISK-01/02/03, ATTR-01, ARB-01)
-- [ ] 04-02-PLAN.md — RiskCalculator (Sharpe/vol/drawdown/beta + dual VaR) + CorrelationCalculator; /risk + /correlation; golden values baked (RISK-01, RISK-02, RISK-03)
+- [x] 04-02-PLAN.md — RiskCalculator (Sharpe/vol/drawdown/beta + dual VaR) + CorrelationCalculator; /risk + /correlation; golden values baked (RISK-01, RISK-02, RISK-03)
 - [ ] 04-03-PLAN.md — FamaFrenchCalculator (FF 3-factor OLS) + CointegrationScanner (Engle-Granger + ADF + MacKinnon); /attribution + /pairs (ATTR-01, ARB-01)
 - [ ] 04-04-PLAN.md — Frontend: store extension + RiskScorecard/CorrelationHeatmap/AttributionChart/PairsTable + DashboardView wiring + human-verify (RISK-01/02/03, ATTR-01, ARB-01)
 **UI hint**: yes
@@ -178,7 +178,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 1. Data Foundation | 4/4 | Complete   | 2026-06-07 |
 | 2. Portfolio Domain | 4/4 | Complete   | 2026-06-07 |
 | 3. Frontend Scaffold | 5/5 | Complete   | 2026-06-07 |
-| 4. Quant Risk Engine | 1/4 | In Progress|  |
+| 4. Quant Risk Engine | 2/4 | In Progress|  |
 | 5. Stochastic Forecasting | 0/TBD | Not started | - |
 | 6. Demo-Mode AI Seam | 0/TBD | Not started | - |
 | 7. RAG Pipeline | 0/TBD | Not started | - |

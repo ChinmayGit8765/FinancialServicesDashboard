@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-01-PLAN.md — analytics module + 5 DTOs + 4 stubs + AnalyticsController + RED tests + @Disabled printer
-last_updated: "2026-06-08T09:24:28.723Z"
+stopped_at: Completed 04-02-PLAN.md — RiskCalculator + CorrelationCalculator + golden tests GREEN
+last_updated: "2026-06-08T10:00:32.625Z"
 last_activity: 2026-06-08
 progress:
   total_phases: 10
   completed_phases: 3
   total_plans: 17
-  completed_plans: 14
+  completed_plans: 15
   percent: 30
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Phase: 04 (quant-risk-engine) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-06-08
 
-Progress: [████████░░] 82%
+Progress: [█████████░] 88%
 
 ## Performance Metrics
 
@@ -68,6 +68,7 @@ Progress: [████████░░] 82%
 | Phase 03-frontend-scaffold P04 | 5 | 3 tasks | 8 files |
 | Phase 03 P05 | 4 minutes | 3 tasks | 4 files |
 | Phase 04 P01 | 20 | 3 tasks | 24 files |
+| Phase 04-quant-risk-engine P02 | 95 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -106,6 +107,9 @@ Recent decisions affecting current work:
 - [Phase ?]: [04-01] analytics Modulith module: separate com.quantlens.analytics, no portfolio::service dependency
 - [Phase ?]: [04-01] resolvePortfolioId copied verbatim from PortfolioController — IDOR T-04-01 mitigation, no portfolioId from request
 - [Phase ?]: [04-01] tsconfig.app.json exclude __tests__ — test files excluded from vue-tsc production build to allow RED scaffolds importing non-existent components
+- [Phase ?]: Local analytics.service.DateValueDto satisfies Modulith portfolio::domain boundary
+- [Phase ?]: GBM seed all-1.0 correlation is correct (shared market factor only) — GOLDEN_CORR_AAPL_MSFT=1.0
+- [Phase ?]: Risk and Correlation tests promoted to integration tests requiring AbstractPostgresIntegrationTest
 
 ### Pending Todos
 
@@ -132,6 +136,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-08T09:24:28.686Z
-Stopped at: Completed 04-01-PLAN.md — analytics module + 5 DTOs + 4 stubs + AnalyticsController + RED tests + @Disabled printer
+Last session: 2026-06-08T10:00:32.591Z
+Stopped at: Completed 04-02-PLAN.md — RiskCalculator + CorrelationCalculator + golden tests GREEN
 Resume file: None

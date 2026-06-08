@@ -97,18 +97,16 @@ public class FamaFrenchCalculator {
         // --- Load factor returns ordered ASC ---
         List<FactorReturn> factorRows = factorReturnRepository.findAllByOrderByFactorDateAsc();
 
-        // Defensive alignment guard: factorRows must have exactly nReturns + 1 entries
-        // (504 factor rows for 503 log returns from 504-bar equity curve)
-        if (factorRows.size() != nReturns + 1) {
-            throw new IllegalStateException(
-                    "Factor alignment failure: expected " + (nReturns + 1) + " factor rows " +
-                    "for " + nReturns + " portfolio log returns, but got " + factorRows.size() +
-                    ". Ensure FactorReturn table has the same 504-day trading calendar as OHLCV bars.");
-        }
+        // CR-03 fix: Replace exact-equality guard + positional i+1 offset with DATE-BASED lookup.
+        // The old guard required factorRows.size() == nReturns + 1 (i.e., exactly 504 rows for
+        // 503 returns), throwing on any portfolio shorter than 504 bars. Date-based lookup works
+        // for portfolios of any length whose dates fall within the FactorReturn table.
+        Map<LocalDate, FactorReturn> factorByDate = factorRows.stream()
+                .collect(Collectors.toMap(FactorReturn::getFactorDate, fr -> fr));
 
-        // --- Build X matrix and excess return vector (aligned at i+1) ---
-        // xMatrix[i] = {MktRf[i+1], SMB[i+1], HML[i+1]} for each return index i
-        // excessReturns[i] = returns[i] - RF[i+1]
+        // --- Build X matrix and excess return vector (date-aligned) ---
+        // Return[i] = ln(curve[i+1]/curve[i]) → closing date is curve.get(i+1).date()
+        // Factor row for that return is factorByDate.get(curve.get(i+1).date())
         // DO NOT add a ones-column — Hipparchus adds intercept automatically (PITFALL 2)
         double[] excessReturns = new double[nReturns];
         double[][] xMatrix = new double[nReturns][3];
@@ -117,7 +115,13 @@ public class FamaFrenchCalculator {
         double[] hmlArr = new double[nReturns];
 
         for (int i = 0; i < nReturns; i++) {
-            FactorReturn fr = factorRows.get(i + 1); // CRITICAL: use i+1 alignment (PITFALL 5)
+            LocalDate returnDate = curve.get(i + 1).date();
+            FactorReturn fr = factorByDate.get(returnDate);
+            if (fr == null) {
+                throw new IllegalStateException(
+                        "No factor row for date " + returnDate +
+                        ". Ensure FactorReturn table covers the full portfolio history.");
+            }
             double mktRf = fr.getMktRf().doubleValue();
             double smb = fr.getSmb().doubleValue();
             double hml = fr.getHml().doubleValue();

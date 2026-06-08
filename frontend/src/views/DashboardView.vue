@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, computed } from 'vue'
 import { usePortfolioStore } from '../stores/portfolio'
-import { formatCurrency, formatSignedCurrency, formatSignedPercent } from '../utils/format'
+import { formatCurrency, formatSignedCurrency, formatSignedPercent, formatPercent } from '../utils/format'
 
 import TopBar from '../components/TopBar.vue'
 import KpiCard from '../components/KpiCard.vue'
@@ -11,6 +11,10 @@ import AllocationChart from '../components/AllocationChart.vue'
 import HoldingsTable from '../components/HoldingsTable.vue'
 import TransactionsTable from '../components/TransactionsTable.vue'
 import SlotPlaceholder from '../components/SlotPlaceholder.vue'
+import RiskScorecard from '../components/RiskScorecard.vue'
+import CorrelationHeatmap from '../components/CorrelationHeatmap.vue'
+import AttributionChart from '../components/AttributionChart.vue'
+import PairsTable from '../components/PairsTable.vue'
 
 const portfolioStore = usePortfolioStore()
 
@@ -58,6 +62,22 @@ const dailyChangeDelta = computed(() =>
   portfolioStore.pnl.data ? portfolioStore.pnl.data.dailyChangePct * 100 : undefined
 )
 
+// --- Risk KPI derived values (access risk resource whole, never destructure) ---
+
+const riskKpiLoading = computed(() => portfolioStore.risk.loading)
+
+// Sharpe ratio KPI for the strip — shows "—" when not yet loaded
+const sharpePrimary = computed(() =>
+  portfolioStore.risk.data ? portfolioStore.risk.data.sharpeRatio.toFixed(2) : '—'
+)
+
+// Annualized volatility KPI (formatPercent expects 0-1 fraction)
+const volatilityPrimary = computed(() =>
+  portfolioStore.risk.data
+    ? formatPercent(portfolioStore.risk.data.annualizedVolatility)
+    : '—'
+)
+
 // --- Handlers ---------------------------------------------------------------
 
 function handleTransactionsPage(page: number): void {
@@ -68,6 +88,10 @@ function retryHoldings(): void { portfolioStore.fetchHoldings() }
 function retryPnl(): void { portfolioStore.fetchPnl() }
 function retryAllocation(): void { portfolioStore.fetchAllocation() }
 function retryBenchmark(): void { portfolioStore.fetchBenchmark() }
+function retryRisk(): void { portfolioStore.fetchRisk() }
+function retryCorrelation(): void { portfolioStore.fetchCorrelation() }
+function retryAttribution(): void { portfolioStore.fetchAttribution() }
+function retryPairs(): void { portfolioStore.fetchPairs() }
 </script>
 
 <template>
@@ -98,21 +122,17 @@ function retryBenchmark(): void { portfolioStore.fetchBenchmark() }
             :delta="dailyChangeDelta"
             :loading="kpiLoading"
           />
-          <!-- Phase 4 placeholder KPI cards -->
-          <div class="kpi-placeholder" title="Available in Phase 4">
-            <KpiCard
-              label="Risk Score — Phase 4"
-              primary="—"
-              :loading="false"
-            />
-          </div>
-          <div class="kpi-placeholder" title="Available in Phase 4">
-            <KpiCard
-              label="Sharpe Ratio — Phase 4"
-              primary="—"
-              :loading="false"
-            />
-          </div>
+          <!-- Phase 4: real Sharpe and Volatility KPI cards -->
+          <KpiCard
+            label="Sharpe Ratio"
+            :primary="sharpePrimary"
+            :loading="riskKpiLoading"
+          />
+          <KpiCard
+            label="Ann. Volatility"
+            :primary="volatilityPrimary"
+            :loading="riskKpiLoading"
+          />
         </div>
 
         <!-- Row 2: P&L Chart (col 7) + Benchmark Chart (col 5) -->
@@ -143,12 +163,40 @@ function retryBenchmark(): void { portfolioStore.fetchBenchmark() }
           />
         </div>
         <div class="col-6">
-          <SlotPlaceholder label="Risk Scorecard — Phase 4" minHeight="280px" />
+          <RiskScorecard
+            :risk="portfolioStore.risk.data"
+            :loading="portfolioStore.risk.loading"
+            :error="portfolioStore.risk.error"
+            @retry="retryRisk"
+          />
         </div>
 
-        <!-- Row 4: Correlation Heatmap slot (col 12) -->
+        <!-- Row 4: Correlation Heatmap (col 12) -->
         <div class="col-12">
-          <SlotPlaceholder label="Correlation Heatmap — Phase 4" minHeight="240px" />
+          <CorrelationHeatmap
+            :correlation="portfolioStore.correlation.data"
+            :loading="portfolioStore.correlation.loading"
+            :error="portfolioStore.correlation.error"
+            @retry="retryCorrelation"
+          />
+        </div>
+
+        <!-- Row 4b: Attribution (col 6) + Pairs (col 6) — Phase 4 new rows -->
+        <div class="col-6">
+          <AttributionChart
+            :attribution="portfolioStore.attribution.data"
+            :loading="portfolioStore.attribution.loading"
+            :error="portfolioStore.attribution.error"
+            @retry="retryAttribution"
+          />
+        </div>
+        <div class="col-6">
+          <PairsTable
+            :pairs="portfolioStore.pairs.data"
+            :loading="portfolioStore.pairs.loading"
+            :error="portfolioStore.pairs.error"
+            @retry="retryPairs"
+          />
         </div>
 
         <!-- Row 5: Monte Carlo slot (col 12) -->

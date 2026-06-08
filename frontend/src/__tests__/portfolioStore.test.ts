@@ -102,21 +102,26 @@ describe('usePortfolioStore', () => {
     expect(store.holdings.data).toBeNull()
   })
 
-  it('refreshAll calls axios.get exactly 5 times', async () => {
+  it('refreshAll calls axios.get exactly 9 times (5 Phase-3 + 4 Phase-4 analytics)', async () => {
     const { usePortfolioStore } = await import('../stores/portfolio')
     const store = usePortfolioStore()
 
-    // All 5 fetches resolve successfully
+    // All 9 fetches resolve successfully
     mockedAxios.get = vi.fn()
       .mockResolvedValueOnce({ data: holdingsPayload() })
       .mockResolvedValueOnce({ data: pnlPayload() })
       .mockResolvedValueOnce({ data: [{ label: 'Tech', weight: 0.5, marketValue: 1000 }] })
       .mockResolvedValueOnce({ data: { content: [], totalPages: 1, totalElements: 0, number: 0, size: 10 } })
       .mockResolvedValueOnce({ data: { dates: [], portfolioSeries: [], benchmarkSeries: [] } })
+      // Phase-4 analytics:
+      .mockResolvedValueOnce({ data: { sharpeRatio: 0.5, annualizedVolatility: 0.2, maxDrawdown: -0.1, beta: 1.0, var: [] } })
+      .mockResolvedValueOnce({ data: { tickers: [], matrix: [] } })
+      .mockResolvedValueOnce({ data: { alphaAnnualized: 0.01, betaMkt: 0.9, betaSmb: 0.1, betaHml: 0.05, rSquared: 0.85, contribMktAnnualized: 0.08, contribSmbAnnualized: 0.01, contribHmlAnnualized: 0.005 } })
+      .mockResolvedValueOnce({ data: [] })
 
     await store.refreshAll()
 
-    expect(mockedAxios.get).toHaveBeenCalledTimes(5)
+    expect(mockedAxios.get).toHaveBeenCalledTimes(9)
   })
 
   /**
@@ -158,14 +163,17 @@ describe('usePortfolioStore', () => {
     const slowPnlAPromise = new Promise<any>(resolve => { resolveSlowPnlA = resolve })
 
     // Track how many axios.get calls have been made total across both batches
+    // refreshAll now issues 9 calls (5 Phase-3 + 4 Phase-4 analytics per batch).
+    // Pnl is always the 2nd call within a batch.
+    // Batch A: calls 1–9 (pnl = call 2); Batch B: calls 10–18 (pnl = call 11).
     let callCount = 0
     mockedAxios.get = vi.fn().mockImplementation(() => {
       callCount = callCount + 1
       const n = callCount
-      // Batch A (calls 1–5): call 2 is pnl — make it slow
+      // Batch A (calls 1–9): call 2 is pnl — make it slow
       if (n === 2) return slowPnlAPromise
-      // Batch B (calls 6–10): all fast; call 7 is pnl for batch B
-      if (n === 7) return Promise.resolve({ data: personaBPnl })
+      // Batch B (calls 10–18): all fast; call 11 is pnl for batch B
+      if (n === 11) return Promise.resolve({ data: personaBPnl })
       // Everything else resolves immediately with a generic payload
       return Promise.resolve({ data: pnlPayload() })
     })

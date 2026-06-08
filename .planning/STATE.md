@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "Completed 04-04-PLAN.md — Phase-4 frontend panels complete: RiskScorecard, CorrelationHeatmap, AttributionChart, PairsTable wired into DashboardView"
-last_updated: "2026-06-08T14:14:33.057Z"
+stopped_at: "Completed 05-02-PLAN.md — 4-model Monte Carlo engine (GBM/Merton/Heston/Bootstrap) implemented; all 16 forecast tests GREEN; full backend suite 96 tests passing"
+last_updated: "2026-06-08T14:23:09.826Z"
 last_activity: 2026-06-08
 progress:
   total_phases: 10
   completed_phases: 4
   total_plans: 20
-  completed_plans: 18
+  completed_plans: 19
   percent: 40
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Phase: 05 (stochastic-forecasting) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-06-08
 
-Progress: [█████████░] 90%
+Progress: [██████████] 95%
 
 ## Performance Metrics
 
@@ -73,6 +73,7 @@ Progress: [█████████░] 90%
 | Phase 04-quant-risk-engine P03 | 40 | 2 tasks | 5 files |
 | Phase 04-quant-risk-engine P04 | 10 | 2 tasks | 7 files |
 | Phase 05 P01 | 26 | 3 tasks | 10 files |
+| Phase 05 P02 | 6 | 2 tasks | 1 file |
 
 ## Accumulated Context
 
@@ -120,6 +121,8 @@ Recent decisions affecting current work:
 - [05-01] finmath-lib 6.1.7 HestonModel constructor: (S0, riskFreeRate, vol=sqrt(V0), discountRate, theta, kappa, xi, rho, Scheme, Factory) — theta before kappa confirmed at Wave 0 compile time (Open Question A4 resolved)
 - [05-01] HC-11 median tolerance: 1% (widened from 0.5%) — MC sampling noise at 5000 paths is ~0.35-0.50% SE of median; 0.5% caused intermittent flakiness
 - [05-01] MonteCarloMertonModel 10-param constructor confirmed (A5); RandomVariableFromArrayFactory.createRandomVariable(double) valid for Heston params (A6)
+- [05-02] extractBands accepts AssetModelMonteCarloSimulationModel interface — shared by MonteCarloAssetModel (GBM/Heston) and MonteCarloMertonModel; no duplication needed
+- [05-02] Bootstrap L=max(10,√H): preserves ~monthly autocorrelation/volatility clustering; boundary-safe blockStart=rng.nextInt(H-L+1); step-major double[H][N] matrix for memory-efficient percentile extraction
 
 ### Pending Todos
 
@@ -146,6 +149,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-08T14:14:33.024Z
+Last session: 2026-06-08T14:23:09.805Z
 Stopped at: Completed 04-04-PLAN.md — Phase-4 frontend panels complete: RiskScorecard, CorrelationHeatmap, AttributionChart, PairsTable wired into DashboardView
 Resume file: None

@@ -40,7 +40,8 @@ class AnalyticsControllerIntegrationTest extends AbstractPostgresIntegrationTest
     // Golden-value constants — FILL from AnalyticsGoldenValuePrinterTest
     // -----------------------------------------------------------------------
 
-    private static final double GOLDEN_HIST_VAR_AMOUNT = 0.0; // FILL from printer (BigDecimal monetary)
+    // Captured from AnalyticsGoldenValuePrinterTest 2026-06-08 (seed=42, alice Growth Portfolio)
+    private static final double GOLDEN_HIST_VAR_AMOUNT = 1464.52;
 
     // -----------------------------------------------------------------------
     // T-04-02: Auth gate — passes immediately (Phase 1 SecurityConfig already wired)

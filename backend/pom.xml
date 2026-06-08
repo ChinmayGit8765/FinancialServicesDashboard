@@ -112,6 +112,15 @@
 			<scope>test</scope>
 		</dependency>
 
+		<!-- Phase 5: Monte Carlo SDE engine (GBM, Merton jump-diffusion, Heston) -->
+		<!-- commons-math3:3.6.1 is a harmless transitive dep (finmath uses it internally) — do NOT add exclusions -->
+		<!-- MertonModel Poisson process requires commons-math3; Hipparchus uses org.hipparchus (different groupId) — zero class collision -->
+		<dependency>
+			<groupId>net.finmath</groupId>
+			<artifactId>finmath-lib</artifactId>
+			<version>6.1.7</version>
+		</dependency>
+
 		<!-- Hipparchus — seedable MersenneTwister RNG + NormalDistribution for GBM generator -->
 		<!-- STACK.md-locked at 4.0.3 — Apache Commons Math successor, same API, active team -->
 		<dependency>

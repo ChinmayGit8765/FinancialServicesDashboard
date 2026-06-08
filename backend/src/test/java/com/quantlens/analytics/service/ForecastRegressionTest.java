@@ -1,4 +1,4 @@
-package com.quantlens.analytics;
+package com.quantlens.analytics.service;
 
 import com.quantlens.analytics.service.ForecastService;
 import org.hipparchus.stat.descriptive.DescriptiveStatistics;

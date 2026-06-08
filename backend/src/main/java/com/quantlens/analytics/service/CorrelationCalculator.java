@@ -3,6 +3,8 @@ package com.quantlens.analytics.service;
 import com.quantlens.analytics.api.CorrelationMatrixDto;
 import com.quantlens.marketdata.domain.OhlcvBar;
 import com.quantlens.marketdata.domain.OhlcvBarRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.quantlens.portfolio.domain.Position;
 import com.quantlens.portfolio.domain.PositionRepository;
 import org.hipparchus.linear.RealMatrix;
@@ -38,6 +40,8 @@ import java.util.stream.Collectors;
 @Service
 @Transactional(readOnly = true)
 public class CorrelationCalculator {
+
+    private static final Logger log = LoggerFactory.getLogger(CorrelationCalculator.class);
 
     private final PositionRepository positionRepository;
     private final OhlcvBarRepository ohlcvBarRepository;
@@ -115,6 +119,12 @@ public class CorrelationCalculator {
             }
         }
         if (commonDates == null || commonDates.size() < 2) {
+            // WR-03: log a warning so insufficient-data fallback is observable.
+            // The identity matrix returned here (off-diagonal = 0) means "no data",
+            // NOT "truly uncorrelated". The frontend should treat this as an insufficient-data state.
+            log.warn("CorrelationCalculator: insufficient common trading dates ({}) for portfolio {}. " +
+                     "Returning identity matrix — off-diagonal zeros indicate missing data, not zero correlation.",
+                     commonDates == null ? 0 : commonDates.size(), portfolioId);
             return new CorrelationMatrixDto(tickers, identityMatrix(tickers.size()));
         }
 

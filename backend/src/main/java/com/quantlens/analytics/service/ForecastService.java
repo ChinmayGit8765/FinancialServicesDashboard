@@ -6,6 +6,15 @@ import com.quantlens.marketdata.domain.OhlcvBar;
 import com.quantlens.marketdata.domain.OhlcvBarRepository;
 import com.quantlens.portfolio.domain.Position;
 import com.quantlens.portfolio.domain.PositionRepository;
+import net.finmath.montecarlo.BrownianMotionFromMersenneRandomNumbers;
+import net.finmath.montecarlo.RandomVariableFromArrayFactory;
+import net.finmath.montecarlo.assetderivativevaluation.MonteCarloAssetModel;
+import net.finmath.montecarlo.assetderivativevaluation.MonteCarloMertonModel;
+import net.finmath.montecarlo.assetderivativevaluation.models.BlackScholesModel;
+import net.finmath.montecarlo.assetderivativevaluation.models.HestonModel;
+import net.finmath.montecarlo.process.EulerSchemeFromProcessModel;
+import net.finmath.time.TimeDiscretizationFromArray;
+import org.hipparchus.random.MersenneTwister;
 import org.hipparchus.stat.descriptive.DescriptiveStatistics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,14 +33,13 @@ import java.util.stream.Collectors;
  * <h3>Supported models</h3>
  * <ul>
  *   <li><strong>GBM</strong> — Geometric Brownian Motion via finmath {@code BlackScholesModel}
- *       with Ito correction (drift = μ − σ²/2 in log-space). Engine in Plan 05-02.</li>
+ *       with Ito correction (drift = μ − σ²/2 in log-space; applied internally by finmath).</li>
  *   <li><strong>JUMP_DIFFUSION</strong> — Merton jump-diffusion via finmath
- *       {@code MonteCarloMertonModel}. Engine in Plan 05-02.</li>
+ *       {@code MonteCarloMertonModel}.</li>
  *   <li><strong>HESTON</strong> — Heston stochastic-vol model via finmath {@code HestonModel}
- *       with {@code FULL_TRUNCATION} scheme. Illustrative parameters (not calibrated from data).
- *       Feller condition enforced at construction time. Engine in Plan 05-02.</li>
+ *       with {@code FULL_TRUNCATION} scheme. Feller condition enforced at construction time.</li>
  *   <li><strong>BOOTSTRAP</strong> — Historical block bootstrap; resamples observed log-return
- *       blocks of length ≈ √H to preserve volatility clustering. Engine in Plan 05-02.</li>
+ *       blocks of length L = max(10, √H) to preserve volatility clustering.</li>
  * </ul>
  *
  * <h3>Calibration</h3>
@@ -54,6 +62,13 @@ import java.util.stream.Collectors;
  *   <li>MC_SEED = 42 — fixed seed for reproducible fan charts</li>
  *   <li>NUM_PATHS = 5000 — sufficient for smooth p5–p95 bands</li>
  * </ul>
+ *
+ * <h3>Performance (RESEARCH.md §Performance Note)</h3>
+ * <p>
+ * Caching is deliberately deferred for Phase 5. Synchronous, single-shot simulation per
+ * request is acceptable (5000 paths × ≤504 steps completes within the request latency budget).
+ * No async layer, queue, executor pool, or cache is added here.
+ * </p>
  */
 @Service
 @Transactional(readOnly = true)
@@ -140,7 +155,7 @@ public class ForecastService {
      *   <li>Compute daily log returns via {@link RiskCalculator#logReturns}</li>
      *   <li>Calibrate annualized μ and σ via {@link DescriptiveStatistics}</li>
      *   <li>Compute current portfolio value via latest closes</li>
-     *   <li>Dispatch to model runner (STUB — engine arrives in Plan 05-02)</li>
+     *   <li>Dispatch to model runner (GBM, Merton, Heston, or Bootstrap)</li>
      * </ol>
      *
      * @param portfolioId the authenticated user's portfolio (resolved by controller, never from request)
@@ -148,7 +163,6 @@ public class ForecastService {
      * @param horizonDays number of trading days to project (already clamped to [1,504] by controller)
      * @return ForecastDto with p5/p25/p50/p75/p95 percentile bands per step
      * @throws IllegalArgumentException if fewer than 2 daily log returns are available for calibration
-     * @throws UnsupportedOperationException STUB — engine not yet implemented (Plan 05-02)
      */
     public ForecastDto forecast(Long portfolioId, ModelType model, int horizonDays) {
         // --- Step 1: Load positions and build equity curve ---
@@ -168,32 +182,282 @@ public class ForecastService {
         double annualizedMu    = stats.getMean()              * 252.0;
         double annualizedSigma = stats.getStandardDeviation() * Math.sqrt(252.0);
 
-        log.debug("Calibration for portfolioId={}: annualizedMu={:.4f}, annualizedSigma={:.4f}, " +
-                  "nReturns={}", portfolioId, annualizedMu, annualizedSigma, dailyLogReturns.length);
+        log.debug("Calibration for portfolioId={}: annualizedMu={}, annualizedSigma={}, nReturns={}",
+                  portfolioId, annualizedMu, annualizedSigma, dailyLogReturns.length);
 
         // --- Step 4: Compute current portfolio value ---
         double initialValue = computeCurrentPortfolioValue(positions);
 
-        log.debug("Portfolio initial value for portfolioId={}: {:.2f}", portfolioId, initialValue);
+        log.debug("Portfolio initial value for portfolioId={}: {}", portfolioId, initialValue);
 
-        // --- Step 5: Dispatch to model runner (STUB — Plan 05-02 implements the engine) ---
-        // All models throw UnsupportedOperationException until Plan 05-02.
-        // The test scaffolds in this plan (05-01) are intentionally RED until 05-02.
-        throw new UnsupportedOperationException(
-                "Monte Carlo engine not yet implemented — arrives in Plan 05-02. " +
-                "model=" + model + " horizonDays=" + horizonDays +
-                " portfolioId=" + portfolioId);
+        // --- Step 5: Dispatch to model runner ---
+        return switch (model) {
+            case GBM             -> runGbm(horizonDays, annualizedMu, annualizedSigma, initialValue, model);
+            case JUMP_DIFFUSION  -> runMerton(horizonDays, annualizedMu, annualizedSigma, initialValue, model);
+            case HESTON          -> runHeston(horizonDays, annualizedMu, annualizedSigma, initialValue, model);
+            case BOOTSTRAP       -> runBootstrap(horizonDays, dailyLogReturns, initialValue, model);
+        };
     }
 
     // -------------------------------------------------------------------------
-    // Package-accessible helpers (used by tests)
+    // Private model runners
     // -------------------------------------------------------------------------
+
+    /**
+     * Runs GBM (Geometric Brownian Motion) simulation via finmath BlackScholesModel.
+     *
+     * <p>finmath BlackScholesModel applies the Ito correction internally:
+     * the log-space drift is (μ − σ²/2)dt. Do NOT manually add a (−σ²/2) drift term.
+     * HC-11 (ForecastMathHandComputedTest) guards against Ito-correction bugs in CI.
+     * (T-05-04 mitigation)
+     *
+     * @param horizonDays     number of trading days to simulate
+     * @param annualizedMu    calibrated annualized drift
+     * @param annualizedSigma calibrated annualized volatility
+     * @param initialValue    base portfolio value
+     * @param model           ModelType.GBM (for DTO construction)
+     */
+    private ForecastDto runGbm(int horizonDays, double annualizedMu, double annualizedSigma,
+                                double initialValue, ModelType model) {
+        try {
+            // Step 1: Time grid — 0 to horizonDays steps of 1/252 year each
+            var td = new TimeDiscretizationFromArray(0.0, horizonDays, 1.0 / 252.0);
+
+            // Step 2: 1-factor Brownian motion with fixed seed (reproducibility)
+            var bm = new BrownianMotionFromMersenneRandomNumbers(td, 1, NUM_PATHS, MC_SEED);
+
+            // Step 3: GBM model — BlackScholesModel handles Ito (μ−σ²/2) in log-space automatically
+            var rvf   = new RandomVariableFromArrayFactory();
+            var gbmModel = new BlackScholesModel(initialValue, annualizedMu, annualizedSigma, rvf);
+
+            // Step 4: Wire Euler scheme and simulation wrapper
+            var process = new EulerSchemeFromProcessModel(gbmModel, bm);
+            var sim     = new MonteCarloAssetModel(process);
+
+            // Step 5: Extract per-step percentile bands
+            return extractBands(sim, horizonDays, model);
+
+        } catch (Exception e) {
+            throw new IllegalStateException("GBM simulation failed", e);
+        }
+    }
+
+    /**
+     * Runs Merton jump-diffusion simulation via finmath MonteCarloMertonModel.
+     *
+     * <p>Uses illustrative jump parameters (λ, μ_J, σ_J). The 10-parameter constructor
+     * is confirmed at compile time in ForecastFinmathIntegrationTest (A5 resolved).
+     *
+     * @param horizonDays     number of trading days to simulate
+     * @param annualizedMu    calibrated annualized drift
+     * @param annualizedSigma calibrated annualized volatility
+     * @param initialValue    base portfolio value
+     * @param model           ModelType.JUMP_DIFFUSION (for DTO construction)
+     */
+    private ForecastDto runMerton(int horizonDays, double annualizedMu, double annualizedSigma,
+                                   double initialValue, ModelType model) {
+        try {
+            var td  = new TimeDiscretizationFromArray(0.0, horizonDays, 1.0 / 252.0);
+            var rvf = new RandomVariableFromArrayFactory();
+
+            // MonteCarloMertonModel 10-param constructor (A5 confirmed):
+            // (td, numPaths, seed, S0, mu, sigma, jumpIntensity, jumpSizeMean, jumpSizeStDev, factory)
+            var mertonSim = new MonteCarloMertonModel(
+                    td,
+                    NUM_PATHS,
+                    MC_SEED,
+                    initialValue,
+                    annualizedMu,
+                    annualizedSigma,
+                    JUMP_LAMBDA,
+                    JUMP_MU_J,
+                    JUMP_SIGMA_J,
+                    rvf
+            );
+
+            return extractBands(mertonSim, horizonDays, model);
+
+        } catch (Exception e) {
+            throw new IllegalStateException("Merton jump-diffusion simulation failed", e);
+        }
+    }
+
+    /**
+     * Runs Heston stochastic-vol simulation via finmath HestonModel with FULL_TRUNCATION.
+     *
+     * <p>Uses 2 Brownian factors (asset SDE + variance CIR SDE).
+     * FULL_TRUNCATION prevents the discretized variance from going negative (T-05-05 mitigation).
+     * The Feller condition 2κθ > ξ² is enforced in the constructor (already verified above).
+     *
+     * <p>HestonModel constructor order (A4 confirmed): (S0, riskFreeRate, volatility=sqrt(V0),
+     * discountRate, theta, kappa, xi, rho, Scheme, Factory) — theta BEFORE kappa.
+     *
+     * @param horizonDays     number of trading days to simulate
+     * @param annualizedMu    calibrated annualized drift
+     * @param annualizedSigma calibrated annualized volatility (used only for logging; V0=HESTON_V0)
+     * @param initialValue    base portfolio value
+     * @param model           ModelType.HESTON (for DTO construction)
+     */
+    private ForecastDto runHeston(int horizonDays, double annualizedMu, double annualizedSigma,
+                                   double initialValue, ModelType model) {
+        try {
+            var td  = new TimeDiscretizationFromArray(0.0, horizonDays, 1.0 / 252.0);
+            var rvf = new RandomVariableFromArrayFactory();
+
+            // HestonModel constructor (A4 confirmed): theta BEFORE kappa
+            // (S0, riskFreeRate, volatility=sqrt(V0), discountRate, theta, kappa, xi, rho, Scheme, Factory)
+            var hestonModel = new HestonModel(
+                    rvf.createRandomVariable(initialValue),          // S₀
+                    rvf.createRandomVariable(annualizedMu),          // drift (riskFreeRate)
+                    rvf.createRandomVariable(Math.sqrt(HESTON_V0)), // volatility = sqrt(V₀)
+                    rvf.createRandomVariable(0.0),                   // discountRate (0 for equity)
+                    rvf.createRandomVariable(HESTON_THETA),          // long-run variance θ (before κ)
+                    rvf.createRandomVariable(HESTON_KAPPA),          // mean-reversion speed κ
+                    rvf.createRandomVariable(HESTON_XI),             // vol-of-vol ξ
+                    rvf.createRandomVariable(HESTON_RHO),            // asset-variance correlation ρ
+                    HestonModel.Scheme.FULL_TRUNCATION,              // prevents V < 0 (T-05-05)
+                    rvf
+            );
+
+            // Heston needs 2 Brownian factors (asset + variance SDE)
+            var bm      = new BrownianMotionFromMersenneRandomNumbers(td, 2, NUM_PATHS, MC_SEED);
+            var process = new EulerSchemeFromProcessModel(hestonModel, bm);
+            var sim     = new MonteCarloAssetModel(process);
+
+            return extractBands(sim, horizonDays, model);
+
+        } catch (Exception e) {
+            throw new IllegalStateException("Heston simulation failed", e);
+        }
+    }
+
+    /**
+     * Runs historical block bootstrap simulation using Hipparchus MersenneTwister.
+     *
+     * <p>Block bootstrap algorithm:
+     * <ol>
+     *   <li>Compute H = dailyLogReturns.length (number of historical observations)</li>
+     *   <li>Set L = max(10, (int)√H) — block length preserves ~monthly autocorrelation /
+     *       volatility clustering vs i.i.d. resampling. For typical 252-day history, L≈16;
+     *       for 504-day history, L≈22.</li>
+     *   <li>For each of NUM_PATHS paths, start at initialValue and repeatedly:
+     *       pick blockStart = rng.nextInt(H - L + 1) (boundary-safe: last block start ensures
+     *       full block of L observations fits within [0, H-1], preventing index overrun),
+     *       then compound currentValue *= exp(logReturn) over L steps until horizonDays filled</li>
+     *   <li>Record per-step value for each path; extract percentiles across paths at each step</li>
+     * </ol>
+     *
+     * <p>Block length rationale: L≈√H preserves the autocorrelation structure of historical
+     * returns (volatility clustering / GARCH-like effects) without over-constraining the
+     * resample. i.i.d. daily resampling (L=1) destroys clustering; very long blocks reduce
+     * the number of distinct resamples. L=max(10,√H) is a standard practical choice.
+     *
+     * @param horizonDays       number of trading days to project
+     * @param dailyLogReturns   historical daily log returns from calibration
+     * @param initialValue      base portfolio value
+     * @param model             ModelType.BOOTSTRAP (for DTO construction)
+     */
+    private ForecastDto runBootstrap(int horizonDays, double[] dailyLogReturns,
+                                      double initialValue, ModelType model) {
+        int H = dailyLogReturns.length;
+        // Block length: max(10, √H) — preserves ~monthly autocorrelation / volatility clustering
+        int L = Math.max(10, (int) Math.sqrt(H));
+
+        // Guard: if history is too short to form even one block, fall back to L=H/2 minimum
+        if (H < L) {
+            L = Math.max(1, H / 2);
+        }
+
+        // Boundary-safe: blockStart ∈ [0, H-L] ensures full block [blockStart, blockStart+L-1]
+        // fits within the dailyLogReturns array (Pitfall 6 prevention)
+        final int maxBlockStart = H - L;
+
+        MersenneTwister rng = new MersenneTwister(MC_SEED);
+
+        // step-major value buffer: pathValues[t][path] = portfolio value at step t for given path
+        // We accumulate into per-step arrays to extract percentiles without materializing the full
+        // [horizonDays × NUM_PATHS] matrix (memory-efficient streaming approach).
+        double[] p5  = new double[horizonDays];
+        double[] p25 = new double[horizonDays];
+        double[] p50 = new double[horizonDays];
+        double[] p75 = new double[horizonDays];
+        double[] p95 = new double[horizonDays];
+
+        // pathSnapshot[path] = value of path at the current time step (rolling)
+        // stepValues[t] will be filled path-by-path using a transposed approach
+        // We build a step-major matrix to enable per-step percentile extraction
+        double[][] stepValues = new double[horizonDays][NUM_PATHS];
+
+        for (int path = 0; path < NUM_PATHS; path++) {
+            double currentValue = initialValue;
+            int stepsRemaining = horizonDays;
+            int stepIdx = 0;
+
+            while (stepsRemaining > 0) {
+                // Boundary-safe block start: nextInt(maxBlockStart + 1) gives [0, maxBlockStart]
+                int blockStart = (maxBlockStart >= 0) ? rng.nextInt(maxBlockStart + 1) : 0;
+
+                // Apply the block of L returns (or fewer if near the horizon end)
+                int blockLen = Math.min(L, stepsRemaining);
+                for (int i = 0; i < blockLen; i++) {
+                    currentValue *= Math.exp(dailyLogReturns[blockStart + i]);
+                    stepValues[stepIdx][path] = currentValue;
+                    stepIdx++;
+                }
+                stepsRemaining -= blockLen;
+            }
+        }
+
+        // Extract percentile bands per step
+        for (int t = 0; t < horizonDays; t++) {
+            double[] pcts = extractPercentiles(stepValues[t]);
+            p5[t]  = pcts[0];
+            p25[t] = pcts[1];
+            p50[t] = pcts[2];
+            p75[t] = pcts[3];
+            p95[t] = pcts[4];
+        }
+
+        return new ForecastDto(model, horizonDays, p5, p25, p50, p75, p95);
+    }
+
+    /**
+     * Extracts per-step percentile bands from a finmath MonteCarloAssetModel.
+     * Iterates t=1..horizonDays, calls getAssetValue(t,0).getRealizations(), extracts p5..p95.
+     *
+     * @param sim         finmath simulation model (GBM or Heston — both implement MonteCarloAssetModel)
+     * @param horizonDays number of steps
+     * @param model       model type for the DTO
+     * @return ForecastDto with five percentile bands
+     */
+    private ForecastDto extractBands(net.finmath.montecarlo.assetderivativevaluation.AssetModelMonteCarloSimulationModel sim,
+                                      int horizonDays, ModelType model) throws Exception {
+        double[] p5  = new double[horizonDays];
+        double[] p25 = new double[horizonDays];
+        double[] p50 = new double[horizonDays];
+        double[] p75 = new double[horizonDays];
+        double[] p95 = new double[horizonDays];
+
+        for (int t = 1; t <= horizonDays; t++) {
+            double[] realizations = sim.getAssetValue(t, 0).getRealizations();
+            double[] pcts = extractPercentiles(realizations);
+            int idx = t - 1;
+            p5[idx]  = pcts[0];
+            p25[idx] = pcts[1];
+            p50[idx] = pcts[2];
+            p75[idx] = pcts[3];
+            p95[idx] = pcts[4];
+        }
+
+        return new ForecastDto(model, horizonDays, p5, p25, p50, p75, p95);
+    }
 
     /**
      * Extracts p5/p25/p50/p75/p95 from an array of path values.
      * Uses nearest-rank method (sort + index arithmetic) — faster than DescriptiveStatistics
      * for large arrays (single sort, no internal copy per percentile call).
      * Sorting is done on a clone; the original array is not modified.
+     * Result is monotone by construction (sorted array + ascending percentile levels).
      *
      * @param pathValues double[] of per-path values at one time step (length = NUM_PATHS)
      * @return double[5] = {p5, p25, p50, p75, p95}

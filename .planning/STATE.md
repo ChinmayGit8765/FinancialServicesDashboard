@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: "Completed 04-04-PLAN.md — Phase-4 frontend panels complete: RiskScorecard, CorrelationHeatmap, AttributionChart, PairsTable wired into DashboardView"
-last_updated: "2026-06-08T10:28:36.873Z"
+status: ready_to_plan
+stopped_at: Phase 04 complete (4/4) — ready to discuss Phase 5
+last_updated: 2026-06-08T11:05:10.657Z
 last_activity: 2026-06-08
 progress:
   total_phases: 10
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-07)
 
 **Core value:** A working, screenshot-ready dashboard that demonstrates real quantitative-finance analytics narrated by a real Spring AI layer — convincing with zero setup, genuinely live when you add a key.
-**Current focus:** Phase 04 — quant-risk-engine
+**Current focus:** Phase 5 — stochastic forecasting
 
 ## Current Position
 
-Phase: 04 (quant-risk-engine) — EXECUTING
-Plan: 4 of 4
-Status: Phase complete — ready for verification
+Phase: 5
+Plan: Not started
+Status: Ready to plan
 Last activity: 2026-06-08
 
 Progress: [██████████] 100%
@@ -36,7 +36,7 @@ Progress: [██████████] 100%
 
 **Velocity:**
 
-- Total plans completed: 14
+- Total plans completed: 18
 - Average duration: ~7 minutes
 - Total execution time: 0.12 hours
 
@@ -48,6 +48,7 @@ Progress: [██████████] 100%
 | 01 | 4 | - | - |
 | 02 | 4 | - | - |
 | 03 | 5 | - | - |
+| 04 | 4 | - | - |
 
 **Recent Trend:**
 

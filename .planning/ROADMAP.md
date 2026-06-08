@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Portfolio Domain** - Holdings, P&L, allocation, transactions, benchmark — full portfolio REST API [IN PROGRESS — 3/4 plans complete] (completed 2026-06-07)
 - [x] **Phase 3: Frontend Scaffold** - Vue 3 + Pinia + ECharts dashboard, portfolio chart bindings, auth flow, OAuth upgrade path docs (completed 2026-06-07)
 - [x] **Phase 4: Quant Risk Engine** - Sharpe, VaR, beta, volatility, correlation heatmap, Fama-French attribution, cointegration pairs scanner (completed 2026-06-08)
-- [ ] **Phase 5: Stochastic Forecasting** - Monte Carlo fan charts across four models (GBM, Merton, Heston, bootstrap) plus rationale documentation
+- [x] **Phase 5: Stochastic Forecasting** - Monte Carlo fan charts across four models (GBM, Merton, Heston, bootstrap) plus rationale documentation (completed 2026-06-08)
 - [ ] **Phase 6: Demo-Mode AI Seam** - DemoModeAdvisor, LlmKeySessionHolder, ChatClientStrategy, seeded fixtures, BYO-key popup, explain-position and commentary in demo mode
 - [ ] **Phase 7: RAG Pipeline** - pgvector ingestion, pre-seeded embeddings, QuestionAnswerAdvisor, NL Q&A chat with conversation memory
 - [ ] **Phase 8: Live AI Features** - Finnhub @Tool integration, multi-provider ChatClient (Claude + OpenAI), structured output driving a chart
@@ -111,7 +111,7 @@ Plans:
 Plans:
 - [x] 05-01-PLAN.md — Wave 0: finmath-lib 6.1.7 dep + ModelType/ForecastDto contracts + ForecastService stub + ForecastController endpoint + 5 RED test scaffolds (HC-11, structural, finmath smoke, controller integration, frontend) (SIM-01, SIM-02)
 - [x] 05-02-PLAN.md — Backend MC engine: GBM/Merton/Heston (finmath) + historical block bootstrap runners + per-step percentile bands; backend suite green (SIM-01, SIM-02)
-- [ ] 05-03-PLAN.md — Frontend: forecast types + store extension + MonteCarloFanChart (band-difference fan + model selector) + DashboardView wiring + docs/MODELS.md + human-verify (SIM-01, SIM-02, SIM-03)
+- [x] 05-03-PLAN.md — Frontend: forecast types + store extension + MonteCarloFanChart (band-difference fan + model selector) + DashboardView wiring + docs/MODELS.md + human-verify (SIM-01, SIM-02, SIM-03)
 **UI hint**: yes
 
 ### Phase 6: Demo-Mode AI Seam
@@ -183,7 +183,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 2. Portfolio Domain | 4/4 | Complete   | 2026-06-07 |
 | 3. Frontend Scaffold | 5/5 | Complete   | 2026-06-07 |
 | 4. Quant Risk Engine | 4/4 | Complete   | 2026-06-08 |
-| 5. Stochastic Forecasting | 2/3 | In Progress|  |
+| 5. Stochastic Forecasting | 3/3 | Complete   | 2026-06-08 |
 | 6. Demo-Mode AI Seam | 0/TBD | Not started | - |
 | 7. RAG Pipeline | 0/TBD | Not started | - |
 | 8. Live AI Features | 0/TBD | Not started | - |

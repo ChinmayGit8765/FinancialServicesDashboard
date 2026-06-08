@@ -178,9 +178,13 @@ public class ForecastService {
         }
 
         // --- Step 3: Calibrate annualized μ and σ ---
+        // CR-01 fix: use sample variance (n-1 denominator) not population variance (n denominator).
+        // Hipparchus getStandardDeviation() returns population std (biased sqrt(sum/n)).
+        // The unbiased sample estimator sqrt(getSampleVariance() * 252) is correct for calibration.
+        // For n=252 the error is ~0.2%; for n=2 (minimum allowed) the bias is 29%.
         DescriptiveStatistics stats = new DescriptiveStatistics(dailyLogReturns);
         double annualizedMu    = stats.getMean()              * 252.0;
-        double annualizedSigma = stats.getStandardDeviation() * Math.sqrt(252.0);
+        double annualizedSigma = Math.sqrt(stats.getSampleVariance() * 252.0);
 
         log.debug("Calibration for portfolioId={}: annualizedMu={}, annualizedSigma={}, nReturns={}",
                   portfolioId, annualizedMu, annualizedSigma, dailyLogReturns.length);

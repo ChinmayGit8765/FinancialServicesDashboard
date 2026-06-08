@@ -9,6 +9,12 @@ import type {
   BenchmarkComparisonDto,
   PageResponse,
 } from '../api/portfolio'
+import type {
+  RiskScorecardDto,
+  CorrelationMatrixDto,
+  AttributionDto,
+  PairResultDto,
+} from '../api/analytics'
 
 // Per-resource async state shape.
 // Components access resources whole — do NOT destructure (Pitfall 5, loses reactivity).
@@ -36,6 +42,12 @@ export const usePortfolioStore = defineStore('portfolio', () => {
   const allocation  = asyncState<AllocationSliceDto[]>(null)
   const transactions = asyncState<PageResponse<TransactionDto>>(null)
   const benchmark   = asyncState<BenchmarkComparisonDto>(null)
+
+  // --- Phase-4 analytics state ------------------------------------------------
+  const risk        = asyncState<RiskScorecardDto>(null)
+  const correlation = asyncState<CorrelationMatrixDto>(null)
+  const attribution = asyncState<AttributionDto>(null)
+  const pairs       = asyncState<PairResultDto[]>(null)
 
   // --- fetch actions ----------------------------------------------------------
 
@@ -146,6 +158,84 @@ export const usePortfolioStore = defineStore('portfolio', () => {
     }
   }
 
+  // --- Phase-4 analytics fetch actions ----------------------------------------
+
+  /**
+   * Fetch risk scorecard metrics (Sharpe, vol, VaR, drawdown, beta).
+   * version: race-guard — see fetchHoldings for semantics.
+   */
+  async function fetchRisk(version?: number): Promise<void> {
+    risk.loading = true
+    risk.error = null
+    try {
+      const { data } = await axios.get<RiskScorecardDto>('/api/portfolio/risk')
+      if (version !== undefined && version !== refreshVersion) return
+      risk.data = data
+    } catch (e: any) {
+      if (version !== undefined && version !== refreshVersion) return
+      risk.error = e?.response?.status === 401 ? 'Session expired' : 'Failed to load risk metrics'
+    } finally {
+      risk.loading = false
+    }
+  }
+
+  /**
+   * Fetch pairwise correlation matrix.
+   * version: race-guard — see fetchHoldings for semantics.
+   */
+  async function fetchCorrelation(version?: number): Promise<void> {
+    correlation.loading = true
+    correlation.error = null
+    try {
+      const { data } = await axios.get<CorrelationMatrixDto>('/api/portfolio/correlation')
+      if (version !== undefined && version !== refreshVersion) return
+      correlation.data = data
+    } catch (e: any) {
+      if (version !== undefined && version !== refreshVersion) return
+      correlation.error = e?.response?.status === 401 ? 'Session expired' : 'Failed to load correlation data'
+    } finally {
+      correlation.loading = false
+    }
+  }
+
+  /**
+   * Fetch Fama-French factor attribution.
+   * version: race-guard — see fetchHoldings for semantics.
+   */
+  async function fetchAttribution(version?: number): Promise<void> {
+    attribution.loading = true
+    attribution.error = null
+    try {
+      const { data } = await axios.get<AttributionDto>('/api/portfolio/attribution')
+      if (version !== undefined && version !== refreshVersion) return
+      attribution.data = data
+    } catch (e: any) {
+      if (version !== undefined && version !== refreshVersion) return
+      attribution.error = e?.response?.status === 401 ? 'Session expired' : 'Failed to load attribution'
+    } finally {
+      attribution.loading = false
+    }
+  }
+
+  /**
+   * Fetch cointegration pairs scanner results.
+   * version: race-guard — see fetchHoldings for semantics.
+   */
+  async function fetchPairs(version?: number): Promise<void> {
+    pairs.loading = true
+    pairs.error = null
+    try {
+      const { data } = await axios.get<PairResultDto[]>('/api/portfolio/pairs')
+      if (version !== undefined && version !== refreshVersion) return
+      pairs.data = data
+    } catch (e: any) {
+      if (version !== undefined && version !== refreshVersion) return
+      pairs.error = e?.response?.status === 401 ? 'Session expired' : 'Failed to load pairs data'
+    } finally {
+      pairs.loading = false
+    }
+  }
+
   // --- refreshAll ------------------------------------------------------------
 
   /**
@@ -168,6 +258,10 @@ export const usePortfolioStore = defineStore('portfolio', () => {
       fetchAllocation(myVersion),
       fetchTransactions(0, myVersion),
       fetchBenchmark(myVersion),
+      fetchRisk(myVersion),
+      fetchCorrelation(myVersion),
+      fetchAttribution(myVersion),
+      fetchPairs(myVersion),
     ])
   }
 
@@ -183,6 +277,10 @@ export const usePortfolioStore = defineStore('portfolio', () => {
     allocation.data  = null; allocation.loading  = false; allocation.error  = null
     transactions.data = null; transactions.loading = false; transactions.error = null
     benchmark.data   = null; benchmark.loading   = false; benchmark.error   = null
+    risk.data        = null; risk.loading        = false; risk.error        = null
+    correlation.data = null; correlation.loading = false; correlation.error = null
+    attribution.data = null; attribution.loading = false; attribution.error = null
+    pairs.data       = null; pairs.loading       = false; pairs.error       = null
   }
 
   return {
@@ -192,12 +290,20 @@ export const usePortfolioStore = defineStore('portfolio', () => {
     allocation,
     transactions,
     benchmark,
+    risk,
+    correlation,
+    attribution,
+    pairs,
     // actions
     fetchHoldings,
     fetchPnl,
     fetchAllocation,
     fetchTransactions,
     fetchBenchmark,
+    fetchRisk,
+    fetchCorrelation,
+    fetchAttribution,
+    fetchPairs,
     refreshAll,
     $reset,
   }

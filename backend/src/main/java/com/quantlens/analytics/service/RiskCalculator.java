@@ -12,6 +12,8 @@ import com.quantlens.portfolio.domain.Position;
 import com.quantlens.portfolio.domain.PositionRepository;
 import org.hipparchus.stat.correlation.Covariance;
 import org.hipparchus.stat.descriptive.DescriptiveStatistics;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -53,6 +55,8 @@ import java.util.stream.Collectors;
 @Service
 @Transactional(readOnly = true)
 public class RiskCalculator {
+
+    private static final Logger log = LoggerFactory.getLogger(RiskCalculator.class);
 
     private final PositionRepository positionRepository;
     private final OhlcvBarRepository ohlcvBarRepository;
@@ -106,7 +110,18 @@ public class RiskCalculator {
         List<OhlcvBar> bmkBars = ohlcvBarRepository.findAllBySecurityIdsOrdered(
                 List.of(benchmark.getId()));
         List<DateValueDto> bmkCurve = buildCurveFromSingleSecurity(bmkBars);
-        double[] benchmarkReturns = logReturns(bmkCurve);
+
+        // CR-02 fix: Build a date-keyed map of benchmark returns so we can align to the
+        // portfolio's actual observation window, not the oldest-N-bars of benchmark history.
+        // trimToSameLength() was taking the earliest N bars — misaligned when benchmark
+        // history is longer than the portfolio window.
+        NavigableMap<LocalDate, Double> bmkReturnByDate = new TreeMap<>();
+        for (int i = 1; i < bmkCurve.size(); i++) {
+            double p0 = bmkCurve.get(i - 1).value().doubleValue();
+            double p1 = bmkCurve.get(i).value().doubleValue();
+            LocalDate d = bmkCurve.get(i).date();
+            bmkReturnByDate.put(d, p0 == 0.0 ? 0.0 : Math.log(p1 / p0));
+        }
 
         // --- Factor returns for RF alignment ---
         List<FactorReturn> factorRows = factorReturnRepository.findAllByOrderByFactorDateAsc();
@@ -117,8 +132,12 @@ public class RiskCalculator {
         double[] rfDailyArr = new double[portfolioReturns.length];
         boolean rfAligned = factorRows.size() == portfolioReturns.length + 1;
         if (!rfAligned) {
-            // Fall back to rf=0 — documented; factorRows should be 504 for 503 returns
-            // This guard protects against edge cases but should not trigger for seeded data
+            // WR-04: log a warning so RF degradation is observable in production logs.
+            // Falls back to rf=0 — Sharpe will be raw-return Sharpe, not excess-return Sharpe.
+            log.warn("RiskCalculator: factor rows count ({}) does not equal portfolioReturns.length + 1 ({}). " +
+                     "Falling back to rf=0 for Sharpe computation. " +
+                     "Check FactorReturn seeding.",
+                     factorRows.size(), portfolioReturns.length + 1);
         }
         for (int i = 0; i < portfolioReturns.length; i++) {
             if (rfAligned) {
@@ -133,10 +152,14 @@ public class RiskCalculator {
         }
 
         DescriptiveStatistics stats = new DescriptiveStatistics(portfolioReturns);
-        double meanExcess = Arrays.stream(excessReturns).average().orElse(0.0);
-        double stdR = stats.getStandardDeviation(); // sample std (n-1) — correct for Sharpe
+        // CR-01 fix: Sharpe denominator must be std(EXCESS returns), not std(portfolio returns).
+        // Canonical formula: Sharpe = mean(r_excess) / std(r_excess) × √252.
+        DescriptiveStatistics excessStats = new DescriptiveStatistics(excessReturns);
+        double meanExcess = excessStats.getMean();
+        double stdExcess  = excessStats.getStandardDeviation(); // std of EXCESS returns — correct Sharpe denominator
+        double stdR       = stats.getStandardDeviation();       // std of portfolio returns — used only for vol
 
-        double sharpe = (stdR == 0.0) ? Double.NaN : (meanExcess / stdR) * Math.sqrt(252.0);
+        double sharpe = (stdExcess == 0.0) ? Double.NaN : (meanExcess / stdExcess) * Math.sqrt(252.0);
 
         // --- Annualized volatility ---
         double annualizedVol = stdR * Math.sqrt(252.0);
@@ -144,13 +167,32 @@ public class RiskCalculator {
         // --- Max drawdown (on equity curve, not returns) ---
         double maxDrawdown = computeMaxDrawdown(curve);
 
-        // --- Beta ---
-        double[] bmkReturnsTrimmed = trimToSameLength(benchmarkReturns, portfolioReturns.length);
-        Covariance cov = new Covariance();
-        double pairCov = cov.covariance(portfolioReturns, bmkReturnsTrimmed);
-        DescriptiveStatistics bmkStats = new DescriptiveStatistics(bmkReturnsTrimmed);
-        double bmkVar = bmkStats.getVariance(); // sample variance — consistent with pairCov
-        double beta = (bmkVar == 0.0) ? Double.NaN : pairCov / bmkVar;
+        // --- Beta (CR-02 fix: date-aligned benchmark returns) ---
+        // Extract benchmark returns for exactly the same calendar dates as the portfolio's
+        // equity curve. Return[i] = ln(curve[i+1]/curve[i]) corresponds to curve.get(i+1).date().
+        // Any date where the benchmark has no bar is skipped from both series (paired drop).
+        List<Double> alignedPortReturns = new ArrayList<>();
+        List<Double> alignedBmkReturns  = new ArrayList<>();
+        for (int i = 0; i < portfolioReturns.length; i++) {
+            LocalDate returnDate = curve.get(i + 1).date();
+            Double bmkRet = bmkReturnByDate.get(returnDate);
+            if (bmkRet != null) {
+                alignedPortReturns.add(portfolioReturns[i]);
+                alignedBmkReturns.add(bmkRet);
+            }
+        }
+        double beta;
+        if (alignedPortReturns.size() < 2) {
+            beta = Double.NaN;
+        } else {
+            double[] portArr = alignedPortReturns.stream().mapToDouble(Double::doubleValue).toArray();
+            double[] bmkArr  = alignedBmkReturns.stream().mapToDouble(Double::doubleValue).toArray();
+            Covariance cov = new Covariance();
+            double pairCov = cov.covariance(portArr, bmkArr);
+            DescriptiveStatistics bmkStats = new DescriptiveStatistics(bmkArr);
+            double bmkVar = bmkStats.getVariance(); // sample variance — consistent with pairCov
+            beta = (bmkVar == 0.0) ? Double.NaN : pairCov / bmkVar;
+        }
 
         // --- Current portfolio value (for VaR monetary amounts) ---
         List<Long> secIds = positions.stream()

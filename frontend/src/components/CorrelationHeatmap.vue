@@ -32,7 +32,10 @@ const option = computed<EChartsOption>(() => {
     tooltip: {
       formatter: (params: any) => {
         const [xi, yi, v] = params.data
-        return `${dto.tickers[yi]} / ${dto.tickers[xi]}: ${v.toFixed(3)}`
+        const n = dto.tickers.length
+        // CR-04 fix: yAxis is reversed ([...dto.tickers].reverse()), so visual row at
+        // data-y-index yi maps to tickers[n - 1 - yi], not tickers[yi].
+        return `${dto.tickers[n - 1 - yi]} / ${dto.tickers[xi]}: ${v.toFixed(3)}`
       },
     },
     xAxis: {

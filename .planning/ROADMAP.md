@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Data Foundation** - Docker stack, Postgres+pgvector, Flyway seeds, demo users, price and factor series, dev MCP tooling [IN PROGRESS — 1/4 plans complete] (completed 2026-06-07)
 - [x] **Phase 2: Portfolio Domain** - Holdings, P&L, allocation, transactions, benchmark — full portfolio REST API [IN PROGRESS — 3/4 plans complete] (completed 2026-06-07)
 - [x] **Phase 3: Frontend Scaffold** - Vue 3 + Pinia + ECharts dashboard, portfolio chart bindings, auth flow, OAuth upgrade path docs (completed 2026-06-07)
-- [ ] **Phase 4: Quant Risk Engine** - Sharpe, VaR, beta, volatility, correlation heatmap, Fama-French attribution, cointegration pairs scanner
+- [x] **Phase 4: Quant Risk Engine** - Sharpe, VaR, beta, volatility, correlation heatmap, Fama-French attribution, cointegration pairs scanner (completed 2026-06-08)
 - [ ] **Phase 5: Stochastic Forecasting** - Monte Carlo fan charts across four models (GBM, Merton, Heston, bootstrap) plus rationale documentation
 - [ ] **Phase 6: Demo-Mode AI Seam** - DemoModeAdvisor, LlmKeySessionHolder, ChatClientStrategy, seeded fixtures, BYO-key popup, explain-position and commentary in demo mode
 - [ ] **Phase 7: RAG Pipeline** - pgvector ingestion, pre-seeded embeddings, QuestionAnswerAdvisor, NL Q&A chat with conversation memory
@@ -95,7 +95,7 @@ Plans:
 - [x] 04-01-PLAN.md — Wave 0: analytics Modulith module + 5 DTOs + 4 stub services + 4-endpoint controller + FactorReturnRepository query + all RED test scaffolds + @Disabled golden-value printer (RISK-01/02/03, ATTR-01, ARB-01)
 - [x] 04-02-PLAN.md — RiskCalculator (Sharpe/vol/drawdown/beta + dual VaR) + CorrelationCalculator; /risk + /correlation; golden values baked (RISK-01, RISK-02, RISK-03)
 - [x] 04-03-PLAN.md — FamaFrenchCalculator (FF 3-factor OLS) + CointegrationScanner (Engle-Granger + ADF + MacKinnon); /attribution + /pairs (ATTR-01, ARB-01)
-- [ ] 04-04-PLAN.md — Frontend: store extension + RiskScorecard/CorrelationHeatmap/AttributionChart/PairsTable + DashboardView wiring + human-verify (RISK-01/02/03, ATTR-01, ARB-01)
+- [x] 04-04-PLAN.md — Frontend: store extension + RiskScorecard/CorrelationHeatmap/AttributionChart/PairsTable + DashboardView wiring + human-verify (RISK-01/02/03, ATTR-01, ARB-01)
 **UI hint**: yes
 
 ### Phase 5: Stochastic Forecasting
@@ -178,7 +178,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 1. Data Foundation | 4/4 | Complete   | 2026-06-07 |
 | 2. Portfolio Domain | 4/4 | Complete   | 2026-06-07 |
 | 3. Frontend Scaffold | 5/5 | Complete   | 2026-06-07 |
-| 4. Quant Risk Engine | 3/4 | In Progress|  |
+| 4. Quant Risk Engine | 4/4 | Complete   | 2026-06-08 |
 | 5. Stochastic Forecasting | 0/TBD | Not started | - |
 | 6. Demo-Mode AI Seam | 0/TBD | Not started | - |
 | 7. RAG Pipeline | 0/TBD | Not started | - |

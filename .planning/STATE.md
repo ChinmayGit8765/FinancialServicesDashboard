@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 04-02-PLAN.md — RiskCalculator + CorrelationCalculator + golden tests GREEN
-last_updated: "2026-06-08T10:19:37.471Z"
+status: verifying
+stopped_at: "Completed 04-04-PLAN.md — Phase-4 frontend panels complete: RiskScorecard, CorrelationHeatmap, AttributionChart, PairsTable wired into DashboardView"
+last_updated: "2026-06-08T10:28:36.873Z"
 last_activity: 2026-06-08
 progress:
   total_phases: 10
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 17
-  completed_plans: 16
-  percent: 30
+  completed_plans: 17
+  percent: 40
 ---
 
 # Project State
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 
 Phase: 04 (quant-risk-engine) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-06-08
 
-Progress: [█████████░] 94%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -70,6 +70,7 @@ Progress: [█████████░] 94%
 | Phase 04 P01 | 20 | 3 tasks | 24 files |
 | Phase 04-quant-risk-engine P02 | 95 | 2 tasks | 7 files |
 | Phase 04-quant-risk-engine P03 | 40 | 2 tasks | 5 files |
+| Phase 04-quant-risk-engine P04 | 10 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -111,6 +112,9 @@ Recent decisions affecting current work:
 - [Phase ?]: Local analytics.service.DateValueDto satisfies Modulith portfolio::domain boundary
 - [Phase ?]: GBM seed all-1.0 correlation is correct (shared market factor only) — GOLDEN_CORR_AAPL_MSFT=1.0
 - [Phase ?]: Risk and Correlation tests promoted to integration tests requiring AbstractPostgresIntegrationTest
+- [Phase ?]: [04-04] RiskScorecard is props-driven (not store-reading) so tests mount without store context
+- [Phase ?]: [04-04] portfolioStore.test.ts refreshAll count updated 5->9 for Phase-4 analytics additions
+- [Phase ?]: [04-04] formatPercent takes 0-1 fraction; annualizedVolatility passed as-is to formatPercent without *100
 
 ### Pending Todos
 
@@ -137,6 +141,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-08T10:19:37.425Z
-Stopped at: Completed 04-02-PLAN.md — RiskCalculator + CorrelationCalculator + golden tests GREEN
+Last session: 2026-06-08T10:28:36.818Z
+Stopped at: Completed 04-04-PLAN.md — Phase-4 frontend panels complete: RiskScorecard, CorrelationHeatmap, AttributionChart, PairsTable wired into DashboardView
 Resume file: None

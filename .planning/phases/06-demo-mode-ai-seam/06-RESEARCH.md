@@ -185,7 +185,7 @@ com.quantlens.ai/
     ├── ExplainPositionService.java     # reads Position, builds prompt context, calls ChatClient
     └── CommentaryService.java          # reads Portfolio summary, calls ChatClient
 
-com.quantlens.auth.session/            # EXISTING module location for LlmKeySessionHolder
+com.quantlens.ai.session/            # ai module session subpackage (LlmKeySessionHolder lives in com.quantlens.ai.session)
 └── LlmKeySessionHolder.java           # @Component @SessionScope — new file in existing module
 
 frontend/src/
@@ -452,7 +452,7 @@ The `@SessionScope` pattern already exists in this codebase (the security module
 
 ```java
 // Source: spring.io/guides/spring-security (SessionScope pattern)
-// Location: com.quantlens.auth.session (existing auth module, new file)
+// Location: com.quantlens.ai.session (ai module, session subpackage)
 @Component
 @SessionScope
 public class LlmKeySessionHolder {
@@ -786,8 +786,8 @@ void apiKeyNeverAppearsInResponseOrLogs() throws Exception {
         .andExpect(status().isOk())
         .andExpect(content().string(not(containsString(testKey))));
 
-    // 3. Call GET /api/ai/explain/1 — demo mode short-circuits; still must not echo key
-    mockMvc.perform(get("/api/ai/explain/1").session(session))
+    // 3. Call GET /api/ai/explain/AAPL — demo mode short-circuits; still must not echo key
+    mockMvc.perform(get("/api/ai/explain/AAPL").session(session))
         .andExpect(status().isOk())
         .andExpect(content().string(not(containsString(testKey))));
 
@@ -873,10 +873,10 @@ export const useAiStore = defineStore('ai', () => {
     commentary.data = null
   }
 
-  async function fetchExplanation(holdingId: number): Promise<void> {
+  async function fetchExplanation(ticker: string): Promise<void> {
     explanation.loading = true; explanation.error = null
     try {
-      const { data } = await axios.get<ExplainResponse>(`/api/ai/explain/${holdingId}`)
+      const { data } = await axios.get<ExplainResponse>(`/api/ai/explain/${ticker}`)
       explanation.data = data
     } catch { explanation.error = 'Failed to load explanation' }
     finally { explanation.loading = false }
@@ -951,7 +951,7 @@ The modal content — especially the "never saved or transmitted" line and the l
 | AI-02 | Key never in any response body or log line | Integration | `KeyLeakageIntegrationTest` | No — Wave 0 |
 | AI-02 | @SessionScope: different sessions isolated | Integration | `AiKeyControllerTest#sessionIsolation` | No — Wave 0 |
 | AI-02 | DemoModeAdvisor passes through when key present | Unit | `DemoModeAdvisorTest#passesThroughWhenKeyPresent` | No — Wave 0 |
-| AI-07 | GET /api/ai/explain/{id} returns ExplainResponseDto with narrative | Integration | `AiControllerIntegrationTest#explainReturnsSeededContent` | No — Wave 0 |
+| AI-07 | GET /api/ai/explain/{ticker} returns ExplainResponseDto with narrative | Integration | `AiControllerIntegrationTest#explainReturnsSeededContent` | No — Wave 0 |
 | AI-08 | GET /api/ai/commentary returns CommentaryDto | Integration | `AiControllerIntegrationTest#commentaryReturnsSeededContent` | No — Wave 0 |
 | AI-02 (FE) | BYOKeyModal: submit does not persist key to localStorage | Component | `BYOKeyModal.spec.ts#keyNotInLocalStorage` | No — Wave 0 |
 | AI-01 (FE) | AiModeBadge: shows "Demo" without key, "Live" with key | Component | `AiModeBadge.spec.ts` | No — Wave 0 |
@@ -1062,7 +1062,7 @@ class DemoModeAdvisorTest {
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED — runtime-gated at Wave 0 compile/boot; see Recommendations)
 
 1. **AnthropicChatModel.Builder minimum required fields**
    - What we know: Builder accepts `anthropicApi`, `defaultOptions`, `retryTemplate`, `toolCallingManager`, `observationRegistry`.

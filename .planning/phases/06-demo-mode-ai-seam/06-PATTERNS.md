@@ -25,7 +25,7 @@
 | `backend/.../ai/seed/AiSeedContentRepository.java` | model (repo) | CRUD | `seed/SeedLogRepository.java` | exact |
 | `backend/.../ai/seed/AiSeedRunner.java` | utility | batch | `seed/SeedRunner.java` | exact |
 | `backend/src/main/resources/db/migration/V4__ai_seed_content.sql` | migration | — | `V1__schema.sql` | exact |
-| `backend/.../auth/session/LlmKeySessionHolder.java` | service | request-response | no analog | none (RESEARCH Pattern 6) |
+| `backend/.../ai/session/LlmKeySessionHolder.java` | service | request-response | no analog | none (RESEARCH Pattern 6) |
 | `backend/src/main/resources/application.yml` (additions) | config | — | existing `application.yml` | exact |
 | `backend/.../ai/DemoModeAdvisorTest.java` | test (unit) | — | `analytics/RiskCalculatorTest.java` | role-match |
 | `backend/.../ai/KeyLeakageIntegrationTest.java` | test (integration) | — | `analytics/AnalyticsControllerIntegrationTest.java` | exact |
@@ -440,7 +440,7 @@ CREATE TABLE IF NOT EXISTS ai_seed_content (
 
 ---
 
-### `backend/.../auth/session/LlmKeySessionHolder.java` (service, request-response)
+### `backend/.../ai/session/LlmKeySessionHolder.java` (service, request-response)
 
 **Analog:** NONE in codebase (no existing `@SessionScope` bean). Use RESEARCH.md Pattern 6.
 
@@ -452,7 +452,7 @@ Critical safety rules (RESEARCH Pitfall 3):
 - NO `@JsonInclude` / `@JsonSerialize` — this bean is never serialized to JSON
 - Accessor `getApiKey()` exists for `ChatClientStrategy` but must NOT be exposed via any DTO
 - Field `apiKey` is a plain `private String` — never `static`, never `volatile`
-- Location: `com.quantlens.auth.session` (new sub-package of existing `security` module or a new `auth.session` module)
+- Location: `com.quantlens.ai.session` (sub-package of the new `ai` module (com.quantlens.ai.session))
 
 ---
 
@@ -1041,7 +1041,7 @@ Files with no close match in the codebase — planner must use RESEARCH.md code 
 | `backend/.../ai/chat/ChatClientStrategy.java` | service | request-response | RESEARCH.md Pattern 5 (lines 368–438) |
 | `backend/.../ai/service/ExplainPositionService.java` | service | request-response | RESEARCH.md Pattern 9 (lines 566–593) |
 | `backend/.../ai/service/CommentaryService.java` | service | request-response | RESEARCH.md Pattern 9 (shape only — commentary variant) |
-| `backend/.../auth/session/LlmKeySessionHolder.java` | service | request-response | RESEARCH.md Pattern 6 (lines 452–483) |
+| `backend/.../ai/session/LlmKeySessionHolder.java` | service | request-response | RESEARCH.md Pattern 6 (lines 452–483) |
 | `backend/src/test/resources/application-test.yml` (additions) | config | — | RESEARCH.md Wave 0 Gaps (line 1025) |
 
 ---

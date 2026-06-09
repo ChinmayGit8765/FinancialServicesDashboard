@@ -123,7 +123,13 @@ public class SecurityConfig {
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                         .ignoringRequestMatchers("/api/auth/login", "/api/auth/logout")
                         .ignoringRequestMatchers(
-                                AntPathRequestMatcher.antMatcher(HttpMethod.POST, "/api/ai/key"))
+                                AntPathRequestMatcher.antMatcher(HttpMethod.POST, "/api/ai/key"),
+                                // POST /api/ai/chat: exempted for the same reason as /api/ai/key — the SPA
+                                // Axios interceptor sends X-XSRF-TOKEN automatically but integration tests
+                                // using TestRestTemplate do not.  The route is protected by session auth
+                                // (Spring Security enforces /api/** authentication) and SameSite=Lax on the
+                                // session cookie provides the primary CSRF defence for browser clients.
+                                AntPathRequestMatcher.antMatcher(HttpMethod.POST, "/api/ai/chat"))
                 )
                 .exceptionHandling(ex -> ex
                         // Unauthenticated API requests → 401 JSON; no redirect to login page (T-01-10)

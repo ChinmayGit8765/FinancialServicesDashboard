@@ -1,17 +1,14 @@
 package com.quantlens.ai.chat;
 
-import com.quantlens.ai.embedding.DeterministicHashingEmbeddingModel;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
-import org.springframework.ai.vectorstore.pgvector.PgVectorStore;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
-import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
  * Spring AI RAG advisor configuration — Phase 7.
@@ -26,13 +23,12 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * <p>{@link ChatClientStrategy} injects all {@code CallAdvisor} beans automatically via
  * {@code List<CallAdvisor>} — no changes to {@code ChatClientStrategy} are needed.
  *
- * <h3>A7 resolution — manual VectorStore bean</h3>
- * The {@code spring-ai-starter-vector-store-pgvector} auto-config may not pick up the
- * {@code @Primary DeterministicHashingEmbeddingModel} if auto-config resolution order places
- * the OpenAI embedding model first. To guarantee the correct model is used, a manual
- * {@link VectorStore} bean is declared here with an explicit {@link DeterministicHashingEmbeddingModel}
- * parameter. This overrides the auto-configured bean and ensures embedding-space consistency
- * (A7 verified at context load by RagAdvisorConfigTest).
+ * <h3>A7 resolution — auto-config via @Primary</h3>
+ * {@code PgVectorStoreAutoConfiguration} is annotated {@code @ConditionalOnMissingBean} and
+ * accepts an {@code EmbeddingModel} parameter resolved by Spring's {@code @Primary} mechanism.
+ * Because {@link com.quantlens.ai.embedding.DeterministicHashingEmbeddingModel} is {@code @Primary},
+ * the auto-config picks it up without a manual VectorStore bean. A7 verified at context load
+ * by RagAdvisorConfigTest (asserts {@code VectorStore} bean present + dimensions == 1536).
  *
  * <h3>A4 resolution</h3>
  * {@code MessageChatMemoryAdvisor.builder(chatMemory).order(int)} builder method confirmed
@@ -92,28 +88,5 @@ public class RagAdvisorConfig {
                 .build();
     }
 
-    /**
-     * Manual PgVectorStore bean — A7 resolution.
-     *
-     * <p>Declares the VectorStore explicitly with {@link DeterministicHashingEmbeddingModel}
-     * as the embedding model, bypassing any auto-config bean resolution ambiguity.
-     * Settings mirror application.yml: initialize-schema=false (Flyway owns DDL), 1536 dims,
-     * COSINE_DISTANCE, HNSW, table "vector_store" in schema "public".
-     *
-     * @param jdbcTemplate   the Spring-provided JDBC template (auto-wired from DataSource)
-     * @param embeddingModel the deterministic embedding model (zero-key, @Primary)
-     * @return the configured PgVectorStore
-     */
-    @Bean
-    public VectorStore vectorStore(JdbcTemplate jdbcTemplate,
-                                   DeterministicHashingEmbeddingModel embeddingModel) {
-        return PgVectorStore.builder(jdbcTemplate, embeddingModel)
-                .dimensions(1536)
-                .distanceType(PgVectorStore.PgDistanceType.COSINE_DISTANCE)
-                .indexType(PgVectorStore.PgIndexType.HNSW)
-                .initializeSchema(false)
-                .schemaName("public")
-                .vectorTableName("vector_store")
-                .build();
-    }
 }
+

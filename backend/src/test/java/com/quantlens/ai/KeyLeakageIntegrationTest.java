@@ -127,12 +127,29 @@ class KeyLeakageIntegrationTest extends AbstractPostgresIntegrationTest {
                 .as("GET /api/ai/commentary response (incl. 502 error body) must NEVER contain the API key (T-06-01)")
                 .doesNotContain(testKey);
 
-        // 5. Assert no captured log line contains the test key
+        // 5. Call POST /api/ai/chat — must not return key (T-07-LEAK)
+        HttpHeaders chatHeaders = new HttpHeaders();
+        chatHeaders.setContentType(MediaType.APPLICATION_JSON);
+        chatHeaders.add(HttpHeaders.COOKIE, sessionCookie);
+        String chatPayload = "{\"message\":\"What are the key risks?\"}";
+        ResponseEntity<String> chatResponse = restTemplate.exchange(
+                "/api/ai/chat",
+                HttpMethod.POST,
+                new HttpEntity<>(chatPayload, chatHeaders),
+                String.class);
+        assertThat(chatResponse.getStatusCode())
+                .as("POST /api/ai/chat is reachable (200) or fails gracefully on fake live key (502) — not 404/403")
+                .isIn(HttpStatus.OK, HttpStatus.BAD_GATEWAY);
+        assertThat(chatResponse.getBody())
+                .as("POST /api/ai/chat response must NEVER contain the API key (T-07-LEAK)")
+                .doesNotContain(testKey);
+
+        // 6. Assert no captured log line contains the test key
         List<String> capturedLines = logAppender.list.stream()
                 .map(ILoggingEvent::getFormattedMessage)
                 .toList();
         assertThat(capturedLines)
-                .as("No log line must contain the API key (T-06-02)")
+                .as("No log line must contain the API key (T-06-02, T-07-LEAK)")
                 .noneMatch(line -> line.contains(testKey));
     }
 

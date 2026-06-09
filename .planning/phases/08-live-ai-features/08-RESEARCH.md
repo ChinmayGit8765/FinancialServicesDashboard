@@ -720,7 +720,7 @@ public StructuredInsightRecord getInsight(Long portfolioId) {
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED — gated at Wave 0 compile; see plan 08-01 tasks)
 
 1. **`MethodToolCallbackProvider.getToolCallbacks()` return type**
    - What we know: `MethodToolCallbackProvider` exists per official Javadoc

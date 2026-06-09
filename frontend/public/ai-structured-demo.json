@@ -1,0 +1,11 @@
+{
+  "title": "AI-Detected Sector Exposure",
+  "subtitle": "Structured output (demo)",
+  "series": [
+    { "label": "Technology",        "value": 42.5 },
+    { "label": "Financials",        "value": 21.0 },
+    { "label": "Energy",            "value": 14.3 },
+    { "label": "Consumer Staples",  "value": 12.7 },
+    { "label": "Healthcare",        "value": 9.5 }
+  ]
+}

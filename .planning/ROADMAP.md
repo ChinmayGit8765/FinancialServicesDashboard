@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Frontend Scaffold** - Vue 3 + Pinia + ECharts dashboard, portfolio chart bindings, auth flow, OAuth upgrade path docs (completed 2026-06-07)
 - [x] **Phase 4: Quant Risk Engine** - Sharpe, VaR, beta, volatility, correlation heatmap, Fama-French attribution, cointegration pairs scanner (completed 2026-06-08)
 - [x] **Phase 5: Stochastic Forecasting** - Monte Carlo fan charts across four models (GBM, Merton, Heston, bootstrap) plus rationale documentation (completed 2026-06-08)
-- [ ] **Phase 6: Demo-Mode AI Seam** - DemoModeAdvisor, LlmKeySessionHolder, ChatClientStrategy, seeded fixtures, BYO-key popup, explain-position and commentary in demo mode
+- [x] **Phase 6: Demo-Mode AI Seam** - DemoModeAdvisor, LlmKeySessionHolder, ChatClientStrategy, seeded fixtures, BYO-key popup, explain-position and commentary in demo mode (completed 2026-06-09)
 - [ ] **Phase 7: RAG Pipeline** - pgvector ingestion, pre-seeded embeddings, QuestionAnswerAdvisor, NL Q&A chat with conversation memory
 - [ ] **Phase 8: Live AI Features** - Finnhub @Tool integration, multi-provider ChatClient (Claude + OpenAI), structured output driving a chart
 - [ ] **Phase 9: MCP Server** - @McpTool beans, Streamable HTTP transport, Spring Security on /mcp, Claude Code .mcp.json config, MCP docs
@@ -128,8 +128,8 @@ Plans:
 Plans:
 - [x] 06-01-PLAN.md — Wave 0: AI starters + key-less sentinel startup + ai_seed_content (V4) + LlmKeySessionHolder/DemoModeAdvisor/ChatClientStrategy/AiKey+AiController + ALL RED test scaffolds incl. KeyLeakageIntegrationTest (AI-01/02/07/08)
 - [x] 06-02-PLAN.md — The seam: idempotent AiSeedRunner authored fixtures + SecurityConfig CSRF for /api/ai/key; demo content end-to-end, no network (AI-01, AI-02)
-- [ ] 06-03-PLAN.md — Feature endpoints: ExplainPositionService + CommentaryService through the seam; /explain/{ticker} + /commentary (AI-07, AI-08)
-- [ ] 06-04-PLAN.md — Frontend: ai store + BYOKeyModal/AiModeBadge/ExplainDrawer/CommentaryCard + DashboardView/TopBar/HoldingsTable wiring + human-verify (AI-01/02/07/08)
+- [x] 06-03-PLAN.md — Feature endpoints: ExplainPositionService + CommentaryService through the seam; /explain/{ticker} + /commentary (AI-07, AI-08)
+- [x] 06-04-PLAN.md — Frontend: ai store + BYOKeyModal/AiModeBadge/ExplainDrawer/CommentaryCard + DashboardView/TopBar/HoldingsTable wiring + human-verify (AI-01/02/07/08)
 **UI hint**: yes
 
 ### Phase 7: RAG Pipeline
@@ -189,7 +189,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 3. Frontend Scaffold | 5/5 | Complete   | 2026-06-07 |
 | 4. Quant Risk Engine | 4/4 | Complete   | 2026-06-08 |
 | 5. Stochastic Forecasting | 3/3 | Complete   | 2026-06-08 |
-| 6. Demo-Mode AI Seam | 2/4 | In Progress|  |
+| 6. Demo-Mode AI Seam | 4/4 | Complete   | 2026-06-09 |
 | 7. RAG Pipeline | 0/TBD | Not started | - |
 | 8. Live AI Features | 0/TBD | Not started | - |
 | 9. MCP Server | 0/TBD | Not started | - |

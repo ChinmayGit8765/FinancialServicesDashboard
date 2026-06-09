@@ -38,11 +38,12 @@ import static org.assertj.core.api.Assertions.assertThat;
  *   <li>{@code GET /api/ai/structured} — 200 or 502 graceful (T-08-LEAK-ST)</li>
  * </ul>
  *
- * <p>Finnhub key-leak threat (T-08-LEAK-FH): {@code FINNHUB_API_KEY} is blank in the test
- * environment, so the seeded fallback path runs and Finnhub is never called. The
- * endpoint-level assertion on {@code /api/ai/structured} is vacuously safe here; the ACTIVE
- * Finnhub sentinel proof (sentinel key + forced IOException catch path) lives in
- * {@code StockQuoteToolServiceTest} (08-01).
+ * <p>T-08-LEAK-FH: {@code FINNHUB_API_KEY} is blank in the test environment, so the seeded
+ * fallback path runs and Finnhub is never called here. The endpoint-level assertion on
+ * {@code /api/ai/structured} therefore does not exercise the Finnhub token path.
+ * The MANDATORY security proof for Finnhub token non-disclosure is in
+ * {@code StockQuoteToolServiceTest#finnhubKeySentinelNeverLogged_onForcedFailure} —
+ * do NOT remove that test. (IN-03 fix: replaced the misleading "vacuously safe" wording.)
  *
  * <p><strong>IMPORTANT:</strong> This test uses a randomly generated test key
  * ({@code "TEST-SENTINEL-KEY-" + UUID}) to ensure no collision with any real key or
@@ -151,13 +152,12 @@ class KeyLeakageIntegrationTest extends AbstractPostgresIntegrationTest {
 
         // 5b. Call GET /api/ai/structured — must not return LLM key in response (T-08-LEAK-ST).
         //
-        // Finnhub key-leak threat (T-08-LEAK-FH): this endpoint can trigger
-        // StockQuoteToolService → FinnhubQuoteClient if the LLM decides to call the @Tool.
-        // In this test env FINNHUB_API_KEY resolves to blank (no env var set), so the seeded
-        // fallback runs and Finnhub's API URL is never constructed with a real key. The
-        // endpoint-level assertion below is therefore vacuously safe for the Finnhub key here.
-        // The ACTIVE Finnhub sentinel proof lives in 08-01's StockQuoteToolServiceTest
-        // (sentinel key + forced IOException catch path proves the token never appears in logs).
+        // T-08-LEAK-FH: this endpoint can trigger StockQuoteToolService → FinnhubQuoteClient
+        // if the LLM decides to call the @Tool. In this test env FINNHUB_API_KEY is blank,
+        // so the seeded fallback runs and Finnhub is never called. The MANDATORY security proof
+        // for Finnhub token non-disclosure is in
+        // StockQuoteToolServiceTest#finnhubKeySentinelNeverLogged_onForcedFailure —
+        // do NOT remove that test. (IN-03 fix: replaced the misleading "vacuously safe" comment.)
         ResponseEntity<String> structuredResponse = authenticatedGet("/api/ai/structured", sessionCookie);
         assertThat(structuredResponse.getStatusCode())
                 .as("GET /api/ai/structured is reachable (200 demo seed) or fails gracefully on the fake live key (502) — not 404/403")

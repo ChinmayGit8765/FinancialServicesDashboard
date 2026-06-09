@@ -28,13 +28,15 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for {@link FinnhubQuoteClient} and {@link StockQuoteToolService}.
  *
  * <p>Tests the demo seeded path, live Finnhub path (mocked HTTP), TTL cache,
- * zero-timestamp fallback, and the ACTIVE Finnhub key-leak sentinel test (T-08-LEAK-FH).
+ * zero-price/timestamp fallback (CR-03/CR-04), the ACTIVE Finnhub key-leak sentinel
+ * test (T-08-LEAK-FH), and regression tests for all Phase-08 critical/warning fixes.
  *
  * <p>Because the test lives in {@code com.quantlens.ai} (not {@code com.quantlens.ai.tools}),
  * the package-private 4-arg constructor is not directly accessible. We use the public
@@ -101,6 +103,9 @@ class StockQuoteToolServiceTest {
      * T2-LIVE: with a key set and stubbed HttpClient returning a valid c/t payload,
      * getQuote returns source=FINNHUB with a marketState derived from the timestamp.
      * Timestamp 1700000000 = 2023-11-14 22:13:20 UTC = 17:13:20 ET → AFTER_HOURS.
+     *
+     * <p>CR-01 regression: the HTTP request must NOT contain the token in the URI;
+     * the token must be in the X-Finnhub-Token header.
      */
     @Test
     @SuppressWarnings("unchecked")
@@ -121,6 +126,46 @@ class StockQuoteToolServiceTest {
         assertThat(result.marketState()).isEqualTo("AFTER_HOURS");
         assertThat(result.ticker()).isEqualTo("AAPL");
         assertThat(result.asOf()).isNotBlank();
+
+        // CR-01 regression: verify token is NOT in the URI
+        verify(mockHttpClient).send(
+                argThat(req -> !req.uri().toString().contains("token=")),
+                any());
+    }
+
+    /**
+     * T2b-CR01-HEADER: the outgoing request carries the token in the X-Finnhub-Token
+     * header, NOT in the URL query string (CR-01 — prevents JDK/Spring HTTP log exposure).
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void live_tokenInHeader_notInUri() throws Exception {
+        final String API_KEY = "my-secret-key-12345";
+        String jsonBody = "{\"c\":100.0,\"d\":0.0,\"dp\":0.0,\"h\":101.0,\"l\":99.0,"
+                + "\"o\":100.0,\"pc\":99.5,\"t\":1700000000}";
+
+        HttpResponse<String> mockResponse = mock(HttpResponse.class);
+        when(mockResponse.body()).thenReturn(jsonBody);
+        when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+                .thenReturn(mockResponse);
+
+        FinnhubQuoteClient client = buildClient(API_KEY);
+        client.getQuote("TSLA");
+
+        verify(mockHttpClient).send(
+                argThat(req -> {
+                    // URI must NOT contain the token
+                    String uriStr = req.uri().toString();
+                    assertThat(uriStr).as("URI must not contain the API key (CR-01)").doesNotContain(API_KEY);
+                    assertThat(uriStr).as("URI must not contain a 'token=' parameter (CR-01)").doesNotContain("token=");
+                    // Header must carry the token
+                    assertThat(req.headers().firstValue("X-Finnhub-Token"))
+                            .as("X-Finnhub-Token header must carry the API key (CR-01)")
+                            .isPresent()
+                            .hasValue(API_KEY);
+                    return true;
+                }),
+                any());
     }
 
     /**
@@ -144,6 +189,38 @@ class StockQuoteToolServiceTest {
 
         assertThat(second).isSameAs(first);
         verify(mockHttpClient, times(1)).send(any(), any());
+    }
+
+    /**
+     * T3b-CR02-EXPIRY: CR-02 regression — an expired cache entry triggers a fresh fetch.
+     * We manipulate the cache directly via clearCache() to simulate expiry (since setting
+     * an artificially short TTL is not exposed), verify the client re-fetches.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void cache_expiredEntry_triggersRefresh() throws Exception {
+        String jsonBody = "{\"c\":189.25,\"d\":1.50,\"dp\":0.80,\"h\":190.0,\"l\":187.0,"
+                + "\"o\":188.0,\"pc\":187.75,\"t\":1700000000}";
+
+        HttpResponse<String> mockResponse = mock(HttpResponse.class);
+        when(mockResponse.body()).thenReturn(jsonBody);
+        when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+                .thenReturn(mockResponse);
+
+        FinnhubQuoteClient client = buildClient("test-api-key");
+
+        StockQuoteResult first = client.getQuote("AAPL");
+
+        // Simulate expiry by clearing the cache via ReflectionTestUtils (clearCache is package-private)
+        ReflectionTestUtils.invokeMethod(client, "clearCache");
+
+        StockQuoteResult second = client.getQuote("AAPL");
+
+        // Both results have correct FINNHUB source — but they are separate instances
+        assertThat(first.source()).isEqualTo("FINNHUB");
+        assertThat(second.source()).isEqualTo("FINNHUB");
+        // After cache clear, exactly 2 HTTP calls were made
+        verify(mockHttpClient, times(2)).send(any(), any());
     }
 
     /**
@@ -171,11 +248,113 @@ class StockQuoteToolServiceTest {
     }
 
     /**
+     * T4b-CR03: CR-03 regression — Finnhub returns zero price with a valid (non-zero)
+     * timestamp (e.g. market closed, real ticker). The result must fall back to seeded
+     * and must NOT be cached with source=FINNHUB and price=0.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void cr03_zeroPriceValidTimestamp_fallsBackToSeeded_notCached() throws Exception {
+        // c=0.0 but t is a real timestamp — this was the CR-03 bug
+        String jsonBody = "{\"c\":0.0,\"d\":0.0,\"dp\":0.0,\"h\":0.0,\"l\":0.0,"
+                + "\"o\":0.0,\"pc\":150.0,\"t\":1700000000}";
+
+        HttpResponse<String> mockResponse = mock(HttpResponse.class);
+        when(mockResponse.body()).thenReturn(jsonBody);
+        when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+                .thenReturn(mockResponse);
+
+        BigDecimal seededClose = new BigDecimal("148.75");
+        OhlcvBar bar = makeBar("NVDA", seededClose, LocalDate.of(2024, 1, 10));
+        when(ohlcvRepo.findLatestCloseByTicker("NVDA")).thenReturn(Optional.of(bar));
+
+        FinnhubQuoteClient client = buildClient("test-api-key");
+        StockQuoteResult result = client.getQuote("NVDA");
+
+        // Must fall back to seeded — zero price is never a valid quote
+        assertThat(result.source())
+                .as("CR-03: zero price with valid timestamp must fall back to seeded, not cache $0.00")
+                .isEqualTo("SEEDED");
+        assertThat(result.price())
+                .as("CR-03: result price must be the seeded close, not $0.00")
+                .isEqualByComparingTo(seededClose);
+    }
+
+    /**
+     * T4c-CR04: CR-04 regression — Finnhub returns non-zero price with zero timestamp
+     * (c=189.25, t=0). The result must fall back to seeded — the 1970-01-01 epoch asOf
+     * and wrong market state must never be cached or returned.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void cr04_nonZeroPriceZeroTimestamp_fallsBackToSeeded_noEpochAsOf() throws Exception {
+        // c is real, but t=0 — this is the CR-04 bug (deriveMarketState(0L) gives AFTER_HOURS
+        // with asOf="1970-01-01T00:00:00Z")
+        String jsonBody = "{\"c\":189.25,\"d\":1.50,\"dp\":0.80,\"h\":190.0,\"l\":187.0,"
+                + "\"o\":188.0,\"pc\":187.75,\"t\":0}";
+
+        HttpResponse<String> mockResponse = mock(HttpResponse.class);
+        when(mockResponse.body()).thenReturn(jsonBody);
+        when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+                .thenReturn(mockResponse);
+
+        BigDecimal seededClose = new BigDecimal("185.00");
+        OhlcvBar bar = makeBar("AAPL", seededClose, LocalDate.of(2024, 1, 10));
+        when(ohlcvRepo.findLatestCloseByTicker("AAPL")).thenReturn(Optional.of(bar));
+
+        FinnhubQuoteClient client = buildClient("test-api-key");
+        StockQuoteResult result = client.getQuote("AAPL");
+
+        // Must fall back to seeded — epoch-zero timestamp is unusable
+        assertThat(result.source())
+                .as("CR-04: non-zero price with t=0 must fall back to seeded (no epoch-1970 asOf)")
+                .isEqualTo("SEEDED");
+        assertThat(result.asOf())
+                .as("CR-04: asOf must NOT be the epoch-1970 timestamp")
+                .doesNotContain("1970");
+        // Price must be seeded, not the live 189.25 with a broken timestamp
+        assertThat(result.price())
+                .as("CR-04: price must be the seeded close, not the live price with a broken timestamp")
+                .isEqualByComparingTo(seededClose);
+    }
+
+    /**
+     * T4d-WR01: WR-01 regression — null ticker must return a safe sentinel, not NPE.
+     */
+    @Test
+    void wr01_nullTicker_returnsSentinelNotNpe() {
+        FinnhubQuoteClient client = buildClient("test-api-key");
+
+        StockQuoteResult result = client.getQuote(null);
+
+        assertThat(result).as("WR-01: null ticker must not throw NPE").isNotNull();
+        assertThat(result.ticker()).isEqualTo("UNKNOWN");
+        assertThat(result.source()).isEqualTo("SEEDED");
+        assertThat(result.price()).isEqualByComparingTo(BigDecimal.ZERO);
+        // HttpClient must not be called — null ticker is a guard-exit
+        verifyNoInteractions(mockHttpClient);
+    }
+
+    /**
+     * T4e-WR01: WR-01 regression — blank ticker must also return a safe sentinel.
+     */
+    @Test
+    void wr01_blankTicker_returnsSentinelNotNpe() {
+        FinnhubQuoteClient client = buildClient("test-api-key");
+
+        StockQuoteResult result = client.getQuote("   ");
+
+        assertThat(result).as("WR-01: blank ticker must not throw NPE").isNotNull();
+        assertThat(result.ticker()).isEqualTo("UNKNOWN");
+        assertThat(result.source()).isEqualTo("SEEDED");
+        verifyNoInteractions(mockHttpClient);
+    }
+
+    /**
      * T5-LEAK (ACTIVE SENTINEL): T-08-LEAK-FH proof.
      *
      * <p>Set the key to TEST-FH-SENTINEL, stub HttpClient.send() to THROW an IOException
-     * whose message embeds the sentinel in the URL (mimicking how Java HttpClient wraps
-     * the token in the exception message). Assert:
+     * whose message embeds the sentinel. Assert:
      * <ol>
      *   <li>result is the seeded fallback (source=SEEDED)</li>
      *   <li>NO captured log line (formatted message or throwable message) contains TEST-FH-SENTINEL</li>
@@ -183,8 +362,12 @@ class StockQuoteToolServiceTest {
      * </ol>
      *
      * <p>This is the ACTIVE sentinel test — it forces the catch path and proves the catch
-     * block NEVER logs {@code e.getMessage()} (which would contain the {@code ?token=...} URL).
+     * block NEVER logs {@code e.getMessage()} (which would contain the sentinel).
      * It is NOT the vacuous demo-blank-key path: the key IS set, and the HttpClient throws.
+     *
+     * <p>CR-01 note: with the header fix the sentinel is no longer in the URI, but the
+     * exception message still embeds it (to cover future regressions). The catch block
+     * must still not log it.
      */
     @Test
     @SuppressWarnings("unchecked")
@@ -274,5 +457,39 @@ class StockQuoteToolServiceTest {
         assertThat(result.source()).isEqualTo("FINNHUB");
         assertThat(result.marketState()).isEqualTo("AFTER_HOURS");
         verify(mockFinnhubClient).getQuote("MSFT");
+    }
+
+    /**
+     * T8-IN01: IN-01 — lowercase ticker is canonicalized to uppercase before the
+     * FinnhubQuoteClient call, so "aapl" → client receives "AAPL".
+     */
+    @Test
+    void in01_lowercaseTicker_canonicalizedToUppercase() {
+        StockQuoteResult expected = new StockQuoteResult("AAPL", new BigDecimal("178.50"),
+                "2024-01-15", "DEMO", "SEEDED");
+        when(mockFinnhubClient.getQuote("AAPL")).thenReturn(expected);
+
+        StockQuoteToolService toolService = new StockQuoteToolService(mockFinnhubClient);
+        StockQuoteResult result = toolService.getStockQuote("aapl");
+
+        assertThat(result).isSameAs(expected);
+        // Verify the client was called with uppercase "AAPL", not "aapl"
+        verify(mockFinnhubClient).getQuote("AAPL");
+        verify(mockFinnhubClient, never()).getQuote("aapl");
+    }
+
+    /**
+     * T9-IN01: IN-01 — mixed-case ticker "Aapl" is canonicalized to "AAPL".
+     */
+    @Test
+    void in01_mixedCaseTicker_canonicalizedToUppercase() {
+        StockQuoteResult expected = new StockQuoteResult("AAPL", new BigDecimal("178.50"),
+                "2024-01-15", "DEMO", "SEEDED");
+        when(mockFinnhubClient.getQuote("AAPL")).thenReturn(expected);
+
+        StockQuoteToolService toolService = new StockQuoteToolService(mockFinnhubClient);
+        toolService.getStockQuote("Aapl");
+
+        verify(mockFinnhubClient).getQuote("AAPL");
     }
 }

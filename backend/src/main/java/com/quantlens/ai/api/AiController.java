@@ -123,12 +123,13 @@ public class AiController {
      * QuestionAnswerAdvisor retrieves relevant 10-K chunks and MessageChatMemoryAdvisor
      * provides conversation history.
      *
-     * <p>T-07-IDOR: conversationId defaults to the server-assigned HTTP session ID —
-     * arbitrary client-supplied IDs are only used if the client provides one explicitly
-     * (not yet validated as session-scoped in v1; default is always sessionId).
+     * <p>T-07-IDOR: The conversationId is ALWAYS derived from the server-assigned HTTP session ID.
+     * Any client-supplied {@code conversationId} in the request body is IGNORED. This prevents
+     * cross-session memory poisoning (IDOR): without this fix, attacker B could supply
+     * User A's sessionId as conversationId and read or inject into A's conversation history.
      *
-     * @param request the chat request (message + optional conversationId)
-     * @param session the HTTP session (provides the fallback conversationId)
+     * @param request the chat request (message; conversationId field ignored — use session.getId())
+     * @param session the HTTP session (sole source of the conversationId)
      * @return 200 with {@link ChatResponseDto}; 502 on provider error
      */
     @PostMapping("/chat")
@@ -136,10 +137,9 @@ public class AiController {
             @RequestBody @Valid ChatRequestDto request,
             Authentication authentication,
             HttpSession session) {
-        // conversationId falls back to session ID (MessageChatMemoryAdvisor requires it)
-        String conversationId = (request.conversationId() != null && !request.conversationId().isBlank())
-                ? request.conversationId()
-                : session.getId();
+        // CR-04/T-07-IDOR: ALWAYS use server-assigned session ID — never trust client-supplied conversationId.
+        // A client providing an arbitrary conversationId could read or poison another user's memory.
+        String conversationId = session.getId();
         return ResponseEntity.ok(chatService.chat(request.message(), conversationId));
     }
 

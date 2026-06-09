@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import axios from 'axios'
-import type { AiStatus, ExplainResponse, CommentaryDto, StructuredChartDto } from '../api/ai'
+import type { AiStatus, ExplainResponse, CommentaryDto, StructuredChartDto, ChatMessage, ChatResponseDto } from '../api/ai'
 
 // Per-resource async state shape.
 // Components access resources whole — do NOT destructure (loses reactivity).
@@ -24,6 +24,11 @@ export const useAiStore = defineStore('ai', () => {
   const explanation = asyncState<ExplainResponse>()
   const commentary  = asyncState<CommentaryDto>()
   const structured  = asyncState<StructuredChartDto>()
+
+  // --- Phase 7: chat state ----------------------------------------------------
+  const chatMessages = ref<ChatMessage[]>([])
+  const chatLoading  = ref(false)
+  const chatError    = ref<string | null>(null)
 
   // --- fetch actions ----------------------------------------------------------
 
@@ -150,6 +155,36 @@ export const useAiStore = defineStore('ai', () => {
     }
   }
 
+  // --- Phase 7: sendMessage action --------------------------------------------
+
+  /**
+   * POST /api/ai/chat with { message, conversationId }.
+   * Pushes user turn immediately, then appends assistant turn on success.
+   * SECURITY: only { message, conversationId } forwarded — no key in payload.
+   */
+  async function sendMessage(message: string, conversationId?: string): Promise<void> {
+    chatMessages.value.push({ role: 'user', content: message })
+    chatLoading.value = true
+    chatError.value = null
+    try {
+      const { data } = await axios.post<ChatResponseDto>(
+        '/api/ai/chat',
+        { message, conversationId }
+      )
+      chatMessages.value.push({
+        role: 'assistant',
+        content: data.answer,
+        citations: data.citations ?? []
+      })
+    } catch (e: any) {
+      chatError.value = e?.response?.status === 401
+        ? 'Session expired'
+        : 'Failed to get AI response'
+    } finally {
+      chatLoading.value = false
+    }
+  }
+
   // --- manual reset -----------------------------------------------------------
 
   /**
@@ -161,6 +196,7 @@ export const useAiStore = defineStore('ai', () => {
     explanation.data = null; explanation.loading = false; explanation.error = null
     commentary.data  = null; commentary.loading  = false; commentary.error  = null
     structured.data  = null; structured.loading  = false; structured.error  = null
+    chatMessages.value = []; chatLoading.value = false; chatError.value = null
   }
 
   return {
@@ -169,6 +205,10 @@ export const useAiStore = defineStore('ai', () => {
     explanation,
     commentary,
     structured,
+    // Phase 7 chat state
+    chatMessages,
+    chatLoading,
+    chatError,
     // actions
     fetchStatus,
     setKey,
@@ -176,6 +216,7 @@ export const useAiStore = defineStore('ai', () => {
     fetchExplanation,
     fetchCommentary,
     fetchStructured,
+    sendMessage,
     $reset,
   }
 })

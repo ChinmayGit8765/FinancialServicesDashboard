@@ -32,3 +32,23 @@ export interface StructuredChartDto {
   subtitle?: string
   series: { label: string; value: number }[]
 }
+
+// --- Phase 7: Chat / RAG DTOs -----------------------------------------------
+
+export interface Citation {
+  ticker: string
+  section: string
+  source: string
+  excerpt: string
+}
+
+export interface ChatMessage {
+  role: 'user' | 'assistant'
+  content: string
+  citations?: Citation[]
+}
+
+export interface ChatResponseDto {
+  answer: string
+  citations: Citation[]
+}

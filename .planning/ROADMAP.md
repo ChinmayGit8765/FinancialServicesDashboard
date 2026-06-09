@@ -18,7 +18,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 4: Quant Risk Engine** - Sharpe, VaR, beta, volatility, correlation heatmap, Fama-French attribution, cointegration pairs scanner (completed 2026-06-08)
 - [x] **Phase 5: Stochastic Forecasting** - Monte Carlo fan charts across four models (GBM, Merton, Heston, bootstrap) plus rationale documentation (completed 2026-06-08)
 - [x] **Phase 6: Demo-Mode AI Seam** - DemoModeAdvisor, LlmKeySessionHolder, ChatClientStrategy, seeded fixtures, BYO-key popup, explain-position and commentary in demo mode (completed 2026-06-09)
-- [ ] **Phase 7: RAG Pipeline** - pgvector ingestion, pre-seeded embeddings, QuestionAnswerAdvisor, NL Q&A chat with conversation memory
+- [x] **Phase 7: RAG Pipeline** - pgvector ingestion, pre-seeded embeddings, QuestionAnswerAdvisor, NL Q&A chat with conversation memory (completed 2026-06-09)
 - [ ] **Phase 8: Live AI Features** - Finnhub @Tool integration, multi-provider ChatClient (Claude + OpenAI), structured output driving a chart
 - [ ] **Phase 9: MCP Server** - @McpTool beans, Streamable HTTP transport, Spring Security on /mcp, Claude Code .mcp.json config, MCP docs
 - [ ] **Phase 10: Polish & Documentation** - README screenshots, OpenAPI spec, Spring Modulith ArchUnit verification test
@@ -145,7 +145,7 @@ Plans:
 Plans:
 - [x] 07-01-PLAN.md — Wave 0: pgvector starter + DeterministicHashingEmbeddingModel + RagAdvisorConfig + ChatService/POST /api/ai/chat + RagSeedRunner skeleton + ALL RED test scaffolds incl. KeyLeakage /api/ai/chat extension; resolve A1-A8 at compile (AI-03, AI-04)
 - [x] 07-02-PLAN.md — The seam: idempotent rag-v1 10-K corpus + RAG_QA demo answers + ChatService citations (demo authored + live RETRIEVED_DOCUMENTS); demo/memory/citations/seed tests green; RAG_DESIGN.md (AI-03, AI-04)
-- [ ] 07-03-PLAN.md — Frontend: ai store chat state + sendMessage + ChatPanel.vue (3 states, citation chips) + DashboardView wiring + ChatPanel spec + human-verify (AI-03, AI-04)
+- [x] 07-03-PLAN.md — Frontend: ai store chat state + sendMessage + ChatPanel.vue (3 states, citation chips) + DashboardView wiring + ChatPanel spec + human-verify (AI-03, AI-04)
 **UI hint**: yes
 
 ### Phase 8: Live AI Features
@@ -194,7 +194,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 4. Quant Risk Engine | 4/4 | Complete   | 2026-06-08 |
 | 5. Stochastic Forecasting | 3/3 | Complete   | 2026-06-08 |
 | 6. Demo-Mode AI Seam | 4/4 | Complete   | 2026-06-09 |
-| 7. RAG Pipeline | 2/3 | In Progress|  |
+| 7. RAG Pipeline | 3/3 | Complete   | 2026-06-09 |
 | 8. Live AI Features | 0/TBD | Not started | - |
 | 9. MCP Server | 0/TBD | Not started | - |
 | 10. Polish & Documentation | 0/TBD | Not started | - |

@@ -26,7 +26,7 @@ function providerLabel(p: string | null): string {
   <span
     class="ai-mode-badge"
     :class="props.mode === 'live' ? 'ai-mode-badge--live' : 'ai-mode-badge--demo'"
-    aria-label="`AI mode: ${props.mode}`"
+    :aria-label="`AI mode: ${props.mode}`"
   >
     <template v-if="props.mode === 'live'">
       Live<template v-if="props.provider"> · {{ providerLabel(props.provider) }}</template>

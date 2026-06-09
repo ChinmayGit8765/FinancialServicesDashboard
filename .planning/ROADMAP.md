@@ -172,7 +172,10 @@ Plans:
   1. An MCP client (e.g., Claude Code) can connect to `http://localhost:8080/mcp` using the committed `.mcp.json` config and call `get_portfolio_summary`, `get_risk_metrics`, and `get_position_detail` tools, receiving correctly-computed responses from the seeded data
   2. The /mcp endpoint requires authentication before any tool is reachable; MCP error responses never contain Java stack traces
   3. The README documents how any MCP client connects to the server and what tools are available
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 09-01-PLAN.md — Wave 1: MCP starter + /mcp Streamable-HTTP config + SecurityConfig (httpBasic + /mcp CSRF exemption) + mcp Modulith module (named interfaces) + 3 @McpTool beans + result records + .mcp.json quantlens entry + RED scaffolds; resolve open questions at compile (MCP-01, MCP-02)
+- [ ] 09-02-PLAN.md — Wave 2: green tool-correctness (golden/service values) + error-hygiene tests + full backend suite + README Product MCP Server section (MCP-01, MCP-02)
 
 ### Phase 10: Polish & Documentation
 **Goal**: The repository reads as senior-engineer work: README with live-demo screenshots, OpenAPI spec, and a Spring Modulith ArchUnit test that verifies module boundaries as a living contract.
@@ -200,5 +203,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 6. Demo-Mode AI Seam | 4/4 | Complete   | 2026-06-09 |
 | 7. RAG Pipeline | 3/3 | Complete   | 2026-06-09 |
 | 8. Live AI Features | 3/3 | Complete   | 2026-06-09 |
-| 9. MCP Server | 0/TBD | Not started | - |
+| 9. MCP Server | 0/2 | Not started | - |
 | 10. Polish & Documentation | 0/TBD | Not started | - |

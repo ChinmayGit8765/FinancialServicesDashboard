@@ -176,9 +176,22 @@ public class CommentaryService {
             return new CommentaryDto(headline, body, List.copyOf(bullets));
         }
 
-        // Fallback: free-form live response — headline = first sentence, body = remainder
+        // Fallback: free-form live response — headline = first sentence, body = remainder.
+        // WR-02: use sentence-end dot detection (dot followed by whitespace or end-of-string)
+        // rather than indexOf('.') which truncates at abbreviation dots like "Inc." or "Corp.".
         String text = content.strip();
-        int dotIdx = text.indexOf('.');
+        int dotIdx = -1;
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c == '.') {
+                int next = i + 1;
+                // Sentence-ending dot: followed by whitespace, end-of-string, or newline
+                if (next >= text.length() || Character.isWhitespace(text.charAt(next))) {
+                    dotIdx = i;
+                    break;
+                }
+            }
+        }
         if (dotIdx > 0 && dotIdx < text.length() - 1) {
             String headline = text.substring(0, dotIdx + 1).strip();
             String body     = text.substring(dotIdx + 1).strip();

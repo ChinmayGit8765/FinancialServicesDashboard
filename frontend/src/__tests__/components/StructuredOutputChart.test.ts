@@ -71,4 +71,24 @@ describe('StructuredOutputChart', () => {
     expect(wrapper.find('.skeleton').exists()).toBe(true)
     expect(wrapper.findComponent({ name: 'VChart' }).exists()).toBe(false)
   })
+
+  it('renders live DTO shape from /api/ai/structured (title + series)', () => {
+    // The same StructuredChartDto shape is used regardless of source:
+    // static /ai-structured-demo.json (Phase 6) OR live GET /api/ai/structured (Phase 8).
+    // StructuredOutputChart requires no changes — it already accepts StructuredChartDto | null.
+    const liveDto: StructuredChartDto = {
+      title: 'Sector Exposure',
+      subtitle: 'AI-Detected Allocation (Demo)',
+      series: [
+        { label: 'Technology', value: 62.5 },
+        { label: 'Financials', value: 18.6 },
+        { label: 'Cash', value: 18.9 },
+      ],
+    }
+    const wrapper = mount(StructuredOutputChart, {
+      props: { structured: liveDto, loading: false, error: null },
+    })
+    expect(wrapper.text()).toContain('Sector Exposure')
+    expect(wrapper.findComponent({ name: 'VChart' }).exists()).toBe(true)
+  })
 })

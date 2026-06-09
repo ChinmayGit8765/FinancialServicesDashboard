@@ -141,7 +141,11 @@ Plans:
   1. User can ask freeform natural-language questions about the portfolio in a chat interface and receive contextually accurate answers; the chat retains conversation memory across turns within a session
   2. User can ask questions answered from seeded SEC 10-K filings (e.g., "What does Apple say about AI risk in their 10-K?") and receive answers with source citations; this works in demo mode because embeddings are pre-seeded in pgvector at startup with no API key
   3. Entering a BYO key switches answer generation to a live LLM call while using the same vector retrieval path
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 07-01-PLAN.md — Wave 0: pgvector starter + DeterministicHashingEmbeddingModel + RagAdvisorConfig + ChatService/POST /api/ai/chat + RagSeedRunner skeleton + ALL RED test scaffolds incl. KeyLeakage /api/ai/chat extension; resolve A1-A8 at compile (AI-03, AI-04)
+- [ ] 07-02-PLAN.md — The seam: idempotent rag-v1 10-K corpus + RAG_QA demo answers + ChatService citations (demo authored + live RETRIEVED_DOCUMENTS); demo/memory/citations/seed tests green; RAG_DESIGN.md (AI-03, AI-04)
+- [ ] 07-03-PLAN.md — Frontend: ai store chat state + sendMessage + ChatPanel.vue (3 states, citation chips) + DashboardView wiring + ChatPanel spec + human-verify (AI-03, AI-04)
 **UI hint**: yes
 
 ### Phase 8: Live AI Features
@@ -190,7 +194,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 4. Quant Risk Engine | 4/4 | Complete   | 2026-06-08 |
 | 5. Stochastic Forecasting | 3/3 | Complete   | 2026-06-08 |
 | 6. Demo-Mode AI Seam | 4/4 | Complete   | 2026-06-09 |
-| 7. RAG Pipeline | 0/TBD | Not started | - |
+| 7. RAG Pipeline | 0/3 | Planned | - |
 | 8. Live AI Features | 0/TBD | Not started | - |
 | 9. MCP Server | 0/TBD | Not started | - |
 | 10. Polish & Documentation | 0/TBD | Not started | - |

@@ -89,13 +89,20 @@ public class ChatService {
      *
      * <p>Citation source branches on data shape, NOT on demo/live flag:
      * <ul>
-     *   <li><strong>Live mode:</strong> {@code RETRIEVED_DOCUMENTS} is present in
-     *       {@code clientResponse.context()} (QuestionAnswerAdvisor ran) → map docs to CitationDto.</li>
-     *   <li><strong>Demo mode:</strong> {@code RETRIEVED_DOCUMENTS} is null (DemoModeAdvisor
+     *   <li><strong>Live mode:</strong> {@code RETRIEVED_DOCUMENTS} key is present in
+     *       {@code clientResponse.context()} (QuestionAnswerAdvisor ran — possibly with 0 results
+     *       if nothing met the similarity threshold) → map docs to CitationDto.
+     *       An empty list is still != null and correctly takes the live path.</li>
+     *   <li><strong>Demo mode:</strong> {@code RETRIEVED_DOCUMENTS} key is null (DemoModeAdvisor
      *       short-circuited before the QA advisor) → authored RAG_QA content is JSON
      *       {@code {"answer":..,"citations":[..]}} → parse with Jackson; graceful fallback
      *       if content is not JSON (treat whole text as answer, empty citations).</li>
      * </ul>
+     *
+     * <p>CR-05: The null-vs-empty distinction is explicit: {@code docsObj != null} means the
+     * QA advisor ran (live path); {@code docsObj == null} means the demo advisor short-circuited
+     * (demo path). This prevents a live response starting with '{' from being fed to
+     * parseDemoResponse and corrupting the answer.
      *
      * @param message        the user's question (validated upstream via @NotBlank @Size)
      * @param conversationId the session-scoped conversation ID; required by MessageChatMemoryAdvisor
@@ -116,19 +123,28 @@ public class ChatService {
                     .call()
                     .chatClientResponse();
 
-            String rawText = clientResponse.chatResponse()
-                    .getResult()
-                    .getOutput()
-                    .getText();
+            // WR-04: null-check getResult() before chaining — getResult() returns null when the
+            // LLM returns an empty candidates list (content-filter rejection, STOP with no content).
+            var generation = clientResponse.chatResponse().getResult();
+            String rawText = (generation != null && generation.getOutput() != null)
+                    ? generation.getOutput().getText()
+                    : "";
 
             // A5 resolution: RETRIEVED_DOCUMENTS is in clientResponse.context(), NOT chatResponse().getMetadata()
             // Bytecode analysis of QuestionAnswerAdvisor.after() confirmed this access path at Wave 0.
-            @SuppressWarnings("unchecked")
-            List<Document> docs = (List<Document>) clientResponse.context()
-                    .get(QuestionAnswerAdvisor.RETRIEVED_DOCUMENTS);
+            //
+            // CR-05: Branch on null vs non-null (including empty list):
+            //   - non-null (including empty list): QA advisor ran → live path
+            //   - null: QA advisor never ran (DemoModeAdvisor short-circuited) → demo path
+            Object docsObj = clientResponse.context().get(QuestionAnswerAdvisor.RETRIEVED_DOCUMENTS);
 
-            if (docs != null) {
+            if (docsObj != null) {
                 // ── Live mode: citations from RETRIEVED_DOCUMENTS ──────────────
+                // docsObj may be an empty list if no docs met the similarity threshold — that is fine.
+                // We NEVER route a live response through parseDemoResponse (prevents answer corruption
+                // when a real LLM answer happens to start with '{').
+                @SuppressWarnings("unchecked")
+                List<Document> docs = (List<Document>) docsObj;
                 List<CitationDto> citations = docs.stream()
                         .map(d -> new CitationDto(
                                 (String) d.getMetadata().getOrDefault("ticker",  ""),
@@ -162,6 +178,10 @@ public class ChatService {
      * <p>If the text is not valid JSON or is missing the expected fields, the raw text is
      * returned as the answer with empty citations — mirrors CommentaryService's defensive
      * parsing (graceful fallback, no exception thrown to the caller).
+     *
+     * <p>WR-03: Uses {@code String.valueOf()} on all citation field values to avoid
+     * ClassCastException when Jackson deserialises a numeric JSON field (e.g. year as int)
+     * — Jackson's untyped {@code Map} gives {@code Integer} for numeric values, not {@code String}.
      */
     private ChatResponseDto parseDemoResponse(String rawText) {
         if (rawText == null || rawText.isBlank()) {
@@ -173,21 +193,30 @@ public class ChatService {
             return new ChatResponseDto(trimmed, List.of());
         }
         try {
+            // WR-03: use TypeReference<Map<String, Object>> so Jackson produces a properly typed map
+            Map<String, Object> envelope = objectMapper.readValue(
+                    trimmed, new TypeReference<Map<String, Object>>() {});
+
+            // WR-03: use String.valueOf() to handle numeric fields without ClassCastException
+            Object answerObj = envelope.getOrDefault("answer", trimmed);
+            String answer = String.valueOf(answerObj);
+
             @SuppressWarnings("unchecked")
-            Map<String, Object> envelope = objectMapper.readValue(trimmed, Map.class);
+            List<Object> rawCitationObjs =
+                    (List<Object>) envelope.getOrDefault("citations", List.of());
 
-            String answer = (String) envelope.getOrDefault("answer", trimmed);
-
-            @SuppressWarnings("unchecked")
-            List<Map<String, String>> rawCitations =
-                    (List<Map<String, String>>) envelope.getOrDefault("citations", List.of());
-
-            List<CitationDto> citations = rawCitations.stream()
-                    .map(c -> new CitationDto(
-                            c.getOrDefault("ticker",  ""),
-                            c.getOrDefault("section", ""),
-                            c.getOrDefault("source",  ""),
-                            c.getOrDefault("excerpt", "")))
+            List<CitationDto> citations = rawCitationObjs.stream()
+                    .filter(obj -> obj instanceof Map)
+                    .map(obj -> {
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> c = (Map<String, Object>) obj;
+                        // WR-03: String.valueOf() handles Integer/Long/Boolean fields safely
+                        return new CitationDto(
+                                String.valueOf(c.getOrDefault("ticker",  "")),
+                                String.valueOf(c.getOrDefault("section", "")),
+                                String.valueOf(c.getOrDefault("source",  "")),
+                                String.valueOf(c.getOrDefault("excerpt", "")));
+                    })
                     .toList();
 
             return new ChatResponseDto(answer != null ? answer : trimmed, citations);

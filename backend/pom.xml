@@ -112,6 +112,19 @@
 			<scope>test</scope>
 		</dependency>
 
+		<!-- Phase 7: pgvector store — BOM pins to 1.1.6; initialize-schema stays false (Flyway owns DDL) -->
+		<!-- Official org.springframework.ai group — legitimacy same as existing starters (Package Legitimacy Audit) -->
+		<dependency>
+			<groupId>org.springframework.ai</groupId>
+			<artifactId>spring-ai-starter-vector-store-pgvector</artifactId>
+		</dependency>
+		<!-- Phase 7: QuestionAnswerAdvisor (RAG retrieval) — separate module from pgvector starter -->
+		<!-- BOM 1.1.6 pins version; org.springframework.ai official group -->
+		<dependency>
+			<groupId>org.springframework.ai</groupId>
+			<artifactId>spring-ai-advisors-vector-store</artifactId>
+		</dependency>
+
 		<!-- Phase 6: Spring AI model starters (BOM 1.1.6 already pinned above) -->
 		<!-- Official org.springframework.ai group — no legitimacy concern (RESEARCH Package Legitimacy Audit) -->
 		<dependency>

@@ -1,5 +1,6 @@
 package com.quantlens.ai.api;
 
+import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -10,7 +11,7 @@ import org.springframework.web.server.ResponseStatusException;
 /**
  * Global exception handler for AI controller layer — defense-in-depth backstop.
  *
- * <h3>Motivation (CR-03 / WR-01)</h3>
+ * <h3>Motivation (CR-03 / WR-01 / CR-05)</h3>
  * <ul>
  *   <li><strong>CR-03:</strong> Any exception that bypasses the service-level try/catch
  *       (e.g. a {@code RuntimeException} during session-proxy resolution, or before the
@@ -25,7 +26,11 @@ import org.springframework.web.server.ResponseStatusException;
  *       {@code AiKeyController.handleIllegalArgument}, which is scoped to
  *       {@code AiKeyController}. Calls from {@code AiController} (explain / commentary)
  *       would use Spring Boot's default handler. This advice catches it globally and
- *       returns a generic 500 with no exception detail.</li>
+ *       returns a generic 400 with no exception detail.</li>
+ *   <li><strong>CR-05:</strong> {@code @Validated} + {@code @Pattern} on a
+ *       {@code @PathVariable} throws {@code ConstraintViolationException} (not
+ *       {@code MethodArgumentNotValidException}). This handler catches it and returns
+ *       a generic 400 so malformed ticker symbols are cleanly rejected.</li>
  * </ul>
  *
  * <h3>What is NOT handled here</h3>
@@ -36,12 +41,28 @@ import org.springframework.web.server.ResponseStatusException;
  * <h3>Key-safety invariant</h3>
  * The exception message is NEVER included in the response body. The full exception is
  * logged internally (with stack trace) for diagnostics, but the client receives only
- * {@code {"error":"Internal server error"}} or {@code {"error":"Invalid configuration"}}.
+ * {@code {"error":"Internal server error"}}, {@code {"error":"Invalid request"}}, or
+ * {@code {"error":"Invalid configuration"}}.
  */
 @RestControllerAdvice(basePackages = "com.quantlens.ai.api")
 public class GlobalAiExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalAiExceptionHandler.class);
+
+    /**
+     * Handles {@link ConstraintViolationException} from {@code @Validated} path variable checks.
+     *
+     * <p>When {@code @Validated} is applied to a class and a {@code @Pattern} (or other constraint)
+     * on a {@code @PathVariable} is violated, Spring throws {@code ConstraintViolationException}
+     * (not {@code MethodArgumentNotValidException}). This handler returns a generic 400 with no
+     * constraint detail forwarded to the client (CR-05).
+     */
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<String> handleConstraintViolation(ConstraintViolationException ex) {
+        // Log at debug level — constraint violations on path variables are expected for bad input
+        log.debug("ConstraintViolationException on path variable (not forwarded to client): {}", ex.getMessage());
+        return ResponseEntity.badRequest().body("{\"error\":\"Invalid request\"}");
+    }
 
     /**
      * Handles {@link IllegalArgumentException} globally for all AI controllers.

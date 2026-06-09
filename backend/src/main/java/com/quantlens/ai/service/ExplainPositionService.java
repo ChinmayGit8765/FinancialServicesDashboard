@@ -78,16 +78,22 @@ public class ExplainPositionService {
         // Build a metrics summary from the matched holding for the live-mode prompt
         String metricsContext = buildMetricsContext(holding);
 
+        // CR-05: use the DB-sourced ticker from the matched Position, NOT the raw path variable.
+        // Even though @Pattern on the controller already rejects non-uppercase-letter tickers,
+        // using the DB value in the prompt is defense-in-depth: the prompt text is constructed
+        // from trusted database data rather than user input.
+        String dbTicker = holding.getSecurity().getTicker();
+
         // Route through the advisor chain — DemoModeAdvisor short-circuits in demo mode
         // by reading AI_SEED_TYPE/AI_SEED_SUBJECT from context; live mode calls the provider
         try {
             String content = strategy.forSession(keyHolder)
                     .prompt()
                     .system(EXPLAIN_SYSTEM_PROMPT)
-                    .user("Explain the portfolio position for " + ticker + ". " + metricsContext)
+                    .user("Explain the portfolio position for " + dbTicker + ". " + metricsContext)
                     .advisors(spec -> spec
                             .param("AI_SEED_TYPE", "EXPLAIN_POSITION")
-                            .param("AI_SEED_SUBJECT", ticker.toUpperCase()))
+                            .param("AI_SEED_SUBJECT", dbTicker.toUpperCase()))
                     .call()
                     .content();
             return new ExplainResponseDto(content != null ? content : "");

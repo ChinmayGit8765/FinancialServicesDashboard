@@ -112,6 +112,44 @@ class AiControllerIntegrationTest extends AbstractPostgresIntegrationTest {
                 .doesNotContain("\"headline\":\"\"");
     }
 
+    // ── CR-05: ticker format validation ──────────────────────────────────────
+
+    /**
+     * CR-05: GET /api/ai/explain/{ticker} with a malformed ticker (lowercase, digits, special
+     * chars, or URL-encoded control chars) must return 400 before reaching the service.
+     *
+     * <p>{@code @Validated} on {@code AiController} + {@code @Pattern(regexp="^[A-Z]{1,10}$")}
+     * on the {@code ticker} path variable ensures Spring validates the constraint and throws
+     * {@code ConstraintViolationException} before the service is ever invoked.
+     *
+     * <p>The test uses a deliberately malformed ticker that would represent a prompt-injection
+     * attempt after URL-decoding (e.g. {@code AAPL%0ADisregard} → {@code AAPL\nDisregard}).
+     * Spring decodes percent-encoding in {@code @PathVariable}, so the newline would reach
+     * the prompt without this guard.
+     */
+    @Test
+    void explain_malformedTicker_returns400() {
+        String cookie = loginAndGetSessionCookie("alice");
+
+        // Malformed ticker: lowercase letters — must be rejected before reaching service
+        ResponseEntity<String> lowercaseResponse = authenticatedGet("/api/ai/explain/aapl", cookie);
+        assertThat(lowercaseResponse.getStatusCode())
+                .as("GET /api/ai/explain/aapl (lowercase) must return 400 (CR-05: @Pattern validation)")
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+
+        // Malformed ticker: too long (>10 chars) — must be rejected
+        ResponseEntity<String> tooLongResponse = authenticatedGet("/api/ai/explain/TOOLONGTICKERX", cookie);
+        assertThat(tooLongResponse.getStatusCode())
+                .as("GET /api/ai/explain/TOOLONGTICKERX (>10 chars) must return 400 (CR-05: @Pattern validation)")
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+
+        // Malformed ticker: contains digit — must be rejected
+        ResponseEntity<String> digitResponse = authenticatedGet("/api/ai/explain/AAPL1", cookie);
+        assertThat(digitResponse.getStatusCode())
+                .as("GET /api/ai/explain/AAPL1 (contains digit) must return 400 (CR-05: @Pattern validation)")
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
     // ── helpers (verbatim copy from AnalyticsControllerIntegrationTest) ───────
 
     private String loginAndGetSessionCookie(String username) {

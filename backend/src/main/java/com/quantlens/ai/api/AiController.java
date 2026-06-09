@@ -3,10 +3,12 @@ package com.quantlens.ai.api;
 import com.quantlens.ai.service.CommentaryService;
 import com.quantlens.ai.service.ExplainPositionService;
 import com.quantlens.portfolio.domain.PortfolioRepository;
+import jakarta.validation.constraints.Pattern;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,7 +26,10 @@ import org.springframework.web.server.ResponseStatusException;
  *       NOT a numeric holdingId — this matches the {@code ai_seed_content.subject_id}
  *       column and {@link com.quantlens.portfolio.api.HoldingDto} which is keyed by ticker.
  *       <strong>Contract decision:</strong> ticker path avoids exposing internal DB IDs and
- *       matches the seed (type=EXPLAIN_POSITION, subjectId=ticker).</dd>
+ *       matches the seed (type=EXPLAIN_POSITION, subjectId=ticker).
+ *       <strong>CR-05:</strong> ticker is constrained to {@code ^[A-Z]{1,10}$} via
+ *       {@code @Pattern} — malformed tickers (e.g. with URL-encoded newlines or
+ *       prompt-injection characters) are rejected with 400 before reaching the service.</dd>
  *   <dt>GET /api/ai/commentary</dt>
  *   <dd>Returns a daily AI portfolio commentary scoped to the authenticated user's persona.</dd>
  * </dl>
@@ -34,10 +39,18 @@ import org.springframework.web.server.ResponseStatusException;
  * {@link #resolvePortfolioId(Authentication)} — copied verbatim from {@code AnalyticsController}.
  * No {@code @RequestParam} or numeric id {@code @PathVariable} accepts a portfolio identity.
  *
+ * <h3>Ticker validation (CR-05)</h3>
+ * {@code @Validated} on the class activates constraint validation for {@code @PathVariable}
+ * parameters. The {@code @Pattern(regexp="^[A-Z]{1,10}$")} on the {@code ticker} parameter
+ * ensures only uppercase letter-only ticker symbols reach the service. Spring's
+ * {@code @PathVariable} decodes percent-encoding — so {@code AAPL%0A} would become
+ * {@code AAPL\n}, which would be injected into the LLM prompt without this guard.
+ *
  * <h3>Module boundary</h3>
  * {@code AiController} is inside {@code com.quantlens.ai.api}. Cross-module reads:
  * {@code portfolio::domain} (PortfolioRepository — declared in {@code ai/package-info.java}).
  */
+@Validated
 @RestController
 @RequestMapping("/api/ai")
 public class AiController {
@@ -60,14 +73,22 @@ public class AiController {
      * <p>The {@code ticker} path variable is the stock ticker symbol (e.g. {@code "AAPL"}).
      * This is the contract established in Phase 6 for all downstream plans (06-02/03/04).
      *
-     * @param ticker         the ticker symbol identifying the holding (e.g. {@code "AAPL"})
+     * <p>CR-05: {@code @Pattern(regexp="^[A-Z]{1,10}$")} rejects malformed tickers (e.g.
+     * those containing URL-decoded newlines or other prompt-injection characters) with 400
+     * before the value ever reaches {@code ExplainPositionService} or an LLM prompt.
+     *
+     * @param ticker         the ticker symbol identifying the holding (e.g. {@code "AAPL"}),
+     *                       must match {@code ^[A-Z]{1,10}$}
      * @param authentication the Spring Security principal
-     * @return 200 with {@link ExplainResponseDto}; 401 if unauthenticated or no portfolio
+     * @return 200 with {@link ExplainResponseDto}; 400 on malformed ticker; 401 if
+     *         unauthenticated or no portfolio; 404 if ticker not in user's holdings
      */
     @GetMapping("/explain/{ticker}")
     @Transactional(readOnly = true)
     public ResponseEntity<ExplainResponseDto> explain(
-            @PathVariable String ticker,
+            @PathVariable @Pattern(regexp = "^[A-Z]{1,10}$",
+                    message = "ticker must be 1-10 uppercase letters")
+            String ticker,
             Authentication authentication) {
         Long portfolioId = resolvePortfolioId(authentication);
         return ResponseEntity.ok(explainService.explain(portfolioId, ticker));

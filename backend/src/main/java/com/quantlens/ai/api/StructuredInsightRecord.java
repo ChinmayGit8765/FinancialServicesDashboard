@@ -1,5 +1,8 @@
 package com.quantlens.ai.api;
 
+import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.annotation.Nulls;
+
 import java.util.List;
 
 /**
@@ -15,10 +18,15 @@ import java.util.List;
  *
  * @param title    chart headline (never blank in valid seed content)
  * @param subtitle optional subtitle (nullable; may be null in live mode)
- * @param series   list of labeled values (never null; may be empty)
+ * @param series   list of labeled values (never null; may be empty — WR-03: null coerced to
+ *                 empty list via {@code @JsonSetter(nulls = Nulls.AS_EMPTY)} so the frontend
+ *                 chart iterator never receives null)
  */
 public record StructuredInsightRecord(
         String title,
         String subtitle,
+        // WR-03: coerce null series (from LLM omitting the field or seed JSON with "series":null)
+        // to an empty list rather than propagating null to the frontend chart renderer.
+        @JsonSetter(nulls = Nulls.AS_EMPTY)
         List<InsightEntry> series
 ) {}

@@ -112,6 +112,15 @@
 			<scope>test</scope>
 		</dependency>
 
+		<!-- Phase 9: MCP Server (Streamable-HTTP, WebMVC, same port as app — port 8080) -->
+		<!-- BOM 1.1.6 already imported above — no version needed here -->
+		<!-- Official org.springframework.ai group — same as existing starters (Package Legitimacy Audit: Approved) -->
+		<!-- VERIFIED: docs.spring.io/spring-ai/reference/api/mcp/mcp-streamable-http-server-boot-starter-docs.html -->
+		<dependency>
+			<groupId>org.springframework.ai</groupId>
+			<artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>
+		</dependency>
+
 		<!-- Phase 7: pgvector store — BOM pins to 1.1.6; initialize-schema stays false (Flyway owns DDL) -->
 		<!-- Official org.springframework.ai group — legitimacy same as existing starters (Package Legitimacy Audit) -->
 		<dependency>

@@ -48,6 +48,18 @@ spring:
         # false — prevents ambiguous ChatClient bean when both Anthropic and OpenAI starters are present (RESEARCH Pitfall 6 / A4)
         # ChatClientStrategy builds ChatClient instances per-request via ChatClient.builder(model)
         enabled: false
+    # Phase 9: MCP Server (Streamable-HTTP, same port as app — port 8080)
+    # Source: docs.spring.io/spring-ai/reference/api/mcp/mcp-streamable-http-server-boot-starter-docs.html
+    mcp:
+      server:
+        name: quantlens-mcp
+        version: 1.0.0
+        protocol: STREAMABLE
+        type: SYNC
+        annotation-scanner:
+          enabled: true          # default true; explicit for clarity (Open Q2 resolution)
+        streamable-http:
+          mcp-endpoint: /mcp    # default /mcp; explicit for documentation
 
 logging:
   level:

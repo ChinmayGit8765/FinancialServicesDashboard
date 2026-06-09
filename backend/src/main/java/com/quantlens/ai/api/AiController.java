@@ -1,8 +1,11 @@
 package com.quantlens.ai.api;
 
+import com.quantlens.ai.service.ChatService;
 import com.quantlens.ai.service.CommentaryService;
 import com.quantlens.ai.service.ExplainPositionService;
 import com.quantlens.portfolio.domain.PortfolioRepository;
+import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -11,6 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
@@ -58,13 +63,16 @@ public class AiController {
     private final PortfolioRepository portfolioRepository;
     private final ExplainPositionService explainService;
     private final CommentaryService commentaryService;
+    private final ChatService chatService;
 
     public AiController(PortfolioRepository portfolioRepository,
                         ExplainPositionService explainService,
-                        CommentaryService commentaryService) {
+                        CommentaryService commentaryService,
+                        ChatService chatService) {
         this.portfolioRepository = portfolioRepository;
         this.explainService      = explainService;
         this.commentaryService   = commentaryService;
+        this.chatService         = chatService;
     }
 
     /**
@@ -105,6 +113,34 @@ public class AiController {
     public ResponseEntity<CommentaryDto> commentary(Authentication authentication) {
         Long portfolioId = resolvePortfolioId(authentication);
         return ResponseEntity.ok(commentaryService.commentary(portfolioId));
+    }
+
+    /**
+     * Handles a freeform chat Q&A request routed through the advisor chain (RAG + memory).
+     *
+     * <p>In demo mode {@link com.quantlens.ai.chat.DemoModeAdvisor} short-circuits and returns
+     * authored seed content. In live mode {@link com.quantlens.ai.chat.RagAdvisorConfig}
+     * QuestionAnswerAdvisor retrieves relevant 10-K chunks and MessageChatMemoryAdvisor
+     * provides conversation history.
+     *
+     * <p>T-07-IDOR: conversationId defaults to the server-assigned HTTP session ID —
+     * arbitrary client-supplied IDs are only used if the client provides one explicitly
+     * (not yet validated as session-scoped in v1; default is always sessionId).
+     *
+     * @param request the chat request (message + optional conversationId)
+     * @param session the HTTP session (provides the fallback conversationId)
+     * @return 200 with {@link ChatResponseDto}; 502 on provider error
+     */
+    @PostMapping("/chat")
+    public ResponseEntity<ChatResponseDto> chat(
+            @RequestBody @Valid ChatRequestDto request,
+            Authentication authentication,
+            HttpSession session) {
+        // conversationId falls back to session ID (MessageChatMemoryAdvisor requires it)
+        String conversationId = (request.conversationId() != null && !request.conversationId().isBlank())
+                ? request.conversationId()
+                : session.getId();
+        return ResponseEntity.ok(chatService.chat(request.message(), conversationId));
     }
 
     // =========================================================================

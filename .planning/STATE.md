@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "Completed 07-01-PLAN.md — RAG scaffold: DeterministicHashingEmbeddingModel, RagAdvisorConfig, ChatService, POST /api/ai/chat, RagSeedRunner, Phase 7 RED scaffolds, KeyLeakageIntegrationTest extended GREEN"
-last_updated: "2026-06-09T07:32:20.839Z"
+stopped_at: "Completed 06-01-PLAN.md — Spring AI scaffold + demo-mode seam: DemoModeAdvisor, ChatClientStrategy, LlmKeySessionHolder, ai_seed_content V4, KeyLeakageIntegrationTest GREEN"
+last_updated: "2026-06-09T07:57:22.212Z"
 last_activity: 2026-06-09
 progress:
   total_phases: 10
   completed_phases: 6
   total_plans: 27
-  completed_plans: 25
+  completed_plans: 26
   percent: 60
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 ## Current Position
 
 Phase: 07 (rag-pipeline) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-06-09
 
-Progress: [█████████░] 93%
+Progress: [██████████] 96%
 
 ## Performance Metrics
 
@@ -79,6 +79,7 @@ Progress: [█████████░] 93%
 | Phase 05-stochastic-forecasting P03 | 15 | 3 tasks | 8 files |
 | Phase 06-demo-mode-ai-seam P01 | 1422 | 3 tasks | 34 files |
 | Phase 07-rag-pipeline P01 | 23 min | 3 tasks | 18 files |
+| Phase 07-rag-pipeline P02 | 1560 | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -136,6 +137,7 @@ Recent decisions affecting current work:
 - [07-01] A5 resolved: RETRIEVED_DOCUMENTS in clientResponse.context() not chatResponse().getMetadata() — bytecode-verified in QuestionAnswerAdvisor.after()
 - [07-01] A7 resolved: PgVectorStoreAutoConfiguration @ConditionalOnMissingBean picks up @Primary EmbeddingModel — no manual VectorStore bean needed
 - [07-01] CSRF exemption added for POST /api/ai/chat (mirrors /api/ai/key pattern; SameSite=Lax is primary browser CSRF defence)
+- [Phase ?]: data shape is the seam between demo and live citation sourcing
 
 ### Pending Todos
 
@@ -162,6 +164,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-09T07:32:20.817Z
+Last session: 2026-06-09T07:57:17.847Z
 Stopped at: Completed 06-01-PLAN.md — Spring AI scaffold + demo-mode seam: DemoModeAdvisor, ChatClientStrategy, LlmKeySessionHolder, ai_seed_content V4, KeyLeakageIntegrationTest GREEN
 Resume file: None

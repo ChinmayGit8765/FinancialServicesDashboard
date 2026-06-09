@@ -11,7 +11,7 @@ import BenchmarkChart from '../components/BenchmarkChart.vue'
 import AllocationChart from '../components/AllocationChart.vue'
 import HoldingsTable from '../components/HoldingsTable.vue'
 import TransactionsTable from '../components/TransactionsTable.vue'
-import SlotPlaceholder from '../components/SlotPlaceholder.vue'
+// SlotPlaceholder removed — AI Q&A slot replaced by ChatPanel (Phase 7)
 import RiskScorecard from '../components/RiskScorecard.vue'
 import CorrelationHeatmap from '../components/CorrelationHeatmap.vue'
 import AttributionChart from '../components/AttributionChart.vue'
@@ -23,6 +23,8 @@ import CommentaryCard from '../components/ai/CommentaryCard.vue'
 import ExplainDrawer from '../components/ai/ExplainDrawer.vue'
 import BYOKeyModal from '../components/ai/BYOKeyModal.vue'
 import StructuredOutputChart from '../components/ai/StructuredOutputChart.vue'
+// Phase-7 AI Q&A
+import ChatPanel from '../components/ai/ChatPanel.vue'
 
 const portfolioStore = usePortfolioStore()
 const aiStore = useAiStore()
@@ -268,8 +270,14 @@ function retryForecast(): void { portfolioStore.fetchForecast() }
             :error="aiStore.structured.error"
             @retry="aiStore.fetchStructured()"
           />
-          <!-- AI Q&A RAG panel deferred to Phase 7 -->
-          <SlotPlaceholder label="AI Q&amp;A — Phase 7" minHeight="120px" style="margin-top: 16px;" />
+          <!-- AI Q&A RAG panel — Phase 7 -->
+          <ChatPanel
+            :messages="aiStore.chatMessages"
+            :loading="aiStore.chatLoading"
+            :error="aiStore.chatError"
+            @send="aiStore.sendMessage($event)"
+            style="margin-top: 16px;"
+          />
         </div>
         <div class="col-4">
           <!-- Connect Live AI trigger + BYO-key popup -->

@@ -35,14 +35,22 @@ async function handleSubmit(): Promise<void> {
   const keyToSubmit = keyInput.value
   // Clear the local ref immediately — key must not persist in component state (T-06-11)
   keyInput.value = ''
-  // Emit submitted synchronously so test assertions on emitted() work without flushPromises
-  emit('submitted')
-  emit('close')
+  // CR-04 / WR-05: await the API call BEFORE emitting close.
+  // The previous order (emit close → await setKey) caused:
+  //   1. Modal unmounts before the async call resolves.
+  //   2. submitError.value = '...' runs on an unmounted component → silent no-op.
+  //   3. The user never sees any error feedback on rejection.
+  // Now: complete the call first, only close on SUCCESS, show error and stay open on failure.
+  // setKey re-throws on error (updated in stores/ai.ts) so the catch block is reachable.
   try {
     await aiStore.setKey(provider.value, keyToSubmit)
+    // Success — notify the parent and close the modal
+    emit('submitted')
+    emit('close')
   } catch {
-    // setKey already shows error in store state; generic note (T-06-12)
+    // setKey already sets status.error in the store; show a generic note here (T-06-12)
     submitError.value = 'Key rejected — check provider and key format'
+    // Modal stays open so the user can see the error and try again
   } finally {
     submitting.value = false
   }

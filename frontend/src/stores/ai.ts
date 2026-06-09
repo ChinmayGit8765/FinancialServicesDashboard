@@ -50,6 +50,12 @@ export const useAiStore = defineStore('ai', () => {
    * endpoint and is NEVER assigned to any reactive state, localStorage,
    * sessionStorage, or module-level variable. Only the returned {mode,provider}
    * is written to status.data. $reset has no apiKey field.
+   *
+   * CR-04 / WR-05: setKey now re-throws on failure so callers (e.g. BYOKeyModal)
+   * can catch the rejection and keep the modal open with an error message. The store
+   * still sets status.error for store-level consumers, and the re-throw allows the
+   * component try/catch to be genuinely reachable (WR-05: the catch block was
+   * previously dead because setKey swallowed all errors).
    */
   async function setKey(provider: 'anthropic' | 'openai', apiKey: string): Promise<void> {
     status.loading = true
@@ -60,6 +66,8 @@ export const useAiStore = defineStore('ai', () => {
       status.data = data
     } catch (e: any) {
       status.error = 'Key rejected — check provider and key format'
+      // Re-throw so callers can react (e.g. keep modal open with error message)
+      throw e
     } finally {
       status.loading = false
       // apiKey is not stored anywhere — it goes out of scope here

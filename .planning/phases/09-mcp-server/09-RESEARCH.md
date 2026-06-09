@@ -516,7 +516,7 @@ AntPathRequestMatcher.antMatcher("/mcp")
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED — gated at Wave 0 compile; see 09-01 tasks)
 
 1. **`McpSchema.CallToolResult` exact class path in 1.1.6 BOM**
    - What we know: The Spring AI MCP module bundles the MCP Java SDK. The SDK has a `CallToolResult` type.

@@ -159,11 +159,18 @@ export const useAiStore = defineStore('ai', () => {
 
   /**
    * POST /api/ai/chat with { message, conversationId }.
-   * Pushes user turn immediately, then appends assistant turn on success.
+   * Pushes user turn immediately (optimistic), then appends assistant turn on success.
+   * On error, the optimistic user message is rolled back to prevent orphaned user bubbles
+   * accumulating in chat history without any assistant reply (WR-05).
+   *
    * SECURITY: only { message, conversationId } forwarded — no key in payload.
+   * NOTE: conversationId is ignored by the server (CR-04); the server always uses session.getId().
+   *       The field is kept here for API compatibility only.
    */
   async function sendMessage(message: string, conversationId?: string): Promise<void> {
-    chatMessages.value.push({ role: 'user', content: message })
+    // WR-05: push optimistic user message BEFORE the network call
+    const userMsg: ChatMessage = { role: 'user', content: message }
+    chatMessages.value.push(userMsg)
     chatLoading.value = true
     chatError.value = null
     try {
@@ -177,6 +184,10 @@ export const useAiStore = defineStore('ai', () => {
         citations: data.citations ?? []
       })
     } catch (e: any) {
+      // WR-05: roll back the optimistic user message on error so the chat history
+      // does not accumulate orphaned user bubbles (no assistant reply after each failure).
+      // pop() is safe because we just pushed userMsg and the try block did not add anything.
+      chatMessages.value.pop()
       chatError.value = e?.response?.status === 401
         ? 'Session expired'
         : 'Failed to get AI response'

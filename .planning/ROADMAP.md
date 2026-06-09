@@ -19,7 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 5: Stochastic Forecasting** - Monte Carlo fan charts across four models (GBM, Merton, Heston, bootstrap) plus rationale documentation (completed 2026-06-08)
 - [x] **Phase 6: Demo-Mode AI Seam** - DemoModeAdvisor, LlmKeySessionHolder, ChatClientStrategy, seeded fixtures, BYO-key popup, explain-position and commentary in demo mode (completed 2026-06-09)
 - [x] **Phase 7: RAG Pipeline** - pgvector ingestion, pre-seeded embeddings, QuestionAnswerAdvisor, NL Q&A chat with conversation memory (completed 2026-06-09)
-- [ ] **Phase 8: Live AI Features** - Finnhub @Tool integration, multi-provider ChatClient (Claude + OpenAI), structured output driving a chart
+- [x] **Phase 8: Live AI Features** - Finnhub @Tool integration, multi-provider ChatClient (Claude + OpenAI), structured output driving a chart (completed 2026-06-09)
 - [ ] **Phase 9: MCP Server** - @McpTool beans, Streamable HTTP transport, Spring Security on /mcp, Claude Code .mcp.json config, MCP docs
 - [ ] **Phase 10: Polish & Documentation** - README screenshots, OpenAPI spec, Spring Modulith ArchUnit verification test
 
@@ -161,7 +161,7 @@ Plans:
 Plans:
 - [x] 08-01-PLAN.md — Tool-calling slice: thin Finnhub HttpClient + 15-min TTL cache + @Tool via MethodToolCallbackProvider + seeded fallback + multi-provider routing test (AI-05)
 - [x] 08-02-PLAN.md — Structured-output slice: StructuredInsightRecord + StructuredOutputService (demo readValue / live .entity) + GET /api/ai/structured + ai-v4 seeds + frontend URL swap (AI-06)
-- [ ] 08-03-PLAN.md — Security + offline gate: KeyLeakage (/api/ai/structured + Finnhub key) + structured no-network proof + full suite green + human-verify (AI-05, AI-06)
+- [x] 08-03-PLAN.md — Security + offline gate: KeyLeakage (/api/ai/structured + Finnhub key) + structured no-network proof + full suite green + human-verify (AI-05, AI-06)
 
 ### Phase 9: MCP Server
 **Goal**: Portfolio analytics are exposed as a product MCP server via @McpTool beans on Streamable HTTP transport, secured by Spring Security, with a .mcp.json config that allows Claude Code to connect — and documentation shows any MCP client how to use it.
@@ -199,6 +199,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 5. Stochastic Forecasting | 3/3 | Complete   | 2026-06-08 |
 | 6. Demo-Mode AI Seam | 4/4 | Complete   | 2026-06-09 |
 | 7. RAG Pipeline | 3/3 | Complete   | 2026-06-09 |
-| 8. Live AI Features | 2/3 | In Progress|  |
+| 8. Live AI Features | 3/3 | Complete   | 2026-06-09 |
 | 9. MCP Server | 0/TBD | Not started | - |
 | 10. Polish & Documentation | 0/TBD | Not started | - |

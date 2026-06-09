@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: "Completed 06-01-PLAN.md — Spring AI scaffold + demo-mode seam: DemoModeAdvisor, ChatClientStrategy, LlmKeySessionHolder, ai_seed_content V4, KeyLeakageIntegrationTest GREEN"
-last_updated: "2026-06-09T08:03:36.615Z"
+status: ready_to_plan
+stopped_at: Phase 07 complete (3/3) — ready to discuss Phase 8
+last_updated: 2026-06-09T08:49:49.503Z
 last_activity: 2026-06-09
 progress:
   total_phases: 10
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-07)
 
 **Core value:** A working, screenshot-ready dashboard that demonstrates real quantitative-finance analytics narrated by a real Spring AI layer — convincing with zero setup, genuinely live when you add a key.
-**Current focus:** Phase 07 — rag-pipeline
+**Current focus:** Phase 8 — live ai features
 
 ## Current Position
 
-Phase: 07 (rag-pipeline) — EXECUTING
-Plan: 3 of 3
-Status: Phase complete — ready for verification
+Phase: 8
+Plan: Not started
+Status: Ready to plan
 Last activity: 2026-06-09
 
 Progress: [██████████] 100%
@@ -36,7 +36,7 @@ Progress: [██████████] 100%
 
 **Velocity:**
 
-- Total plans completed: 25
+- Total plans completed: 28
 - Average duration: ~7 minutes
 - Total execution time: 0.12 hours
 
@@ -51,6 +51,7 @@ Progress: [██████████] 100%
 | 04 | 4 | - | - |
 | 05 | 3 | - | - |
 | 06 | 4 | - | - |
+| 07 | 3 | - | - |
 
 **Recent Trend:**
 

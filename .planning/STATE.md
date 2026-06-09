@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 
 ## Current Position
 
-Phase: 09 (mcp-server) — EXECUTING
-Plan: 09-01 complete; 09-02 next
-Status: Executing Phase 09 (Wave 1 done — MCP starter + 3 @McpTool beans + auth gate + boundary verified)
-Last activity: 2026-06-10 -- Phase 09 plan 09-01 complete (test-compile + Modulith verify + /mcp 401 boot gate all green)
+Phase: 09 (mcp-server) — EXECUTED (awaiting verify/review/complete)
+Plan: 09-01 + 09-02 complete (2/2)
+Status: Phase 09 plans done — 213 backend tests green; pending post-merge gate → verify → code-review → UAT → phase.complete
+Last activity: 2026-06-10 -- Phase 09 plan 09-02 complete (PortfolioMcpToolsTest green, full suite 213, README MCP section)
 
 Progress: [██████████] 100%
 

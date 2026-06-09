@@ -166,6 +166,70 @@ After configuring, verify with `claude mcp list` inside this project directory.
 
 ---
 
+## Product MCP Server (MCP-01 / MCP-02)
+
+QuantLens also ships its **own** MCP server — the portfolio analytics are exposed as Model
+Context Protocol tools so any MCP client (Claude Code, Claude Desktop, or your own agent) can
+query the live, computed portfolio. This is the product surface, distinct from the *dev* MCP
+servers above: it runs inside the Spring Boot app itself, over Streamable HTTP at `/mcp`.
+
+> The tools are a thin protocol adapter over the same golden-tested `PortfolioService` and
+> `RiskCalculator` used by the REST API and the Vue UI — **no math is recomputed**. Every tool
+> resolves the portfolio from the authenticated principal (never from a tool parameter), so one
+> credential only ever sees its own portfolio.
+
+### Transport & auth
+
+| Property | Value |
+|----------|-------|
+| Endpoint | `http://localhost:8080/mcp` (Streamable HTTP, embedded in the backend on port 8080) |
+| Protocol | Spring AI MCP server (`spring-ai-starter-mcp-server-webmvc`, BOM 1.1.6), SYNC |
+| Auth | **HTTP Basic** — `/mcp` requires authentication before any tool is reachable (unauthenticated POST → `401`) |
+| Demo credential | `alice` / `demo1234` (the seeded login shown on the sign-in screen) |
+
+The endpoint is exempt from CSRF (a machine client cannot replay the `XSRF-TOKEN` cookie) — this
+is **not** a relaxation, because `/mcp` still requires HTTP Basic auth. Error responses are
+sanitized: a tool failure returns a static safe message, never a Java stack trace or internal detail.
+
+### Tool catalog
+
+| Tool | Parameters | Returns |
+|------|-----------|---------|
+| `get_portfolio_summary` | _(none)_ | Total market value, cost basis, unrealized P&L (abs + %), daily change (abs + %), and sector allocation weights |
+| `get_risk_metrics` | _(none)_ | Annualized Sharpe ratio, annualized volatility, max drawdown, beta vs SPX500, historical VaR (95%, 1-day), parametric VaR (95%, 1-day) |
+| `get_position_detail` | `ticker` (e.g. `AAPL`) | A single holding: ticker, name, sector, quantity, avg cost basis, current price, market value, portfolio weight, unrealized P&L (abs + %) |
+
+### Connect from Claude Code
+
+The committed `.mcp.json` already includes a `quantlens` entry pointing at the running server:
+
+```jsonc
+"quantlens": {
+  "type": "http",
+  "url": "http://localhost:8080/mcp",
+  "headers": { "Authorization": "Basic ${QUANTLENS_MCP_AUTH:-YWxpY2U6ZGVtbzEyMzQ=}" }
+}
+```
+
+The base64 token `YWxpY2U6ZGVtbzEyMzQ=` decodes to `alice:demo1234` (the demo credential — safe to
+commit). Override it with a different user via the `QUANTLENS_MCP_AUTH` env var
+(`echo -n 'bob:demo1234' | base64`).
+
+```bash
+# 1. Start the stack so /mcp is live
+docker compose up
+
+# 2. From inside this project directory, Claude Code auto-loads .mcp.json — verify:
+claude mcp get quantlens
+# In a Claude Code session, /mcp lists the three tools; then ask, e.g.:
+#   "Use get_risk_metrics to show my portfolio's Sharpe and 95% VaR."
+```
+
+Any MCP client can connect the same way: point it at `http://localhost:8080/mcp` with an
+`Authorization: Basic <base64(user:pass)>` header and call `tools/list` then `tools/call`.
+
+---
+
 ## OAuth Upgrade Path
 
 The current auth uses Spring Security form login with seeded BCrypt users — intentionally simple for the demo. The `SecurityConfig` is structured so an OAuth2/OIDC login can be added later without reworking the authorization rules:

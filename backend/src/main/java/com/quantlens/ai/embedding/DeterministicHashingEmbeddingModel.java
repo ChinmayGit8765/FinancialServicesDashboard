@@ -27,7 +27,9 @@ import java.util.Locale;
  * in both demo and live modes — ensuring embedding-space consistency throughout v1. Only
  * answer generation switches to the real LLM provider when a key is present.
  *
- * <p>Technique: feature hashing (MurmurHash3 bigram projection).
+ * <p>Technique: signed feature hashing (Weinberger et al. 2009, MurmurHash3 bigram projection).
+ * The sign bit (h >>> 31) determines whether a feature increments or decrements its bucket,
+ * reducing the collision noise that degrades cosine discrimination.
  * See: https://en.wikipedia.org/wiki/Feature_hashing
  *
  * <p>Compile-time assumption resolutions (Wave 0):
@@ -70,13 +72,23 @@ public class DeterministicHashingEmbeddingModel implements EmbeddingModel {
      * Embeds the given text into a 1536-dimensional L2-normalized float vector.
      * Public to allow direct use in tests and RagSeedRunner if needed.
      *
-     * @param text the text to embed (any length; empty text returns zero vector)
-     * @return a 1536-dim L2-normalized float array
+     * <p>CR-03: null/blank text returns a zero vector without throwing NPE or producing NaN.
+     * CR-01: bucket index uses {@code (h & 0x7FFFFFFF) % DIMENSIONS} instead of
+     *        {@code Math.abs(h) % DIMENSIONS} — Math.abs(Integer.MIN_VALUE) is still negative.
+     * CR-02: sign bit {@code (h >>> 31)} determines increment direction per
+     *        Weinberger 2009 signed feature hashing — reduces collision noise.
+     *
+     * @param text the text to embed (null/blank returns zero vector; any length otherwise)
+     * @return a 1536-dim L2-normalized float array (zero vector for null/blank/empty input)
      */
     public float[] embed(String text) {
-        // Normalize: lowercase, collapse whitespace
+        // CR-03: null/blank guard — must come BEFORE any method call on text
+        if (text == null || text.isBlank()) {
+            return new float[DIMENSIONS];
+        }
+        // Normalize: lowercase, collapse whitespace including non-breaking space (CR-03: \\u00a0)
         String normalized = text.toLowerCase(Locale.ROOT)
-                .replaceAll("\\s+", " ")
+                .replaceAll("[\\s\\u00a0]+", " ")
                 .trim();
 
         String[] words = normalized.split("\\s+");
@@ -87,16 +99,21 @@ public class DeterministicHashingEmbeddingModel implements EmbeddingModel {
         }
 
         // Unigrams — weight 1.0
+        // CR-01: use (h & 0x7FFFFFFF) % DIMENSIONS — Math.abs(Integer.MIN_VALUE) returns MIN_VALUE
+        // CR-02: use sign bit (h >>> 31) to choose increment direction (Weinberger 2009)
         for (String word : words) {
-            int bucket = Math.abs(murmur3(word)) % DIMENSIONS;
-            vector[bucket] += 1.0f;
+            int h = murmur3(word);
+            int bucket = (h & 0x7FFFFFFF) % DIMENSIONS;
+            vector[bucket] += ((h >>> 31) == 0) ? 1.0f : -1.0f;
         }
 
         // Bigrams (consecutive word pairs) — weight 0.5 (down-weight vs unigrams)
+        // CR-01 + CR-02: same fixes applied here
         for (int i = 0; i + 1 < words.length; i++) {
             String bigram = words[i] + "_" + words[i + 1];
-            int bucket = Math.abs(murmur3(bigram)) % DIMENSIONS;
-            vector[bucket] += 0.5f;
+            int h = murmur3(bigram);
+            int bucket = (h & 0x7FFFFFFF) % DIMENSIONS;
+            vector[bucket] += ((h >>> 31) == 0) ? 0.5f : -0.5f;
         }
 
         return l2Normalize(vector);
@@ -104,11 +121,16 @@ public class DeterministicHashingEmbeddingModel implements EmbeddingModel {
 
     // ── private helpers ────────────────────────────────────────────────────────
 
+    /**
+     * L2-normalizes the given vector in-place (returns a new array).
+     * CR-03: guards against zero norm and non-finite scale to prevent NaN vectors.
+     */
     private static float[] l2Normalize(float[] v) {
         double norm = 0.0;
         for (float x : v) norm += (double) x * x;
-        if (norm == 0.0) return v;
+        if (norm == 0.0 || !Double.isFinite(norm)) return v;
         float scale = (float) (1.0 / Math.sqrt(norm));
+        if (!Float.isFinite(scale)) return v; // paranoia guard against +Infinity
         float[] out = new float[v.length];
         for (int i = 0; i < v.length; i++) out[i] = v[i] * scale;
         return out;
@@ -117,6 +139,10 @@ public class DeterministicHashingEmbeddingModel implements EmbeddingModel {
     /**
      * Inline MurmurHash3 (32-bit) — no external dependency.
      * Algorithm: Austin Appleby's MurmurHash3 (public domain).
+     *
+     * <p>WR-01: all four bytes in the 4-byte block loop are masked with {@code & 0xff}
+     * (including the previously-unmasked {@code data[i+3]}) to match the standard
+     * unsigned-byte interpretation.
      */
     private static int murmur3(String key) {
         byte[] data = key.getBytes(StandardCharsets.UTF_8);
@@ -126,8 +152,11 @@ public class DeterministicHashingEmbeddingModel implements EmbeddingModel {
         final int c1 = 0xcc9e2d51, c2 = 0x1b873593;
         int roundedEnd = (length & 0xFFFFFFFC);
         for (int i = 0; i < roundedEnd; i += 4) {
-            int k1 = (data[i] & 0xff) | ((data[i + 1] & 0xff) << 8)
-                    | ((data[i + 2] & 0xff) << 16) | (data[i + 3] << 24);
+            // WR-01: (data[i+3] & 0xff) << 24 — add & 0xff mask on the last byte
+            int k1 = (data[i]     & 0xff)        |
+                     ((data[i + 1] & 0xff) <<  8) |
+                     ((data[i + 2] & 0xff) << 16) |
+                     ((data[i + 3] & 0xff) << 24);
             k1 *= c1;
             k1 = Integer.rotateLeft(k1, 15);
             k1 *= c2;

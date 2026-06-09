@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: ready_to_plan
-stopped_at: Phase 07 complete (3/3) — ready to discuss Phase 8
-last_updated: 2026-06-09T08:49:49.503Z
+status: executing
+stopped_at: "Completed 06-01-PLAN.md — Spring AI scaffold + demo-mode seam: DemoModeAdvisor, ChatClientStrategy, LlmKeySessionHolder, ai_seed_content V4, KeyLeakageIntegrationTest GREEN"
+last_updated: "2026-06-09T13:00:14.125Z"
 last_activity: 2026-06-09
 progress:
   total_phases: 10
   completed_phases: 7
-  total_plans: 27
-  completed_plans: 27
+  total_plans: 30
+  completed_plans: 28
   percent: 70
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-07)
 
 **Core value:** A working, screenshot-ready dashboard that demonstrates real quantitative-finance analytics narrated by a real Spring AI layer — convincing with zero setup, genuinely live when you add a key.
-**Current focus:** Phase 8 — live ai features
+**Current focus:** Phase 08 — live-ai-features
 
 ## Current Position
 
-Phase: 8
-Plan: Not started
-Status: Ready to plan
+Phase: 08 (live-ai-features) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
 Last activity: 2026-06-09
 
-Progress: [██████████] 100%
+Progress: [█████████░] 93%
 
 ## Performance Metrics
 
@@ -81,6 +81,7 @@ Progress: [██████████] 100%
 | Phase 06-demo-mode-ai-seam P01 | 1422 | 3 tasks | 34 files |
 | Phase 07-rag-pipeline P01 | 23 min | 3 tasks | 18 files |
 | Phase 07-rag-pipeline P02 | 1560 | 3 tasks | 6 files |
+| Phase 08-live-ai-features P01 | 18 | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -139,6 +140,10 @@ Recent decisions affecting current work:
 - [07-01] A7 resolved: PgVectorStoreAutoConfiguration @ConditionalOnMissingBean picks up @Primary EmbeddingModel — no manual VectorStore bean needed
 - [07-01] CSRF exemption added for POST /api/ai/chat (mirrors /api/ai/key pattern; SameSite=Lax is primary browser CSRF defence)
 - [Phase ?]: data shape is the seam between demo and live citation sourcing
+- [Phase ?]: [08-01] MethodToolCallbackProvider.getToolCallbacks() returns ToolCallback[] array; defaultToolCallbacks(ToolCallbackProvider...) cleanest overload (Open Q1 resolved)
+- [Phase ?]: [08-01] findLatestCloseByTicker: JPQL b.security.ticker = :ticker correlated-MAX subquery returns Optional<OhlcvBar> (Open Q2 resolved)
+- [Phase ?]: [08-01] ai.tools subpackage inside ai Modulith module; marketdata::domain already allowed since Phase 6 (Open Q3 resolved)
+- [Phase ?]: [08-01] FinnhubQuoteClient.httpClient non-final; ACTIVE sentinel test forces catch path with live key set — proves never logs e.getMessage()
 
 ### Pending Todos
 
@@ -165,6 +170,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-09T08:03:36.596Z
+Last session: 2026-06-09T12:59:59.468Z
 Stopped at: Completed 06-01-PLAN.md — Spring AI scaffold + demo-mode seam: DemoModeAdvisor, ChatClientStrategy, LlmKeySessionHolder, ai_seed_content V4, KeyLeakageIntegrationTest GREEN
 Resume file: None

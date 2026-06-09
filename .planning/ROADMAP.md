@@ -159,7 +159,7 @@ Plans:
   3. Switching the BYO-key provider between Anthropic Claude and OpenAI produces a successful live AI call from the same ChatClientStrategy.forSession() entry point
 **Plans**: 3 plans
 Plans:
-- [ ] 08-01-PLAN.md — Tool-calling slice: thin Finnhub HttpClient + 15-min TTL cache + @Tool via MethodToolCallbackProvider + seeded fallback + multi-provider routing test (AI-05)
+- [x] 08-01-PLAN.md — Tool-calling slice: thin Finnhub HttpClient + 15-min TTL cache + @Tool via MethodToolCallbackProvider + seeded fallback + multi-provider routing test (AI-05)
 - [ ] 08-02-PLAN.md — Structured-output slice: StructuredInsightRecord + StructuredOutputService (demo readValue / live .entity) + GET /api/ai/structured + ai-v4 seeds + frontend URL swap (AI-06)
 - [ ] 08-03-PLAN.md — Security + offline gate: KeyLeakage (/api/ai/structured + Finnhub key) + structured no-network proof + full suite green + human-verify (AI-05, AI-06)
 
@@ -199,6 +199,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 5. Stochastic Forecasting | 3/3 | Complete   | 2026-06-08 |
 | 6. Demo-Mode AI Seam | 4/4 | Complete   | 2026-06-09 |
 | 7. RAG Pipeline | 3/3 | Complete   | 2026-06-09 |
-| 8. Live AI Features | 0/TBD | Not started | - |
+| 8. Live AI Features | 1/3 | In Progress|  |
 | 9. MCP Server | 0/TBD | Not started | - |
 | 10. Polish & Documentation | 0/TBD | Not started | - |

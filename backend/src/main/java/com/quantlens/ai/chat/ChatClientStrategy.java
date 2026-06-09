@@ -1,6 +1,7 @@
 package com.quantlens.ai.chat;
 
 import com.quantlens.ai.session.LlmKeySessionHolder;
+import com.quantlens.ai.tools.StockQuoteToolService;
 import org.springframework.ai.anthropic.AnthropicChatModel;
 import org.springframework.ai.anthropic.AnthropicChatOptions;
 import org.springframework.ai.anthropic.api.AnthropicApi;
@@ -9,6 +10,7 @@ import org.springframework.ai.chat.client.advisor.api.CallAdvisor;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.api.OpenAiApi;
+import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 import org.springframework.stereotype.Service;
 
@@ -47,19 +49,22 @@ import java.util.List;
 @Service
 public class ChatClientStrategy {
 
-    private final AnthropicChatModel  baseAnthropicModel;
-    private final OpenAiChatModel     baseOpenAiModel;
-    private final List<CallAdvisor>   advisors;
+    private final AnthropicChatModel    baseAnthropicModel;
+    private final OpenAiChatModel       baseOpenAiModel;
+    private final List<CallAdvisor>     advisors;
+    private final StockQuoteToolService stockQuoteToolService;
 
     public ChatClientStrategy(AnthropicChatModel baseAnthropicModel,
                               OpenAiChatModel baseOpenAiModel,
-                              List<CallAdvisor> advisors) {
-        this.baseAnthropicModel = baseAnthropicModel;
-        this.baseOpenAiModel    = baseOpenAiModel;
+                              List<CallAdvisor> advisors,
+                              StockQuoteToolService stockQuoteToolService) {
+        this.baseAnthropicModel     = baseAnthropicModel;
+        this.baseOpenAiModel        = baseOpenAiModel;
         // Sort by order so DemoModeAdvisor (HIGHEST_PRECEDENCE) fires first
         this.advisors = advisors.stream()
                 .sorted(AnnotationAwareOrderComparator.INSTANCE)
                 .toList();
+        this.stockQuoteToolService  = stockQuoteToolService;
     }
 
     /**
@@ -73,10 +78,35 @@ public class ChatClientStrategy {
      * @param keyHolder the session-scoped key holder for the current request
      * @return a ready-to-use {@link ChatClient} with all registered advisors
      */
+    /**
+     * Builds a per-request {@link ChatClient} with the session key injected, all
+     * registered {@link CallAdvisor} beans in the chain (sorted by order), and the
+     * {@link StockQuoteToolService} registered via {@link MethodToolCallbackProvider}.
+     *
+     * <p>Tools are registered at builder level (not request level) via
+     * {@code defaultToolCallbacks(ToolCallbackProvider...)} — the overload that accepts
+     * a {@link MethodToolCallbackProvider} directly. This avoids the {@code defaultTools()}
+     * CGLIB detection bug (Spring AI 1.1.x GitHub #5134).
+     *
+     * <p>Open Question 1 resolved at compile:
+     * {@link MethodToolCallbackProvider#getToolCallbacks()} returns {@code ToolCallback[]}
+     * (an array). {@code defaultToolCallbacks} accepts {@code ToolCallbackProvider...}
+     * varargs — we pass the provider directly, which is the cleanest overload.
+     *
+     * @param keyHolder the session-scoped key holder for the current request
+     * @return a ready-to-use {@link ChatClient} with tools and advisors registered
+     */
     public ChatClient forSession(LlmKeySessionHolder keyHolder) {
         ChatModel model = buildModel(keyHolder);
+        // Build MethodToolCallbackProvider — avoids defaultTools() CGLIB bug (#5134)
+        // Open Q1: getToolCallbacks() returns ToolCallback[]; defaultToolCallbacks(ToolCallbackProvider...)
+        // is the cleanest overload — pass the provider directly.
+        MethodToolCallbackProvider toolProvider = MethodToolCallbackProvider.builder()
+                .toolObjects(stockQuoteToolService)
+                .build();
         return ChatClient.builder(model)
-                .defaultAdvisors(advisors.toArray(new CallAdvisor[0]))   // Phase 7: ragAdvisor, memoryAdvisor added here
+                .defaultToolCallbacks(toolProvider)                        // Phase 8: tool registration
+                .defaultAdvisors(advisors.toArray(new CallAdvisor[0]))     // Phase 7: ragAdvisor, memoryAdvisor
                 .build();
     }
 

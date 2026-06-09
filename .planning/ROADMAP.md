@@ -157,7 +157,11 @@ Plans:
   1. User can request a live stock quote in chat and see the LLM invoke a Finnhub @Tool; in demo mode the tool returns the last seeded price; in live mode it calls the real Finnhub API (with a 15-minute TTL cache and correct after-hours labeling)
   2. At least one AI response is delivered as a typed Java record via structured output (BeanOutputConverter) that drives a Vue ECharts chart directly — the chart renders the same DTO path whether in demo or live mode
   3. Switching the BYO-key provider between Anthropic Claude and OpenAI produces a successful live AI call from the same ChatClientStrategy.forSession() entry point
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 08-01-PLAN.md — Tool-calling slice: thin Finnhub HttpClient + 15-min TTL cache + @Tool via MethodToolCallbackProvider + seeded fallback + multi-provider routing test (AI-05)
+- [ ] 08-02-PLAN.md — Structured-output slice: StructuredInsightRecord + StructuredOutputService (demo readValue / live .entity) + GET /api/ai/structured + ai-v4 seeds + frontend URL swap (AI-06)
+- [ ] 08-03-PLAN.md — Security + offline gate: KeyLeakage (/api/ai/structured + Finnhub key) + structured no-network proof + full suite green + human-verify (AI-05, AI-06)
 
 ### Phase 9: MCP Server
 **Goal**: Portfolio analytics are exposed as a product MCP server via @McpTool beans on Streamable HTTP transport, secured by Spring Security, with a .mcp.json config that allows Claude Code to connect — and documentation shows any MCP client how to use it.

@@ -4,6 +4,8 @@ import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
 
+import java.util.Locale;
+
 /**
  * Spring AI {@link Tool}-annotated service that exposes a stock-quote lookup to the LLM.
  *
@@ -43,6 +45,8 @@ public class StockQuoteToolService {
             + "Returns price, change, market state (regular/after-hours/closed), and timestamp.")
     public StockQuoteResult getStockQuote(
             @ToolParam(description = "Stock ticker symbol, e.g. AAPL, MSFT") String ticker) {
-        return finnhubClient.getQuote(ticker);
+        // IN-01: canonicalize to uppercase before lookup so "aapl" and "AAPL" produce
+        // the same Finnhub request and share the same cache entry.
+        return finnhubClient.getQuote(ticker != null ? ticker.toUpperCase(Locale.ROOT) : ticker);
     }
 }

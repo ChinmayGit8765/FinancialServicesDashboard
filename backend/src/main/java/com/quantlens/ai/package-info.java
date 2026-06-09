@@ -18,5 +18,5 @@
  */
 @org.springframework.modulith.ApplicationModule(
         displayName = "AI",
-        allowedDependencies = {"portfolio::domain"})
+        allowedDependencies = {"portfolio::domain", "seed"})
 package com.quantlens.ai;

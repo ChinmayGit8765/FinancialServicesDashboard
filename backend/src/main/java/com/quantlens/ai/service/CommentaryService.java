@@ -3,7 +3,7 @@ package com.quantlens.ai.service;
 import com.quantlens.ai.api.CommentaryDto;
 import com.quantlens.ai.chat.ChatClientStrategy;
 import com.quantlens.ai.session.LlmKeySessionHolder;
-import com.quantlens.portfolio.service.PortfolioService;
+import com.quantlens.portfolio.domain.PositionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,14 +29,14 @@ public class CommentaryService {
 
     private final ChatClientStrategy strategy;
     private final LlmKeySessionHolder keyHolder;
-    private final PortfolioService portfolioService;
+    private final PositionRepository positionRepository;
 
     public CommentaryService(ChatClientStrategy strategy,
                               LlmKeySessionHolder keyHolder,
-                              PortfolioService portfolioService) {
-        this.strategy         = strategy;
-        this.keyHolder        = keyHolder;
-        this.portfolioService = portfolioService;
+                              PositionRepository positionRepository) {
+        this.strategy           = strategy;
+        this.keyHolder          = keyHolder;
+        this.positionRepository = positionRepository;
     }
 
     /**
@@ -48,8 +48,8 @@ public class CommentaryService {
      * @return a {@link CommentaryDto} with headline, body, bulletPoints (empty stub until Plan 06-03)
      */
     public CommentaryDto commentary(Long portfolioId) {
-        // TODO 06-03: resolve persona from portfolioId, build portfolio summary, set advisor params,
-        // call strategy.forSession(keyHolder).prompt()...call().content()
+        // TODO 06-03: resolve persona from portfolioId via positionRepository, build portfolio summary,
+        // set AI_SEED_TYPE/AI_SEED_SUBJECT advisor params, call strategy.forSession(keyHolder).prompt()...call().content()
         return new CommentaryDto("", "", List.of());
     }
 }

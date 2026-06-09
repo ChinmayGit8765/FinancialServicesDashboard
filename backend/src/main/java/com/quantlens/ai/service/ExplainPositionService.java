@@ -3,7 +3,7 @@ package com.quantlens.ai.service;
 import com.quantlens.ai.api.ExplainResponseDto;
 import com.quantlens.ai.chat.ChatClientStrategy;
 import com.quantlens.ai.session.LlmKeySessionHolder;
-import com.quantlens.portfolio.service.PortfolioService;
+import com.quantlens.portfolio.domain.PositionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,14 +28,14 @@ public class ExplainPositionService {
 
     private final ChatClientStrategy strategy;
     private final LlmKeySessionHolder keyHolder;
-    private final PortfolioService portfolioService;
+    private final PositionRepository positionRepository;
 
     public ExplainPositionService(ChatClientStrategy strategy,
                                    LlmKeySessionHolder keyHolder,
-                                   PortfolioService portfolioService) {
-        this.strategy        = strategy;
-        this.keyHolder       = keyHolder;
-        this.portfolioService = portfolioService;
+                                   PositionRepository positionRepository) {
+        this.strategy           = strategy;
+        this.keyHolder          = keyHolder;
+        this.positionRepository = positionRepository;
     }
 
     /**
@@ -48,8 +48,8 @@ public class ExplainPositionService {
      * @return an {@link ExplainResponseDto} with the narrative (empty stub until Plan 06-03)
      */
     public ExplainResponseDto explain(Long portfolioId, String ticker) {
-        // TODO 06-03: build metrics JSON, set AI_SEED_TYPE/AI_SEED_SUBJECT advisor params,
-        // call strategy.forSession(keyHolder).prompt()...call().content()
+        // TODO 06-03: look up holding via positionRepository, build metrics JSON,
+        // set AI_SEED_TYPE/AI_SEED_SUBJECT advisor params, call strategy.forSession(keyHolder).prompt()...call().content()
         return new ExplainResponseDto("");
     }
 }

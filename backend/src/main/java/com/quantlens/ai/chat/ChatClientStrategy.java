@@ -106,11 +106,19 @@ public class ChatClientStrategy {
             // Demo: model is never called — DemoModeAdvisor short-circuits first
             return baseAnthropicModel;
         }
-        return switch (keyHolder.getProvider()) {
+        // WR-02: guard null provider defensively — getProvider() returns null in demo mode,
+        // and if the hasKey() contract is ever relaxed a null switch would throw NPE (not
+        // IllegalArgumentException) and bypass GlobalAiExceptionHandler.handleIllegalArgument.
+        String provider = keyHolder.getProvider();
+        if (provider == null) {
+            return baseAnthropicModel;
+        }
+        // CR-05: do NOT embed the provider string (attacker-controlled via request body) in
+        // the exception message — it could contain newlines/ANSI codes enabling log injection.
+        return switch (provider) {
             case "anthropic" -> buildAnthropicModel(keyHolder.getApiKey());
             case "openai"    -> buildOpenAiModel(keyHolder.getApiKey());
-            default -> throw new IllegalArgumentException(
-                    "Unknown provider: " + keyHolder.getProvider());
+            default -> throw new IllegalArgumentException("Unknown provider");
         };
     }
 

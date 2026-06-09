@@ -54,7 +54,7 @@ Requirements for the initial release (the screenshot-ready demo). Each maps to r
 - [x] **AI-03**: User can ask freeform natural-language questions about the portfolio in a chat that retains conversation memory
 - [x] **AI-04**: User can ask questions answered from embedded 10-K / earnings filings via RAG over pgvector
 - [x] **AI-05**: User can request a live quote in chat and see the LLM invoke a quote tool (tool calling)
-- [ ] **AI-06**: At least one AI response is delivered as typed structured output that drives a chart directly
+- [x] **AI-06**: At least one AI response is delivered as typed structured output that drives a chart directly
 - [x] **AI-07**: User can click a holding to get an AI-generated "explain this position" narrative
 - [x] **AI-08**: User sees an AI-generated daily portfolio commentary on the dashboard
 
@@ -152,7 +152,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | AI-03 | Phase 7 | Complete |
 | AI-04 | Phase 7 | Complete |
 | AI-05 | Phase 8 | Complete |
-| AI-06 | Phase 8 | Pending |
+| AI-06 | Phase 8 | Complete |
 | MCP-01 | Phase 9 | Pending |
 | MCP-02 | Phase 9 | Pending |
 | DOCS-01 | Phase 10 | Pending |

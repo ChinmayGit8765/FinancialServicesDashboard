@@ -20,7 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *   <li>All expected {@code EXPLAIN_POSITION} rows are present (13 tickers)</li>
  *   <li>All 3 {@code DAILY_COMMENTARY} rows are present (GROWTH, INCOME, BALANCED)</li>
  *   <li>Seed content is non-blank and references the correct ticker/persona key</li>
- *   <li>The {@code seed_log} row {@code "ai-v1"} is written and marked {@code completed=true}</li>
+ *   <li>The {@code seed_log} row {@code "ai-v4"} is written and marked {@code completed=true}</li>
  *   <li>Row counts are stable (idempotency — re-run would not add duplicates)</li>
  * </ul>
  */
@@ -142,27 +142,50 @@ class AiSeedRunnerTest extends AbstractPostgresIntegrationTest {
     }
 
     @Test
-    void seedLog_aiV3_isMarkedCompleted() {
-        // ai-v3 is the current seed version (bumped from ai-v2 in Phase 7 to add RAG_QA rows)
-        assertThat(seedLogRepository.findById("ai-v3"))
-                .as("seed_log 'ai-v3' row must exist after AiSeedRunner runs")
+    void seedLog_aiV4_isMarkedCompleted() {
+        // ai-v4 is the current seed version (bumped from ai-v3 in Phase 8 to add STRUCTURED_INSIGHT rows)
+        assertThat(seedLogRepository.findById("ai-v4"))
+                .as("seed_log 'ai-v4' row must exist after AiSeedRunner runs")
                 .isPresent()
                 .get()
                 .satisfies(log -> assertThat(log.isCompleted())
-                        .as("seed_log 'ai-v3' must be marked completed=true")
+                        .as("seed_log 'ai-v4' must be marked completed=true")
                         .isTrue());
     }
 
     @Test
     void idempotency_rowCounts_stableAfterContextStart() {
-        // The Spring context started once and AiSeedRunner ran once. The seed_log ai-v3
+        // The Spring context started once and AiSeedRunner ran once. The seed_log ai-v4
         // guard prevents re-runs. Verify total row count is stable at expected value:
-        // 13 EXPLAIN_POSITION + 3 DAILY_COMMENTARY + 4 RAG_QA = 20
+        // 13 EXPLAIN_POSITION + 3 DAILY_COMMENTARY + 4 RAG_QA + 3 STRUCTURED_INSIGHT = 23
         long totalRows = aiSeedContentRepository.count();
         assertThat(totalRows)
-                .as("Total ai_seed_content rows must equal 20 " +
-                    "(13 EXPLAIN_POSITION + 3 DAILY_COMMENTARY + 4 RAG_QA)")
-                .isEqualTo(20L);
+                .as("Total ai_seed_content rows must equal 23 " +
+                    "(13 EXPLAIN_POSITION + 3 DAILY_COMMENTARY + 4 RAG_QA + 3 STRUCTURED_INSIGHT)")
+                .isEqualTo(23L);
+    }
+
+    @Test
+    void structuredInsight_rowCount_equals_three() {
+        List<AiSeedContent> rows = aiSeedContentRepository.findAll().stream()
+                .filter(r -> "STRUCTURED_INSIGHT".equals(r.getType()))
+                .toList();
+
+        assertThat(rows)
+                .as("Should have exactly 3 STRUCTURED_INSIGHT rows (GROWTH, INCOME, BALANCED)")
+                .hasSize(3);
+    }
+
+    @Test
+    void allExpectedStructuredInsightPersonas_present() {
+        for (String persona : COMMENTARY_PERSONAS) {
+            Optional<AiSeedContent> row = aiSeedContentRepository
+                    .findByTypeAndSubjectId("STRUCTURED_INSIGHT", persona);
+
+            assertThat(row)
+                    .as("STRUCTURED_INSIGHT row for persona '%s' must be present", persona)
+                    .isPresent();
+        }
     }
 
     @Test

@@ -81,10 +81,12 @@ class StructuredOutputServiceTest {
     void setUp() {
         service = new StructuredOutputService(strategy, keyHolder, portfolioRepository, seedRepo, objectMapper);
 
-        // Stub a Portfolio with style="Growth" (alice persona)
+        // Stub a Portfolio with style="Growth" (alice persona).
+        // getStyle() and getName() are stubbed per-test only where actually invoked:
+        // - demo path: only getStyle() (persona key lookup; getName() never called)
+        // - live path: both getStyle() and getName() (buildPortfolioSummary calls both)
+        // - 401 test: neither (portfolio never returned from repository)
         stubPortfolio = mock(Portfolio.class);
-        when(stubPortfolio.getStyle()).thenReturn("Growth");
-        when(stubPortfolio.getName()).thenReturn("Alice Growth Portfolio");
     }
 
     // ── Demo path ──────────────────────────────────────────────────────────────
@@ -96,6 +98,7 @@ class StructuredOutputServiceTest {
      */
     @Test
     void demoPath_seedJsonDeserialized_toRecord() throws Exception {
+        when(stubPortfolio.getStyle()).thenReturn("Growth");
         when(keyHolder.hasKey()).thenReturn(false);
         when(portfolioRepository.findById(PORTFOLIO_ID)).thenReturn(Optional.of(stubPortfolio));
 
@@ -127,6 +130,7 @@ class StructuredOutputServiceTest {
      */
     @Test
     void demoPath_usesPersonaKey_GROWTH() {
+        when(stubPortfolio.getStyle()).thenReturn("Growth");
         when(keyHolder.hasKey()).thenReturn(false);
         when(portfolioRepository.findById(PORTFOLIO_ID)).thenReturn(Optional.of(stubPortfolio));
 
@@ -147,6 +151,7 @@ class StructuredOutputServiceTest {
      */
     @Test
     void demoPath_fallbackSeed_whenNoSeedRow() {
+        when(stubPortfolio.getStyle()).thenReturn("Growth");
         when(keyHolder.hasKey()).thenReturn(false);
         when(portfolioRepository.findById(PORTFOLIO_ID)).thenReturn(Optional.of(stubPortfolio));
         when(seedRepo.findByTypeAndSubjectId(anyString(), anyString())).thenReturn(Optional.empty());
@@ -168,6 +173,8 @@ class StructuredOutputServiceTest {
     @Test
     @SuppressWarnings("unchecked")
     void livePath_entityReturnsRecord_shapeValid() {
+        when(stubPortfolio.getStyle()).thenReturn("Growth");
+        // getName() is not stubbed: the .user() lambda is never executed on the mock ChatClient chain
         when(keyHolder.hasKey()).thenReturn(true);
         when(portfolioRepository.findById(PORTFOLIO_ID)).thenReturn(Optional.of(stubPortfolio));
 
@@ -226,6 +233,8 @@ class StructuredOutputServiceTest {
     @Test
     @SuppressWarnings("unchecked")
     void providerError_wrappedAs502() {
+        when(stubPortfolio.getStyle()).thenReturn("Growth");
+        // getName() is not stubbed: .call() throws before the .user() lambda can invoke buildPortfolioSummary
         when(keyHolder.hasKey()).thenReturn(true);
         when(portfolioRepository.findById(PORTFOLIO_ID)).thenReturn(Optional.of(stubPortfolio));
 

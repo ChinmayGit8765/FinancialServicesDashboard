@@ -68,17 +68,6 @@ public class ChatClientStrategy {
     }
 
     /**
-     * Builds a per-request {@link ChatClient} with the session key injected and all
-     * registered {@link CallAdvisor} beans in the chain (sorted by order).
-     *
-     * <p>In demo mode the {@link DemoModeAdvisor} fires first (HIGHEST_PRECEDENCE) and
-     * short-circuits the chain — the underlying model with the sentinel key is never
-     * invoked, so {@code DEMO_NO_KEY} is never sent to any provider.
-     *
-     * @param keyHolder the session-scoped key holder for the current request
-     * @return a ready-to-use {@link ChatClient} with all registered advisors
-     */
-    /**
      * Builds a per-request {@link ChatClient} with the session key injected, all
      * registered {@link CallAdvisor} beans in the chain (sorted by order), and the
      * {@link StockQuoteToolService} registered via {@link MethodToolCallbackProvider}.

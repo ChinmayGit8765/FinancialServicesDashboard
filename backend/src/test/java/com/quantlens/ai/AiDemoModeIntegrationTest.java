@@ -96,6 +96,33 @@ class AiDemoModeIntegrationTest extends AbstractPostgresIntegrationTest {
     }
 
     /**
+     * Demo mode structured output returns 200 with seeded, non-blank content AND proves zero network:
+     * the downstream-chain counter must be 0 (DemoModeAdvisor short-circuited before any provider call).
+     *
+     * <p>This is the executable no-network proof for T-08-DEMO-NET (structured path). The
+     * {@link CountingCallAdvisor} sits at {@code HIGHEST_PRECEDENCE + 1}
+     * (immediately after DemoModeAdvisor). In demo mode DemoModeAdvisor short-circuits and never
+     * calls {@code chain.nextCall()}, so the counter stays zero — provably offline.
+     */
+    @Test
+    void demoMode_structured_returnsSeededContent_withZeroNetworkCalls() {
+        String cookie = loginAndGetSessionCookie("alice");
+
+        ResponseEntity<String> response = authenticatedGet("/api/ai/structured", cookie);
+
+        assertThat(response.getStatusCode())
+                .as("Demo mode GET /api/ai/structured must return 200 (no real key needed)")
+                .isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody())
+                .as("Demo structured must return seeded non-blank title")
+                .contains("title")
+                .doesNotContain("\"title\":\"\"");
+        assertThat(NoNetworkProofConfig.NEXT_CALL_COUNT.get())
+                .as("EXECUTABLE no-network proof: chain.nextCall() must never fire in demo mode (T-08-DEMO-NET)")
+                .isZero();
+    }
+
+    /**
      * Key-less app startup smoke gate (A4): the context boots with sentinel keys only
      * (spring.ai.chat.client.enabled=false disables the ambiguous ChatClient bean), and
      * /api/ai/status reports demo mode when no key has been set.

@@ -26,18 +26,23 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Security gate integration test: the API key MUST NEVER appear in any HTTP response
- * or log line (T-06-01, RESEARCH Key-Leak Prevention, AI-02).
+ * or log line (T-06-01, T-08-LEAK-ST, RESEARCH Key-Leak Prevention, AI-02, AI-05, AI-06).
  *
- * <p>This test PASSES now because:
+ * <p>Endpoints covered:
  * <ul>
  *   <li>{@code POST /api/ai/key} returns {@code {mode, provider}} only — never the key</li>
  *   <li>{@code GET /api/ai/status} returns {@code {mode, provider}} only</li>
- *   <li>{@code GET /api/ai/explain/AAPL} returns 200 — AAPL is a seeded holding in alice's
- *       portfolio (Growth persona) so the endpoint does not 404, making the leakage
- *       assertion meaningful (not vacuously true)</li>
- *   <li>{@code GET /api/ai/commentary} returns 200</li>
- *   <li>No logging advisor is registered; {@code org.springframework.ai} is set to WARN</li>
+ *   <li>{@code GET /api/ai/explain/AAPL} — AAPL is a seeded holding for alice; 200 or 502 graceful</li>
+ *   <li>{@code GET /api/ai/commentary} — 200 or 502 graceful</li>
+ *   <li>{@code POST /api/ai/chat} — 200 or 502 graceful (T-07-LEAK)</li>
+ *   <li>{@code GET /api/ai/structured} — 200 or 502 graceful (T-08-LEAK-ST)</li>
  * </ul>
+ *
+ * <p>Finnhub key-leak threat (T-08-LEAK-FH): {@code FINNHUB_API_KEY} is blank in the test
+ * environment, so the seeded fallback path runs and Finnhub is never called. The
+ * endpoint-level assertion on {@code /api/ai/structured} is vacuously safe here; the ACTIVE
+ * Finnhub sentinel proof (sentinel key + forced IOException catch path) lives in
+ * {@code StockQuoteToolServiceTest} (08-01).
  *
  * <p><strong>IMPORTANT:</strong> This test uses a randomly generated test key
  * ({@code "TEST-SENTINEL-KEY-" + UUID}) to ensure no collision with any real key or
@@ -144,12 +149,31 @@ class KeyLeakageIntegrationTest extends AbstractPostgresIntegrationTest {
                 .as("POST /api/ai/chat response must NEVER contain the API key (T-07-LEAK)")
                 .doesNotContain(testKey);
 
+        // 5b. Call GET /api/ai/structured — must not return LLM key in response (T-08-LEAK-ST).
+        //
+        // Finnhub key-leak threat (T-08-LEAK-FH): this endpoint can trigger
+        // StockQuoteToolService → FinnhubQuoteClient if the LLM decides to call the @Tool.
+        // In this test env FINNHUB_API_KEY resolves to blank (no env var set), so the seeded
+        // fallback runs and Finnhub's API URL is never constructed with a real key. The
+        // endpoint-level assertion below is therefore vacuously safe for the Finnhub key here.
+        // The ACTIVE Finnhub sentinel proof lives in 08-01's StockQuoteToolServiceTest
+        // (sentinel key + forced IOException catch path proves the token never appears in logs).
+        ResponseEntity<String> structuredResponse = authenticatedGet("/api/ai/structured", sessionCookie);
+        assertThat(structuredResponse.getStatusCode())
+                .as("GET /api/ai/structured is reachable (200 demo seed) or fails gracefully on the fake live key (502) — not 404/403")
+                .isIn(HttpStatus.OK, HttpStatus.BAD_GATEWAY);
+        assertThat(structuredResponse.getBody())
+                .as("GET /api/ai/structured response (incl. 502 error body) must NEVER contain the API key (T-08-LEAK-ST)")
+                .doesNotContain(testKey);
+
         // 6. Assert no captured log line contains the test key
+        // This step now also guards the structured endpoint (step 5b) since the appender
+        // captures all log output produced during this test including any structured-path logs.
         List<String> capturedLines = logAppender.list.stream()
                 .map(ILoggingEvent::getFormattedMessage)
                 .toList();
         assertThat(capturedLines)
-                .as("No log line must contain the API key (T-06-02, T-07-LEAK)")
+                .as("No log line must contain the API key (T-06-02, T-07-LEAK, T-08-LEAK-ST)")
                 .noneMatch(line -> line.contains(testKey));
     }
 

@@ -12,9 +12,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.ChatClientResponse;
 import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
+import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
-import org.springframework.ai.chat.output.ChatGenerationMetadata;
 
 import java.util.HashMap;
 import java.util.List;
@@ -167,7 +167,7 @@ class ChatServiceLivePathTest {
     @SuppressWarnings("unchecked")
     private ChatClientResponse buildMockResponse(String rawText, Map<String, Object> contextMap) {
         Generation mockGeneration = mock(Generation.class);
-        var mockOutput = mock(org.springframework.ai.chat.messages.AssistantMessage.class);
+        AssistantMessage mockOutput = mock(AssistantMessage.class);
         when(mockOutput.getText()).thenReturn(rawText);
         when(mockGeneration.getOutput()).thenReturn(mockOutput);
 
@@ -187,7 +187,7 @@ class ChatServiceLivePathTest {
     @SuppressWarnings("unchecked")
     private ChatClient buildMockChatClient(ChatClientResponse response) {
         ChatClient.ChatClientRequestSpec requestSpec = mock(ChatClient.ChatClientRequestSpec.class);
-        ChatClient.CallPromptResponseSpec callSpec = mock(ChatClient.CallPromptResponseSpec.class);
+        ChatClient.CallResponseSpec callSpec = mock(ChatClient.CallResponseSpec.class);
         ChatClient mockClient = mock(ChatClient.class);
 
         when(mockClient.prompt()).thenReturn(requestSpec);

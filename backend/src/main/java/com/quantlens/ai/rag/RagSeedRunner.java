@@ -27,10 +27,14 @@ import java.util.List;
  * rolls back and re-runs cleanly on the next restart.
  *
  * <h2>Corpus</h2>
- * 12 authored 10-K-style chunks across AAPL, MSFT, NVDA, JPM, XOM (2-3 chunks per ticker).
+ * 10 authored 10-K-style chunks across AAPL, MSFT, NVDA, JPM, XOM (2 chunks per ticker).
  * Sections: "Risk Factors", "MD&A", "Business Overview".  Each chunk is 200-500 words of
  * table-light narrative prose.  Embedded by the {@code @Primary DeterministicHashingEmbeddingModel}
  * — no key, no network.
+ *
+ * <p>IN-01: Javadoc corrected from "12 chunks, 2-3 per ticker" to "10 chunks, 2 per ticker"
+ * to match the actual {@link #buildChunks()} implementation (AAPL×2, MSFT×2, NVDA×2,
+ * JPM×2, XOM×2 = 10).
  */
 @Component
 @Order(3)
@@ -78,9 +82,13 @@ public class RagSeedRunner implements ApplicationRunner {
     /**
      * Builds the 10-K RAG corpus chunks.
      *
-     * <p>12 authored chunks across AAPL, MSFT, NVDA, JPM, XOM (2–3 per ticker).
+     * <p>10 authored chunks across AAPL, MSFT, NVDA, JPM, XOM (2 per ticker).
      * Sections: "Risk Factors", "MD&amp;A", "Business Overview". 200–500 words each,
      * table-light narrative prose.  Metadata keys map 1:1 to {@link com.quantlens.ai.api.CitationDto}.
+     *
+     * <p>CR-06: Each chunk is wrapped in a {@link RagSeedContent} whose {@link RagSeedContent#toDocument()}
+     * assigns a stable, deterministic ID so re-running the seeder (e.g. after a crash-restart
+     * before the seed_log marker was written) does not insert duplicate embedding rows.
      *
      * @return list of {@link Document} chunks ready for {@code VectorStore.add()}
      */

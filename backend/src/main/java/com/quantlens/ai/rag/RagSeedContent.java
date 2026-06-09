@@ -2,6 +2,7 @@ package com.quantlens.ai.rag;
 
 import org.springframework.ai.document.Document;
 
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -29,10 +30,24 @@ public record RagSeedContent(
      * The metadata keys (ticker, section, source, year) map directly to
      * {@link com.quantlens.ai.api.CitationDto} fields.
      *
-     * @return a {@link Document} ready for {@code VectorStore.add()}
+     * <p>CR-06: The document ID is a STABLE, deterministic string derived from
+     * {@code ticker + "-" + section} (lowercased, spaces replaced with hyphens).
+     * This ensures that re-running {@code VectorStore.add()} after a crash-and-restart
+     * produces the same IDs and does not insert duplicate embedding rows — the seed is
+     * idempotent at the document-ID level. Without a stable ID, {@code new Document(text, metadata)}
+     * auto-generates a fresh UUID on every JVM start, causing duplicate rows in pgvector
+     * when the {@code seed_log} guard fails between {@code vectorStore.add()} and
+     * {@code seedLogRepository.save()}.
+     *
+     * @return a {@link Document} with a stable ID, ready for {@code VectorStore.add()}
      */
     public Document toDocument() {
+        // CR-06: stable ID derived from ticker + section so re-seeding is idempotent
+        String stableId = ticker.toLowerCase(Locale.ROOT)
+                + "-"
+                + section.toLowerCase(Locale.ROOT).replace(" ", "-").replace("&", "and");
         return new Document(
+                stableId,
                 text,
                 Map.of(
                         "ticker",  ticker,

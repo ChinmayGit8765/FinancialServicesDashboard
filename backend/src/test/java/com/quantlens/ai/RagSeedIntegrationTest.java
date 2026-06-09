@@ -1,6 +1,7 @@
 package com.quantlens.ai;
 
 import com.quantlens.AbstractPostgresIntegrationTest;
+import com.quantlens.ai.rag.RagSeedContent;
 import com.quantlens.seed.SeedLogRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.document.Document;
@@ -67,5 +68,59 @@ class RagSeedIntegrationTest extends AbstractPostgresIntegrationTest {
         assertThat(completed)
                 .as("seed_log rag-v1 must be marked completed after RagSeedRunner runs")
                 .isTrue();
+    }
+
+    /**
+     * CR-06 regression: re-running {@code VectorStore.add()} with the same chunk IDs must
+     * NOT produce duplicate rows. With stable deterministic IDs from {@link RagSeedContent#toDocument()},
+     * a second add() of the same document is idempotent (pgvector upserts on conflict or
+     * the existing row is unchanged).
+     *
+     * <p>This test adds the same chunks a second time and asserts the total result count
+     * for an AAPL query does not exceed the expected per-ticker chunk count (2 for AAPL).
+     * Duplicate rows would return the same document twice, inflating the result count
+     * above the expected ceiling.
+     */
+    @Test
+    void ragSeed_reRunWithSameIds_doesNotDuplicateChunks() {
+        // Build the same AAPL chunks that RagSeedRunner seeded
+        List<Document> aaplChunks = List.of(
+            new RagSeedContent(
+                "Apple Inc. faces significant regulatory scrutiny regarding its App Store policies...",
+                "AAPL", "Risk Factors", "AAPL 10-K FY2023", "2023"
+            ).toDocument(),
+            new RagSeedContent(
+                "Apple's Services segment delivered net revenue of approximately 85.2 billion...",
+                "AAPL", "MD&A", "AAPL 10-K FY2023", "2023"
+            ).toDocument()
+        );
+
+        // Both documents have the same stable IDs as what was already seeded by RagSeedRunner
+        assertThat(aaplChunks.get(0).getId())
+                .as("AAPL Risk Factors chunk must have stable ID 'aapl-risk-factors'")
+                .isEqualTo("aapl-risk-factors");
+        assertThat(aaplChunks.get(1).getId())
+                .as("AAPL MD&A chunk must have stable ID 'aapl-mdanda'")
+                .isEqualTo("aapl-mdanda");
+
+        // Re-add the same chunks — must not duplicate rows
+        vectorStore.add(aaplChunks);
+
+        // Query for AAPL chunks — result count must not exceed 2 (one per seeded chunk)
+        // If duplicates were inserted, topK(10) would return >2 AAPL results
+        List<Document> results = vectorStore.similaritySearch(
+                SearchRequest.builder()
+                        .query("Apple regulatory App Store risk")
+                        .topK(10)
+                        .similarityThreshold(0.01)
+                        .build());
+
+        long aaplCount = results.stream()
+                .filter(d -> "AAPL".equals(d.getMetadata().get("ticker")))
+                .count();
+
+        assertThat(aaplCount)
+                .as("CR-06: re-seeding with stable IDs must not duplicate AAPL chunks (expected <= 2, got %d)", aaplCount)
+                .isLessThanOrEqualTo(2);
     }
 }

@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: ready_to_plan
-stopped_at: Phase 06 complete (4/4) — ready to discuss Phase 7
-last_updated: 2026-06-09T06:34:45.665Z
+status: executing
+stopped_at: "Completed 07-01-PLAN.md — RAG scaffold: DeterministicHashingEmbeddingModel, RagAdvisorConfig, ChatService, POST /api/ai/chat, RagSeedRunner, Phase 7 RED scaffolds, KeyLeakageIntegrationTest extended GREEN"
+last_updated: "2026-06-09T07:32:20.839Z"
 last_activity: 2026-06-09
 progress:
   total_phases: 10
   completed_phases: 6
-  total_plans: 24
-  completed_plans: 24
+  total_plans: 27
+  completed_plans: 25
   percent: 60
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-07)
 
 **Core value:** A working, screenshot-ready dashboard that demonstrates real quantitative-finance analytics narrated by a real Spring AI layer — convincing with zero setup, genuinely live when you add a key.
-**Current focus:** Phase 7 — rag pipeline
+**Current focus:** Phase 07 — rag-pipeline
 
 ## Current Position
 
-Phase: 7
-Plan: Not started
-Status: Ready to plan
+Phase: 07 (rag-pipeline) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
 Last activity: 2026-06-09
 
-Progress: [██████████] 100%
+Progress: [█████████░] 93%
 
 ## Performance Metrics
 
@@ -78,6 +78,7 @@ Progress: [██████████] 100%
 | Phase 05 P02 | 6 | 2 tasks | 1 file |
 | Phase 05-stochastic-forecasting P03 | 15 | 3 tasks | 8 files |
 | Phase 06-demo-mode-ai-seam P01 | 1422 | 3 tasks | 34 files |
+| Phase 07-rag-pipeline P01 | 23 min | 3 tasks | 18 files |
 
 ## Accumulated Context
 
@@ -131,6 +132,10 @@ Recent decisions affecting current work:
 - [06-01] explain endpoint path variable is String ticker (e.g. AAPL), NOT numeric holdingId — matches ai_seed_content.subject_id; avoids exposing internal DB ids
 - [06-01] DemoModeAdvisor implements CallAdvisor (Spring AI 1.1.x) — AdvisedRequest/AdvisedResponse do not exist in 1.1.6; ChatClientRequest.builder() requires non-null Prompt at construction time
 - [06-01] ai module allowedDependencies: portfolio::domain + seed (AiSeedRunner needs SeedLogRepository for idempotency guard)
+- [07-01] spring-ai-advisors-vector-store must be explicit dep — QuestionAnswerAdvisor not transitive from spring-ai-starter-vector-store-pgvector
+- [07-01] A5 resolved: RETRIEVED_DOCUMENTS in clientResponse.context() not chatResponse().getMetadata() — bytecode-verified in QuestionAnswerAdvisor.after()
+- [07-01] A7 resolved: PgVectorStoreAutoConfiguration @ConditionalOnMissingBean picks up @Primary EmbeddingModel — no manual VectorStore bean needed
+- [07-01] CSRF exemption added for POST /api/ai/chat (mirrors /api/ai/key pattern; SameSite=Lax is primary browser CSRF defence)
 
 ### Pending Todos
 
@@ -157,6 +162,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-09T05:48:31.182Z
+Last session: 2026-06-09T07:32:20.817Z
 Stopped at: Completed 06-01-PLAN.md — Spring AI scaffold + demo-mode seam: DemoModeAdvisor, ChatClientStrategy, LlmKeySessionHolder, ai_seed_content V4, KeyLeakageIntegrationTest GREEN
 Resume file: None

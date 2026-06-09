@@ -112,6 +112,49 @@ class AiControllerIntegrationTest extends AbstractPostgresIntegrationTest {
                 .doesNotContain("\"headline\":\"\"");
     }
 
+    // ── AI-06: GET /api/ai/structured demo mode ───────────────────────────────
+
+    /**
+     * GET /api/ai/structured returns 200 with a StructuredInsightRecord shape (title +
+     * non-empty series) for alice (GROWTH persona) in demo mode.
+     *
+     * <p>Seed version ai-v4 provides the STRUCTURED_INSIGHT/GROWTH row; the endpoint
+     * deserializes it via {@code ObjectMapper.readValue} — no provider call.
+     */
+    @Test
+    void structured_demoMode_returnsRecordShape() {
+        String cookie = loginAndGetSessionCookie("alice");
+        ResponseEntity<String> response = authenticatedGet("/api/ai/structured", cookie);
+
+        assertThat(response.getStatusCode())
+                .as("GET /api/ai/structured must return 200 in demo mode")
+                .isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody())
+                .as("Response must contain 'title' field")
+                .contains("\"title\"")
+                .as("title must not be blank")
+                .doesNotContain("\"title\":\"\"");
+        assertThat(response.getBody())
+                .as("Response must contain non-empty 'series' array")
+                .contains("\"series\"")
+                .contains("\"label\"");
+    }
+
+    /**
+     * Unauthenticated GET /api/ai/structured must return 401.
+     */
+    @Test
+    void structured_unauthenticated_returns401() {
+        ResponseEntity<String> response = restTemplate.exchange(
+                "/api/ai/structured",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                String.class);
+        assertThat(response.getStatusCode())
+                .as("unauthenticated GET /api/ai/structured must return 401")
+                .isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
     // ── CR-05: ticker format validation ──────────────────────────────────────
 
     /**

@@ -3,6 +3,7 @@ package com.quantlens.ai.api;
 import com.quantlens.ai.service.ChatService;
 import com.quantlens.ai.service.CommentaryService;
 import com.quantlens.ai.service.ExplainPositionService;
+import com.quantlens.ai.service.StructuredOutputService;
 import com.quantlens.portfolio.domain.PortfolioRepository;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
@@ -64,15 +65,18 @@ public class AiController {
     private final ExplainPositionService explainService;
     private final CommentaryService commentaryService;
     private final ChatService chatService;
+    private final StructuredOutputService structuredOutputService;
 
     public AiController(PortfolioRepository portfolioRepository,
                         ExplainPositionService explainService,
                         CommentaryService commentaryService,
-                        ChatService chatService) {
-        this.portfolioRepository = portfolioRepository;
-        this.explainService      = explainService;
-        this.commentaryService   = commentaryService;
-        this.chatService         = chatService;
+                        ChatService chatService,
+                        StructuredOutputService structuredOutputService) {
+        this.portfolioRepository      = portfolioRepository;
+        this.explainService           = explainService;
+        this.commentaryService        = commentaryService;
+        this.chatService              = chatService;
+        this.structuredOutputService  = structuredOutputService;
     }
 
     /**
@@ -113,6 +117,28 @@ public class AiController {
     public ResponseEntity<CommentaryDto> commentary(Authentication authentication) {
         Long portfolioId = resolvePortfolioId(authentication);
         return ResponseEntity.ok(commentaryService.commentary(portfolioId));
+    }
+
+    /**
+     * Returns a typed structured-output insight DTO for the authenticated user's portfolio.
+     *
+     * <p>Demo mode: the {@code STRUCTURED_INSIGHT} seed for the user's persona is deserialized
+     * via {@code ObjectMapper.readValue} — no provider call, no network.
+     * Live mode: {@code BeanOutputConverter} generates the JSON schema and the LLM returns
+     * a typed {@link StructuredInsightRecord}.
+     *
+     * <p>T-08-IDOR-ST: portfolio identity derived exclusively from the authenticated principal
+     * via {@link #resolvePortfolioId(Authentication)}.
+     *
+     * @param authentication the Spring Security principal
+     * @return 200 with {@link StructuredInsightRecord}; 401 if unauthenticated or no portfolio;
+     *         502 on provider error
+     */
+    @GetMapping("/structured")
+    @Transactional(readOnly = true)
+    public ResponseEntity<StructuredInsightRecord> structured(Authentication authentication) {
+        Long portfolioId = resolvePortfolioId(authentication);
+        return ResponseEntity.ok(structuredOutputService.getInsight(portfolioId));
     }
 
     /**

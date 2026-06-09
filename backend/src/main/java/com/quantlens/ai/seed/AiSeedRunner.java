@@ -62,10 +62,11 @@ public class AiSeedRunner implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(AiSeedRunner.class);
 
-    private static final String AI_SEED_VERSION = "ai-v3";
-    private static final String EXPLAIN    = "EXPLAIN_POSITION";
-    private static final String COMMENTARY = "DAILY_COMMENTARY";
-    private static final String RAG_QA     = "RAG_QA";
+    private static final String AI_SEED_VERSION    = "ai-v4";
+    private static final String EXPLAIN            = "EXPLAIN_POSITION";
+    private static final String COMMENTARY         = "DAILY_COMMENTARY";
+    private static final String RAG_QA             = "RAG_QA";
+    private static final String STRUCTURED_INSIGHT = "STRUCTURED_INSIGHT";
 
     private final AiSeedContentRepository aiSeedContentRepository;
     private final SeedLogRepository seedLogRepository;
@@ -476,7 +477,41 @@ public class AiSeedRunner implements ApplicationRunner {
                 "- JNJ: Healthcare defensive positioning performing as expected; MedTech " +
                   "volume recovery on track post-elective-procedure normalization\n" +
                 "- XOM/PG/KO: Defensive and income-generating positions offsetting growth " +
-                  "volatility; combined yield contribution supporting total return stability")
+                  "volatility; combined yield contribution supporting total return stability"),
+
+            // ── STRUCTURED_INSIGHT: per-persona sector exposure (ai-v4) ──────────
+            // JSON must match StructuredInsightRecord exactly: title, subtitle, series:[{label,value}]
+            // Parsed by ObjectMapper.readValue in demo mode — any schema deviation throws
+            // JsonMappingException (08-RESEARCH Pitfall 2).
+
+            new AiSeedContent(STRUCTURED_INSIGHT, "GROWTH",
+                "{\"title\":\"Sector Exposure\",\"subtitle\":\"AI-Detected Allocation (Demo)\"," +
+                "\"series\":[" +
+                "{\"label\":\"Technology\",\"value\":62.5}," +
+                "{\"label\":\"Automotive\",\"value\":17.3}," +
+                "{\"label\":\"Consumer Staples\",\"value\":10.1}," +
+                "{\"label\":\"Cash\",\"value\":10.1}" +
+                "]}"),
+
+            new AiSeedContent(STRUCTURED_INSIGHT, "INCOME",
+                "{\"title\":\"Sector Exposure\",\"subtitle\":\"AI-Detected Allocation (Demo)\"," +
+                "\"series\":[" +
+                "{\"label\":\"Financials\",\"value\":36.2}," +
+                "{\"label\":\"Energy\",\"value\":28.4}," +
+                "{\"label\":\"Consumer Staples\",\"value\":25.9}," +
+                "{\"label\":\"Cash\",\"value\":9.5}" +
+                "]}"),
+
+            new AiSeedContent(STRUCTURED_INSIGHT, "BALANCED",
+                "{\"title\":\"Sector Exposure\",\"subtitle\":\"AI-Detected Allocation (Demo)\"," +
+                "\"series\":[" +
+                "{\"label\":\"Technology\",\"value\":32.1}," +
+                "{\"label\":\"Financials\",\"value\":18.6}," +
+                "{\"label\":\"Healthcare\",\"value\":15.4}," +
+                "{\"label\":\"Consumer Staples\",\"value\":14.2}," +
+                "{\"label\":\"Energy\",\"value\":11.8}," +
+                "{\"label\":\"Cash\",\"value\":7.9}" +
+                "]}")
         );
     }
 }

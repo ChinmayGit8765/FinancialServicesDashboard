@@ -115,7 +115,7 @@ public class SecurityConfig {
                         // reads the XSRF-TOKEN cookie that Spring sets on the first GET request and then
                         // attaches it to all subsequent mutating calls (Plan 04 Axios interceptor).
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                        .ignoringRequestMatchers("/api/auth/login", "/api/auth/logout")
+                        .ignoringRequestMatchers("/api/auth/login", "/api/auth/logout", "/api/ai/key")
                 )
                 .exceptionHandling(ex -> ex
                         // Unauthenticated API requests → 401 JSON; no redirect to login page (T-01-10)

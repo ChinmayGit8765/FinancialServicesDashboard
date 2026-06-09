@@ -202,7 +202,7 @@ class DeterministicHashingEmbeddingModelTest {
      */
     @Test
     void embed_nullInput_returnsZeroVector_notNPE() {
-        float[] v = model.embed(null);
+        float[] v = model.embed((String) null);
         assertThat(v).hasSize(1536);
         double norm = 0.0;
         for (float x : v) norm += (double) x * x;

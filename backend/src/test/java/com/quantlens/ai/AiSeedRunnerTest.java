@@ -142,24 +142,56 @@ class AiSeedRunnerTest extends AbstractPostgresIntegrationTest {
     }
 
     @Test
-    void seedLog_aiV1_isMarkedCompleted() {
-        assertThat(seedLogRepository.findById("ai-v1"))
-                .as("seed_log 'ai-v1' row must exist after AiSeedRunner runs")
+    void seedLog_aiV2_isMarkedCompleted() {
+        // ai-v2 is the current seed version (bumped from ai-v1 in WR-06 fix to ensure
+        // corrected persona-neutral EXPLAIN_POSITION content is upserted on existing databases)
+        assertThat(seedLogRepository.findById("ai-v2"))
+                .as("seed_log 'ai-v2' row must exist after AiSeedRunner runs")
                 .isPresent()
                 .get()
                 .satisfies(log -> assertThat(log.isCompleted())
-                        .as("seed_log 'ai-v1' must be marked completed=true")
+                        .as("seed_log 'ai-v2' must be marked completed=true")
                         .isTrue());
     }
 
     @Test
     void idempotency_rowCounts_stableAfterContextStart() {
-        // The Spring context started once and AiSeedRunner ran once. The seed_log ai-v1
+        // The Spring context started once and AiSeedRunner ran once. The seed_log ai-v2
         // guard prevents re-runs. Verify total row count is stable at expected value:
         // 13 EXPLAIN_POSITION + 3 DAILY_COMMENTARY = 16
         long totalRows = aiSeedContentRepository.count();
         assertThat(totalRows)
                 .as("Total ai_seed_content rows must equal 16 (13 EXPLAIN_POSITION + 3 DAILY_COMMENTARY)")
                 .isEqualTo(16L);
+    }
+
+    @Test
+    void explainPosition_content_isPersonaNeutral() {
+        // WR-06: EXPLAIN_POSITION content must not contain persona-specific share counts
+        // or portfolio style references. Narratives are shared across personas (all demo
+        // users can hold the same ticker), so content must be ticker/company-specific only.
+        for (String ticker : EXPLAIN_TICKERS) {
+            AiSeedContent row = aiSeedContentRepository
+                    .findByTypeAndSubjectId("EXPLAIN_POSITION", ticker)
+                    .orElseThrow(() -> new AssertionError("Missing EXPLAIN_POSITION row for " + ticker));
+
+            String content = row.getContent();
+            assertThat(content)
+                    .as("EXPLAIN_POSITION content for %s must not contain specific share counts " +
+                        "(persona-neutral requirement — WR-06)", ticker)
+                    .doesNotContainPattern("approximately \\d+ shares?");
+            assertThat(content)
+                    .as("EXPLAIN_POSITION content for %s must not say 'growth-oriented portfolio' " +
+                        "(persona-specific language — WR-06)", ticker)
+                    .doesNotContainIgnoringCase("growth-oriented portfolio");
+            assertThat(content)
+                    .as("EXPLAIN_POSITION content for %s must not say 'income-oriented portfolio' " +
+                        "(persona-specific language — WR-06)", ticker)
+                    .doesNotContainIgnoringCase("income-oriented portfolio");
+            assertThat(content)
+                    .as("EXPLAIN_POSITION content for %s must not say 'balanced portfolio' " +
+                        "(persona-specific language — WR-06)", ticker)
+                    .doesNotContainIgnoringCase("balanced portfolio");
+        }
     }
 }

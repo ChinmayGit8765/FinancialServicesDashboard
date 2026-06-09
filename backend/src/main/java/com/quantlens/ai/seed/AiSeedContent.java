@@ -65,4 +65,17 @@ public class AiSeedContent {
     public String getSubjectId() { return subjectId; }
 
     public String getContent() { return content; }
+
+    /**
+     * Updates the authored content for an existing seed row.
+     *
+     * <p>Used by {@link AiSeedRunner} ai-v2 to overwrite persona-specific narratives
+     * from ai-v1 with persona-neutral content (WR-06). The (type, subjectId) key is
+     * immutable; only the content text changes.
+     *
+     * @param content the new authored narrative text
+     */
+    public void setContent(String content) {
+        this.content = content;
+    }
 }

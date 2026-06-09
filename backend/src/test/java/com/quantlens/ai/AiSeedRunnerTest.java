@@ -142,27 +142,27 @@ class AiSeedRunnerTest extends AbstractPostgresIntegrationTest {
     }
 
     @Test
-    void seedLog_aiV2_isMarkedCompleted() {
-        // ai-v2 is the current seed version (bumped from ai-v1 in WR-06 fix to ensure
-        // corrected persona-neutral EXPLAIN_POSITION content is upserted on existing databases)
-        assertThat(seedLogRepository.findById("ai-v2"))
-                .as("seed_log 'ai-v2' row must exist after AiSeedRunner runs")
+    void seedLog_aiV3_isMarkedCompleted() {
+        // ai-v3 is the current seed version (bumped from ai-v2 in Phase 7 to add RAG_QA rows)
+        assertThat(seedLogRepository.findById("ai-v3"))
+                .as("seed_log 'ai-v3' row must exist after AiSeedRunner runs")
                 .isPresent()
                 .get()
                 .satisfies(log -> assertThat(log.isCompleted())
-                        .as("seed_log 'ai-v2' must be marked completed=true")
+                        .as("seed_log 'ai-v3' must be marked completed=true")
                         .isTrue());
     }
 
     @Test
     void idempotency_rowCounts_stableAfterContextStart() {
-        // The Spring context started once and AiSeedRunner ran once. The seed_log ai-v2
+        // The Spring context started once and AiSeedRunner ran once. The seed_log ai-v3
         // guard prevents re-runs. Verify total row count is stable at expected value:
-        // 13 EXPLAIN_POSITION + 3 DAILY_COMMENTARY = 16
+        // 13 EXPLAIN_POSITION + 3 DAILY_COMMENTARY + 4 RAG_QA = 20
         long totalRows = aiSeedContentRepository.count();
         assertThat(totalRows)
-                .as("Total ai_seed_content rows must equal 16 (13 EXPLAIN_POSITION + 3 DAILY_COMMENTARY)")
-                .isEqualTo(16L);
+                .as("Total ai_seed_content rows must equal 20 " +
+                    "(13 EXPLAIN_POSITION + 3 DAILY_COMMENTARY + 4 RAG_QA)")
+                .isEqualTo(20L);
     }
 
     @Test

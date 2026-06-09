@@ -22,19 +22,20 @@ import java.util.Optional;
  * seed content references.
  *
  * <h2>Idempotence</h2>
- * Guarded by a {@code seed_log} row with {@code id="ai-v2"}. The completion row is
+ * Guarded by a {@code seed_log} row with {@code id="ai-v3"}. The completion row is
  * written at the END of the transaction — if the JVM crashes mid-seed, the partial
  * work rolls back and re-runs cleanly on the next restart.
  *
- * <h2>Upsert strategy (ai-v2)</h2>
- * Rows are upserted (updated if they already exist from ai-v1, inserted if new).
- * This ensures corrected content takes effect on existing databases that ran ai-v1.
- * The ai-v1 seed_log row is left intact so partial-v1 detection still works on
- * fresh databases that never ran v1; ai-v2 only checks for its own completion marker.
+ * <h2>Upsert strategy (ai-v3)</h2>
+ * Rows are upserted (updated if they already exist from ai-v1/ai-v2, inserted if new).
+ * This ensures corrected content takes effect on existing databases. Prior seed_log rows
+ * (ai-v1, ai-v2) are left intact; ai-v3 only checks for its own completion marker.
  *
  * <h2>Seeded universe</h2>
  * One {@code EXPLAIN_POSITION} row per ticker in the seeded portfolio universe (13 tickers),
- * and one {@code DAILY_COMMENTARY} row per persona (3 rows). Total: 16 rows.
+ * one {@code DAILY_COMMENTARY} row per persona (3 rows), and 4 {@code RAG_QA} rows for
+ * the chat Q&amp;A demo mode ({@code DEFAULT}, {@code AAPL_RISK}, {@code NVDA_AI},
+ * {@code JPM_RATES}). Total: 20 rows.
  *
  * <h2>EXPLAIN_POSITION content — persona-neutral (WR-06)</h2>
  * EXPLAIN_POSITION content is keyed by TICKER and shared across all personas (all three
@@ -61,9 +62,10 @@ public class AiSeedRunner implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(AiSeedRunner.class);
 
-    private static final String AI_SEED_VERSION = "ai-v2";
-    private static final String EXPLAIN = "EXPLAIN_POSITION";
+    private static final String AI_SEED_VERSION = "ai-v3";
+    private static final String EXPLAIN    = "EXPLAIN_POSITION";
     private static final String COMMENTARY = "DAILY_COMMENTARY";
+    private static final String RAG_QA     = "RAG_QA";
 
     private final AiSeedContentRepository aiSeedContentRepository;
     private final SeedLogRepository seedLogRepository;
@@ -361,6 +363,102 @@ public class AiSeedRunner implements ApplicationRunner {
                   "on schedule, supporting medium-term cash flow visibility\n" +
                 "- KO/PG: Pricing-driven revenue growth moderating as expected; volume recovery " +
                   "in emerging markets partially offsetting developed-market normalization"),
+
+            // ── RAG_QA: demo chat answers with embedded citations ─────────────
+            // Content is authored JSON: {"answer":"...","citations":[{"ticker":...}]}
+            // ChatService parses this in demo mode (DemoModeAdvisor short-circuits).
+            // Citations reference actual seeded chunks (same ticker/section/source as
+            // RagSeedRunner corpus) so demo citations are genuine references.
+
+            new AiSeedContent(RAG_QA, "DEFAULT",
+                "{\"answer\":\"Based on the 10-K filings in this portfolio, the key regulatory " +
+                "and strategic risks span several themes. Apple faces significant scrutiny over " +
+                "its App Store policies under the EU Digital Markets Act, which could reduce " +
+                "Services segment margins by 300-500 basis points as third-party payment systems " +
+                "are mandated. NVIDIA's data centre dominance carries supply chain concentration " +
+                "risk given exclusive reliance on TSMC for leading-edge fabrication, alongside " +
+                "export control restrictions limiting GPU sales to China. JPMorgan Chase faces " +
+                "credit cycle normalisation headwinds as consumer credit card charge-off rates " +
+                "return to historical averages following pandemic-era stimulus. ExxonMobil " +
+                "navigates long-duration energy transition risk as policy-driven demand destruction " +
+                "for petroleum products accelerates across major economies. Each company's " +
+                "management team has disclosed mitigation strategies in their respective " +
+                "Risk Factors and MD\\u0026A sections.\"," +
+                "\"citations\":[" +
+                "{\"ticker\":\"AAPL\",\"section\":\"Risk Factors\",\"source\":\"AAPL 10-K FY2023\"," +
+                "\"excerpt\":\"Apple Inc. faces significant regulatory scrutiny regarding its App Store policies and the broader digital marketplace ecosystem.\"}," +
+                "{\"ticker\":\"NVDA\",\"section\":\"Risk Factors\",\"source\":\"NVDA 10-K FY2024\"," +
+                "\"excerpt\":\"NVIDIA Corporation's business is heavily concentrated in the data centre segment following the explosive growth in demand for accelerated computing.\"}," +
+                "{\"ticker\":\"JPM\",\"section\":\"Risk Factors\",\"source\":\"JPM 10-K FY2023\"," +
+                "\"excerpt\":\"JPMorgan Chase & Co. operates within a complex and evolving regulatory environment that imposes significant compliance obligations.\"}," +
+                "{\"ticker\":\"XOM\",\"section\":\"Risk Factors\",\"source\":\"XOM 10-K FY2023\"," +
+                "\"excerpt\":\"ExxonMobil Corporation faces material risks associated with the global energy transition and the evolving regulatory landscape.\"}" +
+                "]}"),
+
+            new AiSeedContent(RAG_QA, "AAPL_RISK",
+                "{\"answer\":\"Apple's 10-K Risk Factors section discloses several material risks. " +
+                "The most prominent is regulatory scrutiny of the App Store: the EU Digital Markets " +
+                "Act requires Apple to allow alternative app distribution and third-party payment " +
+                "systems on iOS, potentially reducing the 15-30% App Store commission and compressing " +
+                "Services gross margins by 300-500 basis points. In the United States, the Department " +
+                "of Justice has filed antitrust litigation challenging Apple's restrictions on " +
+                "third-party NFC payment access and messaging interoperability. Japan, the UK, and " +
+                "South Korea have also initiated investigations, resulting in voluntary concessions. " +
+                "Apple's Services segment — which contributes approximately 22% of total revenue at " +
+                "roughly $85.2 billion — is the most margin-sensitive component of the business, " +
+                "making regulatory outcomes disproportionately important to the earnings trajectory. " +
+                "Management maintains that the integrated platform provides security and privacy " +
+                "benefits justifying its model, but the litigation reserve and regulatory engagement " +
+                "costs are material and ongoing.\"," +
+                "\"citations\":[" +
+                "{\"ticker\":\"AAPL\",\"section\":\"Risk Factors\",\"source\":\"AAPL 10-K FY2023\"," +
+                "\"excerpt\":\"Apple Inc. faces significant regulatory scrutiny regarding its App Store policies and the broader digital marketplace ecosystem. The European Commission's Digital Markets Act...\"}," +
+                "{\"ticker\":\"AAPL\",\"section\":\"MD&A\",\"source\":\"AAPL 10-K FY2023\"," +
+                "\"excerpt\":\"Apple's Services segment delivered net revenue of approximately 85.2 billion dollars in fiscal year 2023, representing 22 percent of total company net sales.\"}" +
+                "]}"),
+
+            new AiSeedContent(RAG_QA, "NVDA_AI",
+                "{\"answer\":\"NVIDIA's 10-K reveals that its data centre segment is the dominant " +
+                "growth engine, generating approximately $47.5 billion in fiscal 2024 revenue — " +
+                "a 217% year-over-year increase driven by H100 GPU demand for generative AI " +
+                "training workloads. The Hopper GPU architecture became the de facto standard " +
+                "for large language model training across major AI research laboratories. " +
+                "Management highlighted the transition from training-only to inference compute " +
+                "as a key TAM expansion opportunity, since inference requires sustained GPU " +
+                "capacity across deployed model fleets. The forthcoming Blackwell GB200 NVLink " +
+                "system targets inference economics specifically. NVIDIA's CUDA software ecosystem " +
+                "creates significant switching costs that reinforce hardware platform stickiness. " +
+                "Key risks include export control restrictions on GPU sales to China (the H20 chip " +
+                "carries lower margins), supply chain concentration at TSMC, and longer-term " +
+                "competition from custom silicon developed by Google (TPUs), Amazon (Trainium), " +
+                "and Microsoft (Maia).\"," +
+                "\"citations\":[" +
+                "{\"ticker\":\"NVDA\",\"section\":\"MD&A\",\"source\":\"NVDA 10-K FY2024\"," +
+                "\"excerpt\":\"NVIDIA's Data Center segment generated revenue of approximately 47.5 billion dollars in fiscal year 2024, representing extraordinary growth of approximately 217 percent.\"}," +
+                "{\"ticker\":\"NVDA\",\"section\":\"Risk Factors\",\"source\":\"NVDA 10-K FY2024\"," +
+                "\"excerpt\":\"NVIDIA Corporation's business is heavily concentrated in the data centre segment. This concentration creates material risk if demand from hyperscalers decelerates.\"}" +
+                "]}"),
+
+            new AiSeedContent(RAG_QA, "JPM_RATES",
+                "{\"answer\":\"JPMorgan Chase's 2023 10-K shows that rising interest rates were " +
+                "the primary driver of record earnings. Net interest income of approximately " +
+                "$89.3 billion grew 34% year-over-year as the Federal Reserve's tightening cycle " +
+                "expanded the firm's net interest margin. Full-year 2023 net income reached a " +
+                "record $49.6 billion, with return on tangible common equity of approximately 21% " +
+                "— well above the firm's 17% long-term target. Management guided that NII will " +
+                "normalise over the medium term as deposit betas increase and eventual rate cuts " +
+                "reduce the benefit. On the risk side, the Basel III endgame proposal would " +
+                "increase JPMorgan's CET1 requirement by approximately 25% under the original " +
+                "proposal, constraining capital return capacity. Credit cycle normalisation in " +
+                "the consumer card portfolio — with charge-off rates returning to historical " +
+                "averages — represents a headwind to consumer banking profitability relative " +
+                "to 2021-2022 levels.\"," +
+                "\"citations\":[" +
+                "{\"ticker\":\"JPM\",\"section\":\"MD&A\",\"source\":\"JPM 10-K FY2023\"," +
+                "\"excerpt\":\"JPMorgan Chase reported record net income of approximately 49.6 billion dollars in full-year 2023, driven by net interest income expansion.\"}," +
+                "{\"ticker\":\"JPM\",\"section\":\"Risk Factors\",\"source\":\"JPM 10-K FY2023\"," +
+                "\"excerpt\":\"JPMorgan Chase & Co. operates within a complex and evolving regulatory environment. The Basel III endgame proposal would increase JPMorgan's CET1 requirement by approximately 25 percent.\"}" +
+                "]}"),
 
             new AiSeedContent(COMMENTARY, "BALANCED",
                 "The balanced portfolio's multi-sector construction navigated a mixed market " +

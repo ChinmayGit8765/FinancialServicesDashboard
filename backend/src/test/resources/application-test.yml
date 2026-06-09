@@ -18,6 +18,11 @@ spring:
         dimensions: 1536
         distance-type: COSINE_DISTANCE
         index-type: HNSW
+    anthropic:
+      # TEST_SENTINEL — mirrors prod sentinel pattern; allows integration test context to boot key-less
+      api-key: TEST_SENTINEL
+    openai:
+      api-key: TEST_SENTINEL
     chat:
       client:
         enabled: false

@@ -26,9 +26,33 @@ spring:
         dimensions: 1536
         distance-type: COSINE_DISTANCE
         index-type: HNSW
+    anthropic:
+      # DEMO_NO_KEY sentinel: non-blank placeholder allows Spring context to load without a real key.
+      # DemoModeAdvisor short-circuits before any network call fires, so this value never reaches a provider.
+      # Override with ANTHROPIC_API_KEY env var to switch to live mode.
+      api-key: ${ANTHROPIC_API_KEY:DEMO_NO_KEY}
+      chat:
+        options:
+          # Override Spring AI default (claude-sonnet-4-5) with current Sonnet generation (RESEARCH Pitfall 7)
+          model: claude-sonnet-4-6
+          max-tokens: 2048
+    openai:
+      # Same sentinel pattern as Anthropic (RESEARCH Pattern 4)
+      api-key: ${OPENAI_API_KEY:DEMO_NO_KEY}
+      chat:
+        options:
+          model: gpt-4o
+          max-tokens: 2048
     chat:
       client:
+        # false — prevents ambiguous ChatClient bean when both Anthropic and OpenAI starters are present (RESEARCH Pitfall 6 / A4)
+        # ChatClientStrategy builds ChatClient instances per-request via ChatClient.builder(model)
         enabled: false
+
+logging:
+  level:
+    # WARN — prevents SimpleLoggerAdvisor from logging prompt/response details at DEBUG (RESEARCH Pitfall 4 / T-06-02)
+    org.springframework.ai: WARN
 
 server:
   port: 8080

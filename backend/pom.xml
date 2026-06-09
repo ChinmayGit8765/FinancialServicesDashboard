@@ -112,6 +112,17 @@
 			<scope>test</scope>
 		</dependency>
 
+		<!-- Phase 6: Spring AI model starters (BOM 1.1.6 already pinned above) -->
+		<!-- Official org.springframework.ai group — no legitimacy concern (RESEARCH Package Legitimacy Audit) -->
+		<dependency>
+			<groupId>org.springframework.ai</groupId>
+			<artifactId>spring-ai-starter-model-anthropic</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.ai</groupId>
+			<artifactId>spring-ai-starter-model-openai</artifactId>
+		</dependency>
+
 		<!-- Phase 5: Monte Carlo SDE engine (GBM, Merton jump-diffusion, Heston) -->
 		<!-- commons-math3:3.6.1 is a harmless transitive dep (finmath uses it internally) — do NOT add exclusions -->
 		<!-- MertonModel Poisson process requires commons-math3; Hipparchus uses org.hipparchus (different groupId) — zero class collision -->

@@ -24,6 +24,13 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Proves that {@code @SessionScope} works correctly — two separate HTTP sessions
  * each hold their own provider state and cannot see each other's key (T-06-04,
  * RESEARCH Pitfall 3).
+ *
+ * <h3>CR-01: DELETE CSRF protection</h3>
+ * {@link #deleteKey_withoutCsrfToken_returns403()} proves that {@code DELETE /api/ai/key}
+ * requires the {@code X-XSRF-TOKEN} header — it is NOT included in the
+ * CSRF-exempt matcher (which is now POST-scoped only). The existing
+ * {@link #clearKey_returns_mode_demo()} fetches the CSRF token via a GET request
+ * and passes it correctly.
  */
 class AiKeyControllerTest extends AbstractPostgresIntegrationTest {
 
@@ -55,7 +62,7 @@ class AiKeyControllerTest extends AbstractPostgresIntegrationTest {
     void clearKey_returns_mode_demo() {
         String sessionCookie = loginAndGetSessionCookie("alice");
 
-        // First set a key
+        // First set a key (POST is CSRF-exempt so no token needed)
         HttpHeaders postHeaders = new HttpHeaders();
         postHeaders.setContentType(MediaType.APPLICATION_JSON);
         postHeaders.add(HttpHeaders.COOKIE, sessionCookie);
@@ -63,9 +70,14 @@ class AiKeyControllerTest extends AbstractPostgresIntegrationTest {
                 new HttpEntity<>("{\"provider\":\"openai\",\"apiKey\":\"test-key-456\"}", postHeaders),
                 String.class);
 
-        // Then clear it
+        // Fetch XSRF-TOKEN from a GET request — required for DELETE (CR-01 fix: DELETE is no
+        // longer CSRF-exempt; the Axios interceptor sends this header in the real SPA)
+        String xsrfToken = fetchXsrfToken(sessionCookie);
+
+        // Then clear it — include X-XSRF-TOKEN header
         HttpHeaders deleteHeaders = new HttpHeaders();
         deleteHeaders.add(HttpHeaders.COOKIE, sessionCookie);
+        deleteHeaders.add("X-XSRF-TOKEN", xsrfToken);
         ResponseEntity<String> response = restTemplate.exchange(
                 "/api/ai/key",
                 HttpMethod.DELETE,
@@ -76,6 +88,41 @@ class AiKeyControllerTest extends AbstractPostgresIntegrationTest {
         assertThat(response.getBody()).contains("\"mode\":\"demo\"");
         // Provider must be omitted (null → @JsonInclude NON_NULL omits it)
         assertThat(response.getBody()).doesNotContain("\"provider\"");
+    }
+
+    /**
+     * CR-01: DELETE /api/ai/key without X-XSRF-TOKEN must be rejected with 403.
+     *
+     * <p>Before the fix, {@code DELETE /api/ai/key} was CSRF-exempt (path-level exemption
+     * matched both GET and DELETE). After the fix, only {@code POST /api/ai/key} is exempt
+     * (method-scoped matcher), so DELETE requires the XSRF token. A CSRF attack that forces
+     * a victim's browser to send {@code DELETE /api/ai/key} will be rejected.
+     */
+    @Test
+    void deleteKey_withoutCsrfToken_returns403() {
+        String sessionCookie = loginAndGetSessionCookie("alice");
+
+        // Set a key first (POST is still CSRF-exempt)
+        HttpHeaders postHeaders = new HttpHeaders();
+        postHeaders.setContentType(MediaType.APPLICATION_JSON);
+        postHeaders.add(HttpHeaders.COOKIE, sessionCookie);
+        restTemplate.exchange("/api/ai/key", HttpMethod.POST,
+                new HttpEntity<>("{\"provider\":\"anthropic\",\"apiKey\":\"csrf-test-key\"}", postHeaders),
+                String.class);
+
+        // Attempt DELETE without X-XSRF-TOKEN — must be rejected (CR-01)
+        HttpHeaders deleteHeaders = new HttpHeaders();
+        deleteHeaders.add(HttpHeaders.COOKIE, sessionCookie);
+        // Deliberately omit X-XSRF-TOKEN
+        ResponseEntity<String> response = restTemplate.exchange(
+                "/api/ai/key",
+                HttpMethod.DELETE,
+                new HttpEntity<>(deleteHeaders),
+                String.class);
+
+        assertThat(response.getStatusCode())
+                .as("DELETE /api/ai/key without CSRF token must be rejected with 403 (CR-01)")
+                .isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     @Test
@@ -164,5 +211,49 @@ class AiKeyControllerTest extends AbstractPostgresIntegrationTest {
         HttpHeaders headers = new HttpHeaders();
         headers.add(HttpHeaders.COOKIE, sessionCookie);
         return restTemplate.exchange(path, HttpMethod.GET, new HttpEntity<>(headers), String.class);
+    }
+
+    /**
+     * Fetches the XSRF-TOKEN value from the {@code Set-Cookie} header of a GET request.
+     *
+     * <p>Spring Security's {@link org.springframework.security.web.csrf.CookieCsrfTokenRepository}
+     * sets the {@code XSRF-TOKEN} cookie on the first response. Reading this cookie and
+     * passing its value as {@code X-XSRF-TOKEN} header is what the Axios interceptor does
+     * in the real SPA. Required for any CSRF-protected mutating request (DELETE, PUT, PATCH).
+     */
+    private String fetchXsrfToken(String sessionCookie) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.COOKIE, sessionCookie);
+        ResponseEntity<String> response = restTemplate.exchange(
+                "/api/ai/status",
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
+                String.class);
+        // Extract XSRF-TOKEN value from Set-Cookie header
+        String setCookie = response.getHeaders().getFirst(HttpHeaders.SET_COOKIE);
+        if (setCookie != null && setCookie.contains("XSRF-TOKEN=")) {
+            String[] parts = setCookie.split(";");
+            for (String part : parts) {
+                String trimmed = part.trim();
+                if (trimmed.startsWith("XSRF-TOKEN=")) {
+                    return trimmed.substring("XSRF-TOKEN=".length());
+                }
+            }
+        }
+        // Fallback: check all Set-Cookie headers
+        for (String cookie : response.getHeaders().get(HttpHeaders.SET_COOKIE) != null
+                ? response.getHeaders().get(HttpHeaders.SET_COOKIE)
+                : java.util.List.of()) {
+            if (cookie.contains("XSRF-TOKEN=")) {
+                String[] parts = cookie.split(";");
+                for (String part : parts) {
+                    String trimmed = part.trim();
+                    if (trimmed.startsWith("XSRF-TOKEN=")) {
+                        return trimmed.substring("XSRF-TOKEN=".length());
+                    }
+                }
+            }
+        }
+        throw new AssertionError("XSRF-TOKEN cookie not found in GET /api/ai/status response");
     }
 }

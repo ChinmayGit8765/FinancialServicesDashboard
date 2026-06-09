@@ -15,7 +15,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 import java.util.Map;
 
@@ -110,12 +112,18 @@ public class SecurityConfig {
                         // CookieCsrfTokenRepository.withHttpOnlyFalse() → Axios can read XSRF-TOKEN cookie
                         // and send X-XSRF-TOKEN header.  SameSite=Lax (application.yml) is the complementary
                         // defence.  (T-01-08)
-                        // The login and logout endpoints themselves are excluded from CSRF checking because
-                        // a CSRF token cannot be fetched before the first authenticated request — the SPA
-                        // reads the XSRF-TOKEN cookie that Spring sets on the first GET request and then
-                        // attaches it to all subsequent mutating calls (Plan 04 Axios interceptor).
+                        // Login/logout: excluded because a CSRF token cannot be fetched before the first
+                        // authenticated request.
+                        // POST /api/ai/key: excluded because the first key submission happens before the SPA
+                        // has exchanged a full authenticated request cycle (the CSRF cookie may not yet be set).
+                        // DELETE /api/ai/key: NOT excluded — by the time a user clears a key, a full auth
+                        // cycle has completed and the Axios interceptor sends X-XSRF-TOKEN automatically.
+                        // Using AntPathRequestMatcher.antMatcher(POST, ...) scopes the exemption to POST only
+                        // (CR-01: method-agnostic path exemption would unprotect DELETE from CSRF attacks).
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                        .ignoringRequestMatchers("/api/auth/login", "/api/auth/logout", "/api/ai/key")
+                        .ignoringRequestMatchers("/api/auth/login", "/api/auth/logout")
+                        .ignoringRequestMatchers(
+                                AntPathRequestMatcher.antMatcher(HttpMethod.POST, "/api/ai/key"))
                 )
                 .exceptionHandling(ex -> ex
                         // Unauthenticated API requests → 401 JSON; no redirect to login page (T-01-10)

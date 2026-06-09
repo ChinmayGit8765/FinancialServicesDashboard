@@ -29,8 +29,11 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * <h3>Security</h3>
  * All endpoints require an authenticated session (covered by {@code .anyRequest().authenticated()}
- * in {@code SecurityConfig}). The CSRF exemption for {@code /api/ai/key} is set in
- * {@code SecurityConfig.ignoringRequestMatchers} alongside the login/logout exemptions.
+ * in {@code SecurityConfig}). Only {@code POST /api/ai/key} is CSRF-exempt (method-scoped
+ * {@code AntPathRequestMatcher.antMatcher(POST, ...)} — before the first authenticated request
+ * cycle the CSRF cookie may not yet be set). {@code DELETE /api/ai/key} requires the
+ * {@code X-XSRF-TOKEN} header, which the Axios interceptor supplies automatically after login.
+ * (CR-01 fix: the prior method-agnostic path exemption inadvertently exempted DELETE too.)
  * {@link #handleIllegalArgument(IllegalArgumentException)} returns a generic error message —
  * the exception detail (which may contain a provider name) is never forwarded (Pitfall 5).
  */

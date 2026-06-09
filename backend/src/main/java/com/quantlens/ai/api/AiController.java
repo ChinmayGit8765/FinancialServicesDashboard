@@ -11,7 +11,6 @@ import jakarta.validation.constraints.Pattern;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -96,7 +95,6 @@ public class AiController {
      *         unauthenticated or no portfolio; 404 if ticker not in user's holdings
      */
     @GetMapping("/explain/{ticker}")
-    @Transactional(readOnly = true)
     public ResponseEntity<ExplainResponseDto> explain(
             @PathVariable @Pattern(regexp = "^[A-Z]{1,10}$",
                     message = "ticker must be 1-10 uppercase letters")
@@ -113,7 +111,6 @@ public class AiController {
      * @return 200 with {@link CommentaryDto}; 401 if unauthenticated or no portfolio
      */
     @GetMapping("/commentary")
-    @Transactional(readOnly = true)
     public ResponseEntity<CommentaryDto> commentary(Authentication authentication) {
         Long portfolioId = resolvePortfolioId(authentication);
         return ResponseEntity.ok(commentaryService.commentary(portfolioId));
@@ -134,8 +131,11 @@ public class AiController {
      * @return 200 with {@link StructuredInsightRecord}; 401 if unauthenticated or no portfolio;
      *         502 on provider error
      */
+    // WR-05: @Transactional(readOnly=true) removed from controller methods — the service layer
+    // (@Transactional on StructuredOutputService) owns the transaction boundary. Having a
+    // controller-level transaction pins a JDBC connection across multi-second LLM network calls,
+    // which is a reliability hazard under load.
     @GetMapping("/structured")
-    @Transactional(readOnly = true)
     public ResponseEntity<StructuredInsightRecord> structured(Authentication authentication) {
         Long portfolioId = resolvePortfolioId(authentication);
         return ResponseEntity.ok(structuredOutputService.getInsight(portfolioId));

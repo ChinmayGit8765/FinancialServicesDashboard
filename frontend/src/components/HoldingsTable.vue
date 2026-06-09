@@ -15,7 +15,10 @@ const props = defineProps<{
   error: string | null
 }>()
 
-const emit = defineEmits<{ retry: [] }>()
+const emit = defineEmits<{
+  retry: []
+  explain: [ticker: string]
+}>()
 
 type SortKey = 'ticker' | 'marketValue' | 'pnl'
 type SortDir = 'ascending' | 'descending'
@@ -162,7 +165,17 @@ const isEmpty = computed(
 
         <!-- Data rows -->
         <template v-else>
-          <tr v-for="h in sortedHoldings" :key="h.ticker" class="data-row">
+          <tr
+            v-for="h in sortedHoldings"
+            :key="h.ticker"
+            class="data-row clickable-row"
+            role="button"
+            :aria-label="`Explain ${h.ticker} position`"
+            tabindex="0"
+            @click="emit('explain', h.ticker)"
+            @keydown.enter="emit('explain', h.ticker)"
+            @keydown.space.prevent="emit('explain', h.ticker)"
+          >
             <td class="ticker">{{ h.ticker }}</td>
             <td class="name">{{ h.name }}</td>
             <td class="sector">{{ h.sector }}</td>
@@ -322,6 +335,20 @@ td.sector {
 
 .retry-btn:hover {
   background: var(--color-down-subtle);
+}
+
+/* Clickable row: explain affordance (row click → ExplainDrawer) */
+.clickable-row {
+  cursor: pointer;
+}
+
+.clickable-row:hover {
+  background: var(--color-accent-subtle) !important;
+}
+
+.clickable-row:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
 }
 
 /* Skeleton pills */

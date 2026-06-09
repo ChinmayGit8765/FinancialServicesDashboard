@@ -1,13 +1,20 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { usePortfolioStore } from '../stores/portfolio'
+import { useAiStore } from '../stores/ai'
 import { personas, type PersonaInfo } from '../api/auth'
+import AiModeBadge from './ai/AiModeBadge.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const portfolioStore = usePortfolioStore()
+const aiStore = useAiStore()
+
+// Derive mode + provider from ai store status for the badge
+const aiMode = computed<'demo' | 'live'>(() => aiStore.status.data?.mode ?? 'demo')
+const aiProvider = computed<string | null>(() => aiStore.status.data?.provider ?? null)
 
 const personaList = ref<PersonaInfo[]>([])
 const switching = ref(false)
@@ -77,8 +84,9 @@ async function handleLogout(): Promise<void> {
       </button>
     </nav>
 
-    <!-- Right: username + logout -->
+    <!-- Right: AI mode badge + username + logout -->
     <div class="user-area">
+      <AiModeBadge :mode="aiMode" :provider="aiProvider" />
       <span class="username-display">@{{ authStore.username }}</span>
       <button class="logout-btn" @click="handleLogout">Log out</button>
     </div>

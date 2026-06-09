@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { onMounted, computed } from 'vue'
+import { onMounted, computed, ref } from 'vue'
 import { usePortfolioStore } from '../stores/portfolio'
+import { useAiStore } from '../stores/ai'
 import { formatCurrency, formatSignedCurrency, formatSignedPercent, formatPercent } from '../utils/format'
 
 import TopBar from '../components/TopBar.vue'
@@ -17,10 +18,24 @@ import AttributionChart from '../components/AttributionChart.vue'
 import PairsTable from '../components/PairsTable.vue'
 import MonteCarloFanChart from '../components/MonteCarloFanChart.vue'
 
+// Phase-6 AI components
+import CommentaryCard from '../components/ai/CommentaryCard.vue'
+import ExplainDrawer from '../components/ai/ExplainDrawer.vue'
+import BYOKeyModal from '../components/ai/BYOKeyModal.vue'
+import StructuredOutputChart from '../components/ai/StructuredOutputChart.vue'
+
 const portfolioStore = usePortfolioStore()
+const aiStore = useAiStore()
+
+// AI panel local state
+const explainOpen = ref(false)
+const keyModalOpen = ref(false)
 
 onMounted(() => {
   void portfolioStore.refreshAll()
+  void aiStore.fetchStatus()
+  void aiStore.fetchCommentary()
+  void aiStore.fetchStructured()
 })
 
 // --- KPI derived values (access pnl resource whole, never destructure) ------
@@ -212,13 +227,14 @@ function retryForecast(): void { portfolioStore.fetchForecast() }
           />
         </div>
 
-        <!-- Row 6: Holdings table (col 12) -->
+        <!-- Row 6: Holdings table (col 12) — row click emits explain(ticker) → ExplainDrawer -->
         <div class="col-12">
           <HoldingsTable
             :holdings="portfolioStore.holdings.data"
             :loading="portfolioStore.holdings.loading"
             :error="portfolioStore.holdings.error"
             @retry="retryHoldings"
+            @explain="(ticker) => { explainOpen = true; void aiStore.fetchExplanation(ticker) }"
           />
         </div>
 
@@ -232,18 +248,57 @@ function retryForecast(): void { portfolioStore.fetchForecast() }
           />
         </div>
 
-        <!-- Row 8: AI Commentary slot (col 12) -->
+        <!-- Row 8: AI Daily Commentary (col 12) — Phase 6 -->
         <div class="col-12">
-          <SlotPlaceholder label="AI Daily Commentary — Phase 6" minHeight="120px" />
+          <CommentaryCard
+            :commentary="aiStore.commentary.data"
+            :loading="aiStore.commentary.loading"
+            :error="aiStore.commentary.error"
+            @retry="aiStore.fetchCommentary()"
+          />
         </div>
 
-        <!-- Row 9: AI Q&A (col 8) + BYO Key (col 4) -->
+        <!-- Row 9: Structured Output Chart (col 8) + BYO Key slot (col 4) — Phase 6 -->
         <div class="col-8">
-          <SlotPlaceholder label="AI Q&amp;A — Phase 6" minHeight="400px" />
+          <!-- Structured-output chart: seeded demo fixture (Phase 6 AI panel).
+               Phase 8 (AI-06) will swap source to live BeanOutputConverter typed record. -->
+          <StructuredOutputChart
+            :structured="aiStore.structured.data"
+            :loading="aiStore.structured.loading"
+            :error="aiStore.structured.error"
+            @retry="aiStore.fetchStructured()"
+          />
+          <!-- AI Q&A RAG panel deferred to Phase 7 -->
+          <SlotPlaceholder label="AI Q&amp;A — Phase 7" minHeight="120px" style="margin-top: 16px;" />
         </div>
         <div class="col-4">
-          <SlotPlaceholder label="LLM Key — Phase 6" minHeight="320px" />
+          <!-- Connect Live AI trigger + BYO-key popup -->
+          <div class="connect-ai-panel">
+            <button
+              class="connect-ai-btn"
+              @click="keyModalOpen = true"
+            >
+              Connect Live AI
+            </button>
+            <p class="connect-ai-hint">
+              Paste your own Anthropic or OpenAI key to switch from demo to live AI responses.
+            </p>
+          </div>
+          <BYOKeyModal
+            :open="keyModalOpen"
+            @close="keyModalOpen = false"
+            @submitted="aiStore.fetchStatus(); aiStore.fetchCommentary()"
+          />
         </div>
+
+        <!-- ExplainDrawer — renders outside grid flow (position: fixed) -->
+        <ExplainDrawer
+          :open="explainOpen"
+          :narrative="aiStore.explanation.data?.narrative ?? null"
+          :loading="aiStore.explanation.loading"
+          :error="aiStore.explanation.error"
+          @close="explainOpen = false"
+        />
 
       </div>
     </main>
@@ -288,6 +343,49 @@ function retryForecast(): void { portfolioStore.fetchForecast() }
 .col-7  { grid-column: span 7; }
 .col-8  { grid-column: span 8; }
 .col-12 { grid-column: 1 / -1; }
+
+/* Connect Live AI panel (LLM Key slot) */
+.connect-ai-panel {
+  background: var(--color-bg-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--color-border);
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  align-items: flex-start;
+}
+
+.connect-ai-btn {
+  min-height: 40px;
+  padding: 8px 20px;
+  background: var(--color-accent);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-md);
+  color: var(--color-bg-base);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.connect-ai-btn:hover {
+  background: var(--color-accent-light);
+  border-color: var(--color-accent-light);
+}
+
+.connect-ai-btn:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+.connect-ai-hint {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin: 0;
+  line-height: 1.5;
+}
 
 /* Responsive: ≤ 1279px — charts stack to full width */
 @media (max-width: 1279px) {

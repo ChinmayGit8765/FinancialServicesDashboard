@@ -5,11 +5,33 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Spring Data repository for {@link OhlcvBar}.
  */
 public interface OhlcvBarRepository extends JpaRepository<OhlcvBar, Long> {
+
+    /**
+     * Returns the latest (most recent) OHLCV bar for a given ticker symbol.
+     * <p>
+     * Joins through {@link Security#getTicker()} to find by ticker string directly
+     * (Open Question 2 resolved: joins {@code b.security.ticker = :ticker} with
+     * correlated MAX subquery, same pattern as {@link #findLatestBarBySecurityIds}).
+     * Used by {@code FinnhubQuoteClient.buildSeededQuote} for the demo/fallback path.
+     *
+     * @param ticker the ticker symbol (e.g. "AAPL")
+     * @return the bar with the latest barDate for that ticker, or empty if not found
+     */
+    @Query("""
+            SELECT b FROM OhlcvBar b
+            WHERE b.security.ticker = :ticker
+              AND b.barDate = (
+                  SELECT MAX(b2.barDate) FROM OhlcvBar b2
+                  WHERE b2.security.ticker = :ticker
+              )
+            """)
+    Optional<OhlcvBar> findLatestCloseByTicker(@Param("ticker") String ticker);
 
     /**
      * Returns the latest (most recent) OHLCV bar per security for a given set of security IDs.

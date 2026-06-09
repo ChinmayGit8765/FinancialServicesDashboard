@@ -10,12 +10,13 @@ import com.quantlens.ai.tools.StockQuoteResult;
 import com.quantlens.ai.tools.StockQuoteToolService;
 import com.quantlens.marketdata.domain.OhlcvBar;
 import com.quantlens.marketdata.domain.OhlcvBarRepository;
-import org.junit.jupiter.api.BeforeEach;
+import com.quantlens.marketdata.domain.Security;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -27,14 +28,19 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for {@link FinnhubQuoteClient} and {@link StockQuoteToolService}.
  *
  * <p>Tests the demo seeded path, live Finnhub path (mocked HTTP), TTL cache,
- * zero-timestamp fallback, and the ACTIVE Finnhub key-leak sentinel test.
+ * zero-timestamp fallback, and the ACTIVE Finnhub key-leak sentinel test (T-08-LEAK-FH).
+ *
+ * <p>Because the test lives in {@code com.quantlens.ai} (not {@code com.quantlens.ai.tools}),
+ * the package-private 4-arg constructor is not directly accessible. We use the public
+ * primary constructor and then inject {@code httpClient} / {@code finnhubApiKey} via
+ * {@link ReflectionTestUtils#setField} — this is the correct pattern for testing internal
+ * fields across packages without widening visibility.
  */
 @ExtendWith(MockitoExtension.class)
 class StockQuoteToolServiceTest {
@@ -50,17 +56,29 @@ class StockQuoteToolServiceTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    /** Helper: build a real OhlcvBar with a given close price. */
     private OhlcvBar makeBar(String ticker, BigDecimal close, LocalDate date) {
-        com.quantlens.marketdata.domain.Security sec =
-                new com.quantlens.marketdata.domain.Security(ticker, ticker + " Inc", "Technology", false);
+        Security sec = new Security(ticker, ticker + " Inc", "Technology", false);
         return new OhlcvBar(sec, date, close, close, close, close, 1_000_000L);
+    }
+
+    /**
+     * Helper: build a {@link FinnhubQuoteClient} via the public constructor and inject
+     * the httpClient + key via ReflectionTestUtils (avoids package-private access from
+     * a different test package).
+     */
+    private FinnhubQuoteClient buildClient(String apiKey) {
+        FinnhubQuoteClient client = new FinnhubQuoteClient(objectMapper, ohlcvRepo);
+        ReflectionTestUtils.setField(client, "httpClient",    mockHttpClient);
+        ReflectionTestUtils.setField(client, "finnhubApiKey", apiKey);
+        return client;
     }
 
     // ── FinnhubQuoteClient tests ─────────────────────────────────────────────
 
     /**
-     * T1-DEMO: with blank finnhubApiKey, getQuote returns seeded last close from OhlcvBarRepository.
-     * No HttpClient call is made.
+     * T1-DEMO: with blank finnhubApiKey, getQuote returns seeded last close from
+     * OhlcvBarRepository. No HttpClient call is made.
      */
     @Test
     void demoFallback_noKey_returnsSeededLastClose() {
@@ -68,36 +86,34 @@ class StockQuoteToolServiceTest {
         OhlcvBar bar = makeBar("AAPL", expectedClose, LocalDate.of(2024, 1, 15));
         when(ohlcvRepo.findLatestCloseByTicker("AAPL")).thenReturn(Optional.of(bar));
 
-        // Construct client with BLANK key — must use the no-arg HttpClient constructor
+        // Primary constructor sets blank key → demo path
         FinnhubQuoteClient client = new FinnhubQuoteClient(objectMapper, ohlcvRepo);
-        // blank key → demo path
         StockQuoteResult result = client.getQuote("AAPL");
 
         assertThat(result.source()).isEqualTo("SEEDED");
         assertThat(result.marketState()).isEqualTo("DEMO");
         assertThat(result.price()).isEqualByComparingTo(expectedClose);
         assertThat(result.ticker()).isEqualTo("AAPL");
-        // No HTTP call on demo path
         verifyNoInteractions(mockHttpClient);
     }
 
     /**
      * T2-LIVE: with a key set and stubbed HttpClient returning a valid c/t payload,
      * getQuote returns source=FINNHUB with a marketState derived from the timestamp.
-     * The timestamp 1700000000 = 2023-11-14 22:13:20 UTC = AFTER_HOURS ET.
+     * Timestamp 1700000000 = 2023-11-14 22:13:20 UTC = 17:13:20 ET → AFTER_HOURS.
      */
     @Test
     @SuppressWarnings("unchecked")
     void live_returnsFinnhubPrice_withMarketState() throws Exception {
-        // 1700000000 seconds = 2023-11-14 22:13:20 UTC = 17:13:20 ET (after 16:00) -> AFTER_HOURS
-        String jsonBody = "{\"c\":189.25,\"d\":1.50,\"dp\":0.80,\"h\":190.0,\"l\":187.0,\"o\":188.0,\"pc\":187.75,\"t\":1700000000}";
+        String jsonBody = "{\"c\":189.25,\"d\":1.50,\"dp\":0.80,\"h\":190.0,\"l\":187.0,"
+                + "\"o\":188.0,\"pc\":187.75,\"t\":1700000000}";
 
         HttpResponse<String> mockResponse = mock(HttpResponse.class);
         when(mockResponse.body()).thenReturn(jsonBody);
         when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
                 .thenReturn(mockResponse);
 
-        FinnhubQuoteClient client = new FinnhubQuoteClient(objectMapper, ohlcvRepo, mockHttpClient, "test-api-key");
+        FinnhubQuoteClient client = buildClient("test-api-key");
         StockQuoteResult result = client.getQuote("AAPL");
 
         assertThat(result.source()).isEqualTo("FINNHUB");
@@ -108,26 +124,25 @@ class StockQuoteToolServiceTest {
     }
 
     /**
-     * T3-CACHE: second call within 15-min TTL window returns cached result, no second HTTP fetch.
+     * T3-CACHE: second call within 15-min TTL window returns cached result; only one HTTP call.
      */
     @Test
     @SuppressWarnings("unchecked")
     void cacheTtl_secondCallWithinWindow_doesNotRefetch() throws Exception {
-        String jsonBody = "{\"c\":189.25,\"d\":1.50,\"dp\":0.80,\"h\":190.0,\"l\":187.0,\"o\":188.0,\"pc\":187.75,\"t\":1700000000}";
+        String jsonBody = "{\"c\":189.25,\"d\":1.50,\"dp\":0.80,\"h\":190.0,\"l\":187.0,"
+                + "\"o\":188.0,\"pc\":187.75,\"t\":1700000000}";
 
         HttpResponse<String> mockResponse = mock(HttpResponse.class);
         when(mockResponse.body()).thenReturn(jsonBody);
         when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
                 .thenReturn(mockResponse);
 
-        FinnhubQuoteClient client = new FinnhubQuoteClient(objectMapper, ohlcvRepo, mockHttpClient, "test-api-key");
+        FinnhubQuoteClient client = buildClient("test-api-key");
 
         StockQuoteResult first  = client.getQuote("AAPL");
         StockQuoteResult second = client.getQuote("AAPL");
 
-        // Same object from cache
         assertThat(second).isSameAs(first);
-        // Only one HTTP call
         verify(mockHttpClient, times(1)).send(any(), any());
     }
 
@@ -137,7 +152,8 @@ class StockQuoteToolServiceTest {
     @Test
     @SuppressWarnings("unchecked")
     void zeroTimestamp_fallsBackToSeeded() throws Exception {
-        String jsonBody = "{\"c\":0.0,\"d\":0.0,\"dp\":0.0,\"h\":0.0,\"l\":0.0,\"o\":0.0,\"pc\":0.0,\"t\":0}";
+        String jsonBody = "{\"c\":0.0,\"d\":0.0,\"dp\":0.0,\"h\":0.0,\"l\":0.0,"
+                + "\"o\":0.0,\"pc\":0.0,\"t\":0}";
 
         HttpResponse<String> mockResponse = mock(HttpResponse.class);
         when(mockResponse.body()).thenReturn(jsonBody);
@@ -148,7 +164,7 @@ class StockQuoteToolServiceTest {
         OhlcvBar bar = makeBar("MSFT", seededClose, LocalDate.of(2024, 1, 10));
         when(ohlcvRepo.findLatestCloseByTicker("MSFT")).thenReturn(Optional.of(bar));
 
-        FinnhubQuoteClient client = new FinnhubQuoteClient(objectMapper, ohlcvRepo, mockHttpClient, "test-api-key");
+        FinnhubQuoteClient client = buildClient("test-api-key");
         StockQuoteResult result = client.getQuote("MSFT");
 
         assertThat(result.source()).isEqualTo("SEEDED");
@@ -156,22 +172,25 @@ class StockQuoteToolServiceTest {
 
     /**
      * T5-LEAK (ACTIVE SENTINEL): T-08-LEAK-FH proof.
-     * Set the key to TEST-FH-SENTINEL, stub HttpClient.send() to THROW an IOException
-     * whose message embeds the URL (mimicking how Java HttpClient wraps the token in the
-     * exception message). Assert:
-     * (a) result is the seeded fallback (source=SEEDED)
-     * (b) NO captured log line contains TEST-FH-SENTINEL
-     * (c) no field of the returned StockQuoteResult contains TEST-FH-SENTINEL
      *
-     * This is the ACTIVE sentinel test — it forces the catch path and proves the catch
-     * block never logs e.getMessage() (which would contain the ?token=... URL).
+     * <p>Set the key to TEST-FH-SENTINEL, stub HttpClient.send() to THROW an IOException
+     * whose message embeds the sentinel in the URL (mimicking how Java HttpClient wraps
+     * the token in the exception message). Assert:
+     * <ol>
+     *   <li>result is the seeded fallback (source=SEEDED)</li>
+     *   <li>NO captured log line (formatted message or throwable message) contains TEST-FH-SENTINEL</li>
+     *   <li>no field of the returned StockQuoteResult contains TEST-FH-SENTINEL</li>
+     * </ol>
+     *
+     * <p>This is the ACTIVE sentinel test — it forces the catch path and proves the catch
+     * block NEVER logs {@code e.getMessage()} (which would contain the {@code ?token=...} URL).
+     * It is NOT the vacuous demo-blank-key path: the key IS set, and the HttpClient throws.
      */
     @Test
     @SuppressWarnings("unchecked")
     void finnhubKeySentinelNeverLogged_onForcedFailure() throws Exception {
         final String SENTINEL = "TEST-FH-SENTINEL";
 
-        // Stub HttpClient.send() to throw IOException embedding the sentinel in the URL
         when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
                 .thenThrow(new IOException(
                         "Failed to connect to finnhub.io?symbol=AAPL&token=" + SENTINEL + " timed out"));
@@ -185,24 +204,24 @@ class StockQuoteToolServiceTest {
         ListAppender<ILoggingEvent> listAppender = new ListAppender<>();
         listAppender.start();
         logger.addAppender(listAppender);
-        logger.setLevel(Level.ALL);
+        logger.setLevel(Level.TRACE);
 
         try {
-            FinnhubQuoteClient client = new FinnhubQuoteClient(objectMapper, ohlcvRepo, mockHttpClient, SENTINEL);
+            FinnhubQuoteClient client = buildClient(SENTINEL);
             StockQuoteResult result = client.getQuote("AAPL");
 
-            // (a) result is the seeded fallback
+            // (a) result is the seeded fallback — NOT the demo-blank-key path (key IS set)
             assertThat(result.source())
-                    .as("On IOException, result must be seeded fallback")
+                    .as("On IOException with live key set, result must be seeded fallback")
                     .isEqualTo("SEEDED");
 
-            // (b) NO log line contains the sentinel
+            // (b) NO log line contains the sentinel — catch block must log only the ticker
             for (ILoggingEvent event : listAppender.list) {
                 assertThat(event.getFormattedMessage())
-                        .as("Log line must NOT contain the Finnhub sentinel key (T-08-LEAK-FH)")
+                        .as("Log formatted message must NOT contain the Finnhub sentinel (T-08-LEAK-FH)")
                         .doesNotContain(SENTINEL);
-                // Also check MDC and throwable proxy
                 if (event.getThrowableProxy() != null) {
+                    // Catch block must NOT log throwable — if it did, the token would appear here
                     assertThat(event.getThrowableProxy().getMessage())
                             .as("Logged throwable message must NOT contain the sentinel (T-08-LEAK-FH)")
                             .doesNotContain(SENTINEL);
@@ -225,7 +244,7 @@ class StockQuoteToolServiceTest {
 
     /**
      * T6-DELEGATE: StockQuoteToolService.getStockQuote delegates to FinnhubQuoteClient.getQuote
-     * with no demo/live branch in the tool body.
+     * unchanged — no demo/live branch inside the tool body.
      */
     @Test
     void toolDelegatesToClient() {
@@ -241,8 +260,7 @@ class StockQuoteToolServiceTest {
     }
 
     /**
-     * T7-NONNULL: forSession must return a non-null ChatClient when StockQuoteToolService is registered.
-     * Covered by MultiProviderRoutingTest — this test verifies only tool delegation.
+     * T7-DELEGATE-LIVE: tool delegates for live path result unchanged.
      */
     @Test
     void toolDelegatesToClient_livePath() {

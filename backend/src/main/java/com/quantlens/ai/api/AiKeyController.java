@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 
 /**
  * REST controller for LLM API key management.
@@ -94,6 +95,23 @@ public class AiKeyController {
             return new AiStatusDto("live", keyHolder.getProvider());
         }
         return new AiStatusDto("demo", null);
+    }
+
+    /**
+     * Generic error handler for bean-validation failures ({@link MethodArgumentNotValidException}).
+     *
+     * <p>Spring Boot's default error serializer includes the field name in the {@code errors[].field}
+     * property (e.g. {@code "field":"apiKey"}), which reveals the API parameter name to callers.
+     * This handler replaces that with a generic body containing no field names or submitted values.
+     * (CR-02: information disclosure via default validation error body.)
+     *
+     * @param ex the caught validation exception
+     * @return 400 with a generic error body — no field enumeration
+     */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<String> handleValidation(MethodArgumentNotValidException ex) {
+        // Never include field names, messages, or rejected values — generic body only (CR-02)
+        return ResponseEntity.badRequest().body("{\"error\":\"Invalid request\"}");
     }
 
     /**

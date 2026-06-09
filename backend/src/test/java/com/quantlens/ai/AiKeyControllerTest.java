@@ -185,6 +185,40 @@ class AiKeyControllerTest extends AbstractPostgresIntegrationTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
+    /**
+     * CR-02: POST /api/ai/key with blank apiKey must return 400 with generic body.
+     *
+     * <p>Spring Boot's default {@link org.springframework.web.bind.MethodArgumentNotValidException}
+     * handler includes {@code "field":"apiKey"} in the error body — revealing the parameter name.
+     * The custom {@code @ExceptionHandler(MethodArgumentNotValidException.class)} in
+     * {@code AiKeyController} returns {@code {"error":"Invalid request"}} with no field names.
+     */
+    @Test
+    void setKey_blankApiKey_returns400_withGenericBody() {
+        String sessionCookie = loginAndGetSessionCookie("alice");
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.add(HttpHeaders.COOKIE, sessionCookie);
+
+        // POST with blank apiKey — triggers @NotBlank validation failure
+        ResponseEntity<String> response = restTemplate.exchange(
+                "/api/ai/key",
+                HttpMethod.POST,
+                new HttpEntity<>("{\"provider\":\"anthropic\",\"apiKey\":\"\"}", headers),
+                String.class);
+
+        assertThat(response.getStatusCode())
+                .as("POST /api/ai/key with blank apiKey must return 400")
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody())
+                .as("Validation error body must NOT contain field name 'apiKey' (CR-02: info disclosure)")
+                .doesNotContainIgnoringCase("apiKey");
+        assertThat(response.getBody())
+                .as("Validation error body must NOT contain the submitted blank value")
+                .doesNotContain("\"\"");
+    }
+
     // ── helpers (verbatim copy from AnalyticsControllerIntegrationTest) ───────
 
     private String loginAndGetSessionCookie(String username) {

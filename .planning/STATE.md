@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: ready_to_plan
-stopped_at: Phase 05 complete (3/3) — ready to discuss Phase 6
-last_updated: 2026-06-08T15:09:43.541Z
-last_activity: 2026-06-08
+status: executing
+stopped_at: "Completed 06-01-PLAN.md — Spring AI scaffold + demo-mode seam: DemoModeAdvisor, ChatClientStrategy, LlmKeySessionHolder, ai_seed_content V4, KeyLeakageIntegrationTest GREEN"
+last_updated: "2026-06-09T01:17:49.723Z"
+last_activity: 2026-06-09
 progress:
   total_phases: 10
   completed_phases: 5
-  total_plans: 20
-  completed_plans: 20
+  total_plans: 24
+  completed_plans: 21
   percent: 50
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-07)
 
 **Core value:** A working, screenshot-ready dashboard that demonstrates real quantitative-finance analytics narrated by a real Spring AI layer — convincing with zero setup, genuinely live when you add a key.
-**Current focus:** Phase 6 — demo mode ai seam
+**Current focus:** Phase 06 — demo-mode-ai-seam
 
 ## Current Position
 
-Phase: 6
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-06-08
+Phase: 06 (demo-mode-ai-seam) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-06-09
 
-Progress: [██████████] 100%
+Progress: [█████████░] 88%
 
 ## Performance Metrics
 
@@ -76,6 +76,7 @@ Progress: [██████████] 100%
 | Phase 05 P01 | 26 | 3 tasks | 10 files |
 | Phase 05 P02 | 6 | 2 tasks | 1 file |
 | Phase 05-stochastic-forecasting P03 | 15 | 3 tasks | 8 files |
+| Phase 06-demo-mode-ai-seam P01 | 1422 | 3 tasks | 34 files |
 
 ## Accumulated Context
 
@@ -125,6 +126,10 @@ Recent decisions affecting current work:
 - [05-01] MonteCarloMertonModel 10-param constructor confirmed (A5); RandomVariableFromArrayFactory.createRandomVariable(double) valid for Heston params (A6)
 - [05-02] extractBands accepts AssetModelMonteCarloSimulationModel interface — shared by MonteCarloAssetModel (GBM/Heston) and MonteCarloMertonModel; no duplication needed
 - [05-02] Bootstrap L=max(10,√H): preserves ~monthly autocorrelation/volatility clustering; boundary-safe blockStart=rng.nextInt(H-L+1); step-major double[H][N] matrix for memory-efficient percentile extraction
+- [06-01] A4 resolved: spring.ai.chat.client.enabled=false sufficient for key-less startup with Anthropic + OpenAI starters — spring.ai.model.chat=none NOT required; DEMO_NO_KEY sentinel boots cleanly
+- [06-01] explain endpoint path variable is String ticker (e.g. AAPL), NOT numeric holdingId — matches ai_seed_content.subject_id; avoids exposing internal DB ids
+- [06-01] DemoModeAdvisor implements CallAdvisor (Spring AI 1.1.x) — AdvisedRequest/AdvisedResponse do not exist in 1.1.6; ChatClientRequest.builder() requires non-null Prompt at construction time
+- [06-01] ai module allowedDependencies: portfolio::domain + seed (AiSeedRunner needs SeedLogRepository for idempotency guard)
 
 ### Pending Todos
 
@@ -151,6 +156,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-08T14:38:02.127Z
-Stopped at: Completed 04-04-PLAN.md — Phase-4 frontend panels complete: RiskScorecard, CorrelationHeatmap, AttributionChart, PairsTable wired into DashboardView
+Last session: 2026-06-09T01:17:49.670Z
+Stopped at: Completed 06-01-PLAN.md — Spring AI scaffold + demo-mode seam: DemoModeAdvisor, ChatClientStrategy, LlmKeySessionHolder, ai_seed_content V4, KeyLeakageIntegrationTest GREEN
 Resume file: None

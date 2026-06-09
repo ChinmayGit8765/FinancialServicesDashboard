@@ -126,7 +126,7 @@ Plans:
   4. User sees an AI-generated daily portfolio commentary on the dashboard home (seeded in demo, live after key entry)
 **Plans**: 4 plans
 Plans:
-- [ ] 06-01-PLAN.md — Wave 0: AI starters + key-less sentinel startup + ai_seed_content (V4) + LlmKeySessionHolder/DemoModeAdvisor/ChatClientStrategy/AiKey+AiController + ALL RED test scaffolds incl. KeyLeakageIntegrationTest (AI-01/02/07/08)
+- [x] 06-01-PLAN.md — Wave 0: AI starters + key-less sentinel startup + ai_seed_content (V4) + LlmKeySessionHolder/DemoModeAdvisor/ChatClientStrategy/AiKey+AiController + ALL RED test scaffolds incl. KeyLeakageIntegrationTest (AI-01/02/07/08)
 - [ ] 06-02-PLAN.md — The seam: idempotent AiSeedRunner authored fixtures + SecurityConfig CSRF for /api/ai/key; demo content end-to-end, no network (AI-01, AI-02)
 - [ ] 06-03-PLAN.md — Feature endpoints: ExplainPositionService + CommentaryService through the seam; /explain/{ticker} + /commentary (AI-07, AI-08)
 - [ ] 06-04-PLAN.md — Frontend: ai store + BYOKeyModal/AiModeBadge/ExplainDrawer/CommentaryCard + DashboardView/TopBar/HoldingsTable wiring + human-verify (AI-01/02/07/08)
@@ -189,7 +189,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 3. Frontend Scaffold | 5/5 | Complete   | 2026-06-07 |
 | 4. Quant Risk Engine | 4/4 | Complete   | 2026-06-08 |
 | 5. Stochastic Forecasting | 3/3 | Complete   | 2026-06-08 |
-| 6. Demo-Mode AI Seam | 0/4 | Not started | - |
+| 6. Demo-Mode AI Seam | 1/4 | In Progress|  |
 | 7. RAG Pipeline | 0/TBD | Not started | - |
 | 8. Live AI Features | 0/TBD | Not started | - |
 | 9. MCP Server | 0/TBD | Not started | - |

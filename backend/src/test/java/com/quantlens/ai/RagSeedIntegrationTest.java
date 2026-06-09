@@ -9,7 +9,9 @@ import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -72,14 +74,12 @@ class RagSeedIntegrationTest extends AbstractPostgresIntegrationTest {
 
     /**
      * CR-06 regression: re-running {@code VectorStore.add()} with the same chunk IDs must
-     * NOT produce duplicate rows. With stable deterministic IDs from {@link RagSeedContent#toDocument()},
-     * a second add() of the same document is idempotent (pgvector upserts on conflict or
-     * the existing row is unchanged).
+     * NOT produce duplicate rows. With stable deterministic UUID IDs from
+     * {@link RagSeedContent#toDocument()}, a second add() of the same document is idempotent.
      *
-     * <p>This test adds the same chunks a second time and asserts the total result count
-     * for an AAPL query does not exceed the expected per-ticker chunk count (2 for AAPL).
-     * Duplicate rows would return the same document twice, inflating the result count
-     * above the expected ceiling.
+     * <p>This test verifies that the stable IDs are valid UUIDs, then adds the same chunks
+     * a second time and asserts the total AAPL result count does not exceed 2 (one per chunk).
+     * Duplicate rows would return the same document twice, inflating the result count.
      */
     @Test
     void ragSeed_reRunWithSameIds_doesNotDuplicateChunks() {
@@ -95,15 +95,29 @@ class RagSeedIntegrationTest extends AbstractPostgresIntegrationTest {
             ).toDocument()
         );
 
-        // Both documents have the same stable IDs as what was already seeded by RagSeedRunner
-        assertThat(aaplChunks.get(0).getId())
-                .as("AAPL Risk Factors chunk must have stable ID 'aapl-risk-factors'")
-                .isEqualTo("aapl-risk-factors");
-        assertThat(aaplChunks.get(1).getId())
-                .as("AAPL MD&A chunk must have stable ID 'aapl-mdanda'")
-                .isEqualTo("aapl-mdanda");
+        // CR-06: both documents must have stable, valid UUID IDs
+        // The IDs are type-3 UUIDs derived from "aapl-risk-factors" and "aapl-mdanda"
+        String expectedAaplRiskId = UUID.nameUUIDFromBytes(
+                "aapl-risk-factors".getBytes(StandardCharsets.UTF_8)).toString();
+        String expectedAaplMdaId = UUID.nameUUIDFromBytes(
+                "aapl-mdanda".getBytes(StandardCharsets.UTF_8)).toString();
 
-        // Re-add the same chunks — must not duplicate rows
+        assertThat(aaplChunks.get(0).getId())
+                .as("AAPL Risk Factors chunk must have stable deterministic UUID ID")
+                .isEqualTo(expectedAaplRiskId);
+        assertThat(aaplChunks.get(1).getId())
+                .as("AAPL MD&A chunk must have stable deterministic UUID ID")
+                .isEqualTo(expectedAaplMdaId);
+
+        // Both IDs must be valid UUID format (parseable)
+        assertThat(aaplChunks.get(0).getId())
+                .as("AAPL Risk Factors ID must be a valid UUID string")
+                .matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
+        assertThat(aaplChunks.get(1).getId())
+                .as("AAPL MD&A ID must be a valid UUID string")
+                .matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
+
+        // Re-add the same chunks — must not duplicate rows in pgvector
         vectorStore.add(aaplChunks);
 
         // Query for AAPL chunks — result count must not exceed 2 (one per seeded chunk)

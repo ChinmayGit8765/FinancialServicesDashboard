@@ -5,10 +5,14 @@ import org.springframework.ai.anthropic.AnthropicChatModel;
 import org.springframework.ai.anthropic.AnthropicChatOptions;
 import org.springframework.ai.anthropic.api.AnthropicApi;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.api.CallAdvisor;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.api.OpenAiApi;
+import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
  * Factory service that builds a per-request {@link ChatClient} with the session key
@@ -28,6 +32,13 @@ import org.springframework.stereotype.Service;
  * Uses {@link OpenAiChatModel#mutate()} (which does exist in 1.1.x) and overrides the API
  * via {@link OpenAiApi#builder()}.
  *
+ * <h2>Advisor chain extensibility</h2>
+ * All {@link CallAdvisor} beans registered in the application context are injected and
+ * sorted by {@link org.springframework.core.Ordered#getOrder()} before being added as
+ * default advisors. This allows test configurations to register additional advisors
+ * (e.g. a counting advisor at {@code HIGHEST_PRECEDENCE + 1}) that sit just after
+ * {@link DemoModeAdvisor} in the chain — enabling executable no-network proofs.
+ *
  * <h2>A3 verification</h2>
  * {@code AnthropicChatModel.builder().anthropicApi(api).defaultOptions(opts).build()} compiles
  * and the builder fills defaults for toolCallingManager/retryTemplate/observationRegistry
@@ -36,32 +47,36 @@ import org.springframework.stereotype.Service;
 @Service
 public class ChatClientStrategy {
 
-    private final AnthropicChatModel baseAnthropicModel;
-    private final OpenAiChatModel    baseOpenAiModel;
-    private final DemoModeAdvisor    demoAdvisor;
+    private final AnthropicChatModel  baseAnthropicModel;
+    private final OpenAiChatModel     baseOpenAiModel;
+    private final List<CallAdvisor>   advisors;
 
     public ChatClientStrategy(AnthropicChatModel baseAnthropicModel,
                               OpenAiChatModel baseOpenAiModel,
-                              DemoModeAdvisor demoAdvisor) {
+                              List<CallAdvisor> advisors) {
         this.baseAnthropicModel = baseAnthropicModel;
         this.baseOpenAiModel    = baseOpenAiModel;
-        this.demoAdvisor        = demoAdvisor;
+        // Sort by order so DemoModeAdvisor (HIGHEST_PRECEDENCE) fires first
+        this.advisors = advisors.stream()
+                .sorted(AnnotationAwareOrderComparator.INSTANCE)
+                .toList();
     }
 
     /**
-     * Builds a per-request {@link ChatClient} with the session key injected.
+     * Builds a per-request {@link ChatClient} with the session key injected and all
+     * registered {@link CallAdvisor} beans in the chain (sorted by order).
      *
      * <p>In demo mode the {@link DemoModeAdvisor} fires first (HIGHEST_PRECEDENCE) and
      * short-circuits the chain — the underlying model with the sentinel key is never
      * invoked, so {@code DEMO_NO_KEY} is never sent to any provider.
      *
      * @param keyHolder the session-scoped key holder for the current request
-     * @return a ready-to-use {@link ChatClient} with {@link DemoModeAdvisor} as the first advisor
+     * @return a ready-to-use {@link ChatClient} with all registered advisors
      */
     public ChatClient forSession(LlmKeySessionHolder keyHolder) {
         ChatModel model = buildModel(keyHolder);
         return ChatClient.builder(model)
-                .defaultAdvisors(demoAdvisor)   // Phase 7 will add ragAdvisor, memoryAdvisor here
+                .defaultAdvisors(advisors.toArray(new CallAdvisor[0]))   // Phase 7: ragAdvisor, memoryAdvisor added here
                 .build();
     }
 

@@ -1,9 +1,18 @@
 package com.quantlens.ai;
 
 import com.quantlens.AbstractPostgresIntegrationTest;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.ai.chat.client.ChatClientRequest;
+import org.springframework.ai.chat.client.ChatClientResponse;
+import org.springframework.ai.chat.client.advisor.api.CallAdvisor;
+import org.springframework.ai.chat.client.advisor.api.CallAdvisorChain;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.core.Ordered;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -13,45 +22,42 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Integration tests proving that demo mode reads ONLY from the DB seed — no provider call.
  *
- * <h3>Structural demo proof</h3>
- * In demo mode (no key set), the {@code DemoModeAdvisor} short-circuits the advisor chain.
- * The real {@code ChatModel} is NEVER invoked. The proof is structural:
- * <ul>
- *   <li>No real Anthropic/OpenAI API key is configured (sentinel {@code DEMO_NO_KEY} is set)</li>
- *   <li>The app starts and responds without network access to any LLM provider</li>
- *   <li>Responses are sourced from {@code ai_seed_content} (the DB seed)</li>
- * </ul>
+ * <h3>EXECUTABLE no-network proof (T-06-03b)</h3>
+ * A test-only {@link CountingCallAdvisor} bean is registered with order
+ * {@code HIGHEST_PRECEDENCE + 1} — i.e. immediately AFTER {@link com.quantlens.ai.chat.DemoModeAdvisor}
+ * ({@code HIGHEST_PRECEDENCE}). {@code ChatClientStrategy} injects all {@link CallAdvisor}
+ * beans, so this advisor sits just below DemoModeAdvisor in the chain. In demo mode
+ * DemoModeAdvisor short-circuits and NEVER calls {@code chain.nextCall()}, so the counting
+ * advisor's {@code adviseCall} is never reached and the counter stays at 0. That zero is the
+ * executable proof that no provider/network call occurred — asserted, not inferred from the
+ * absence of a key.
  *
- * <p>A more explicit no-network assertion (spy on the advisor chain to verify
- * {@code nextCall()} is never invoked) will be added in Plan 06-02 once the real
- * content is seeded. The structural form here is the RED scaffold.
- *
- * <h3>RED until 06-02</h3>
- * The content assertions fail until 06-02 seeds the {@code ai_seed_content} table.
- * The auth/startup assertions PASS now.
+ * <p>This test MUST NOT mock a live provider — the demo path reads the DB only.
  */
+@Import(AiDemoModeIntegrationTest.NoNetworkProofConfig.class)
 class AiDemoModeIntegrationTest extends AbstractPostgresIntegrationTest {
 
     @Autowired
     private TestRestTemplate restTemplate;
 
+    @BeforeEach
+    void resetCounter() {
+        NoNetworkProofConfig.NEXT_CALL_COUNT.set(0);
+    }
+
     /**
-     * Demo mode explain returns 200 without requiring a real API key.
-     *
-     * <p>PASSES now: endpoint is reachable and returns 200. Content assertion is
-     * RED until 06-02 seeds EXPLAIN_POSITION/AAPL content.
-     *
-     * <p><strong>This test MUST NOT mock a live provider.</strong> The demo path reads
-     * the DB only — the sentinel {@code DEMO_NO_KEY} never reaches any provider.
+     * Demo mode explain returns 200 with seeded, non-blank content AND proves zero network:
+     * the downstream-chain counter must be 0 (DemoModeAdvisor short-circuited).
      */
     @Test
-    void demoMode_explain_returns200_withoutRealKey() {
-        // No key set — pure demo mode (sentinel DEMO_NO_KEY is the configured key)
+    void demoMode_explain_returnsSeededContent_withZeroNetworkCalls() {
         String cookie = loginAndGetSessionCookie("alice");
 
         ResponseEntity<String> response = authenticatedGet("/api/ai/explain/AAPL", cookie);
@@ -59,17 +65,20 @@ class AiDemoModeIntegrationTest extends AbstractPostgresIntegrationTest {
         assertThat(response.getStatusCode())
                 .as("Demo mode GET /api/ai/explain/AAPL must return 200 (no real key needed)")
                 .isEqualTo(HttpStatus.OK);
-        // RED until 06-02: stub returns empty narrative; will contain seeded content after 06-02
-        // assertThat(response.getBody()).contains("AAPL");  // uncomment in 06-02
+        assertThat(response.getBody())
+                .as("Demo explain must return seeded non-blank narrative")
+                .contains("narrative")
+                .doesNotContain("\"narrative\":\"\"");
+        assertThat(NoNetworkProofConfig.NEXT_CALL_COUNT.get())
+                .as("EXECUTABLE no-network proof: chain.nextCall() must never fire in demo mode")
+                .isZero();
     }
 
     /**
-     * Demo mode commentary returns 200 without requiring a real API key.
-     *
-     * <p>PASSES now: endpoint is reachable. Content assertion is RED until 06-02.
+     * Demo mode commentary returns 200 with seeded, non-blank content AND proves zero network.
      */
     @Test
-    void demoMode_commentary_returns200_withoutRealKey() {
+    void demoMode_commentary_returnsSeededContent_withZeroNetworkCalls() {
         String cookie = loginAndGetSessionCookie("alice");
 
         ResponseEntity<String> response = authenticatedGet("/api/ai/commentary", cookie);
@@ -77,21 +86,22 @@ class AiDemoModeIntegrationTest extends AbstractPostgresIntegrationTest {
         assertThat(response.getStatusCode())
                 .as("Demo mode GET /api/ai/commentary must return 200 (no real key needed)")
                 .isEqualTo(HttpStatus.OK);
-        // RED until 06-02: stub returns empty fields; will contain seeded content after 06-02
+        assertThat(response.getBody())
+                .as("Demo commentary must return seeded non-blank headline")
+                .contains("headline")
+                .doesNotContain("\"headline\":\"\"");
+        assertThat(NoNetworkProofConfig.NEXT_CALL_COUNT.get())
+                .as("EXECUTABLE no-network proof: chain.nextCall() must never fire in demo mode")
+                .isZero();
     }
 
     /**
-     * Key-less app startup smoke gate — the Spring context boots with sentinel keys only.
-     *
-     * <p>PASSES now: the application context starts without throwing
-     * {@code NoUniqueBeanDefinitionException} or any startup failure (A4 confirmed).
-     * The {@code spring.ai.chat.client.enabled=false} property disables the ambiguous
-     * auto-configured {@code ChatClient} bean. Verified here via a successful authenticated request.
+     * Key-less app startup smoke gate (A4): the context boots with sentinel keys only
+     * (spring.ai.chat.client.enabled=false disables the ambiguous ChatClient bean), and
+     * /api/ai/status reports demo mode when no key has been set.
      */
     @Test
-    void keylessStartup_springContextBoots_withSentinelKeys() {
-        // If the context failed to boot with sentinel keys, this test would not reach here.
-        // The successful response proves A4 (key-less startup) at runtime.
+    void keylessStartup_statusReportsDemoMode() {
         String cookie = loginAndGetSessionCookie("alice");
         ResponseEntity<String> statusResponse = authenticatedGet("/api/ai/status", cookie);
         assertThat(statusResponse.getStatusCode())
@@ -102,25 +112,17 @@ class AiDemoModeIntegrationTest extends AbstractPostgresIntegrationTest {
                 .contains("\"mode\":\"demo\"");
     }
 
-    // ── helpers (verbatim copy from AnalyticsControllerIntegrationTest) ───────
+    // ── helpers ─────────────────────────────────────────────────────────────────
 
     private String loginAndGetSessionCookie(String username) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
         body.add("username", username);
         body.add("password", "demo1234");
-
         ResponseEntity<String> response = restTemplate.exchange(
-                "/api/auth/login",
-                HttpMethod.POST,
-                new HttpEntity<>(body, headers),
-                String.class);
-
-        assertThat(response.getStatusCode())
-                .as("Login for %s should succeed", username)
-                .isEqualTo(HttpStatus.OK);
+                "/api/auth/login", HttpMethod.POST, new HttpEntity<>(body, headers), String.class);
+        assertThat(response.getStatusCode()).as("Login for %s should succeed", username).isEqualTo(HttpStatus.OK);
         return response.getHeaders().getFirst(HttpHeaders.SET_COOKIE);
     }
 
@@ -128,5 +130,39 @@ class AiDemoModeIntegrationTest extends AbstractPostgresIntegrationTest {
         HttpHeaders headers = new HttpHeaders();
         headers.add(HttpHeaders.COOKIE, sessionCookie);
         return restTemplate.exchange(path, HttpMethod.GET, new HttpEntity<>(headers), String.class);
+    }
+
+    /**
+     * Registers a counting advisor immediately after DemoModeAdvisor so the test can prove
+     * the chain never advances past the short-circuit in demo mode.
+     */
+    @TestConfiguration
+    static class NoNetworkProofConfig {
+        static final AtomicInteger NEXT_CALL_COUNT = new AtomicInteger(0);
+
+        @Bean
+        CallAdvisor countingCallAdvisor() {
+            return new CountingCallAdvisor();
+        }
+    }
+
+    /** Counts every time the chain advances into it (i.e. DemoModeAdvisor did NOT short-circuit). */
+    static class CountingCallAdvisor implements CallAdvisor {
+        @Override
+        public ChatClientResponse adviseCall(ChatClientRequest request, CallAdvisorChain chain) {
+            NoNetworkProofConfig.NEXT_CALL_COUNT.incrementAndGet();
+            return chain.nextCall(request);
+        }
+
+        @Override
+        public String getName() {
+            return "CountingCallAdvisor";
+        }
+
+        @Override
+        public int getOrder() {
+            // Just after DemoModeAdvisor (HIGHEST_PRECEDENCE) — reached only if it does not short-circuit
+            return Ordered.HIGHEST_PRECEDENCE + 1;
+        }
     }
 }

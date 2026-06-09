@@ -104,23 +104,27 @@ class KeyLeakageIntegrationTest extends AbstractPostgresIntegrationTest {
                 .as("GET /api/ai/status response must NOT contain the API key")
                 .doesNotContain(testKey);
 
-        // 3. Call GET /api/ai/explain/AAPL — AAPL is in alice's Growth portfolio (seeded in Phase 1)
-        // A 404 here would make the leakage assertion vacuously true; we assert 200 (T-06-SC)
+        // 3. Call GET /api/ai/explain/AAPL — AAPL IS a seeded holding for alice, so this is NOT a
+        // vacuous 404. With a live key set (the fake TEST-SENTINEL key), the request routes to the
+        // real provider, which rejects the fake key — the service wraps that as 502 BAD_GATEWAY
+        // (never echoing the key). The security property under test is: regardless of status, the
+        // key must NEVER appear in the response body. So we accept 200 (if a provider somehow
+        // succeeded) OR 502 (live provider rejected the fake key) and assert no leak either way.
         ResponseEntity<String> explainResponse = authenticatedGet("/api/ai/explain/AAPL", sessionCookie);
         assertThat(explainResponse.getStatusCode())
-                .as("GET /api/ai/explain/AAPL must return 200 — AAPL is a seeded holding for alice")
-                .isEqualTo(HttpStatus.OK);
+                .as("GET /api/ai/explain/AAPL is reachable (200) or fails gracefully on the fake live key (502) — not 404")
+                .isIn(HttpStatus.OK, HttpStatus.BAD_GATEWAY);
         assertThat(explainResponse.getBody())
-                .as("GET /api/ai/explain/AAPL response must NOT contain the API key")
+                .as("GET /api/ai/explain/AAPL response (incl. 502 error body) must NEVER contain the API key (T-06-01)")
                 .doesNotContain(testKey);
 
-        // 4. Call GET /api/ai/commentary — same leakage check
+        // 4. Call GET /api/ai/commentary — same leakage check (200 or graceful 502 on fake live key)
         ResponseEntity<String> commentaryResponse = authenticatedGet("/api/ai/commentary", sessionCookie);
         assertThat(commentaryResponse.getStatusCode())
-                .as("GET /api/ai/commentary must return 200")
-                .isEqualTo(HttpStatus.OK);
+                .as("GET /api/ai/commentary is reachable (200) or fails gracefully on the fake live key (502)")
+                .isIn(HttpStatus.OK, HttpStatus.BAD_GATEWAY);
         assertThat(commentaryResponse.getBody())
-                .as("GET /api/ai/commentary response must NOT contain the API key")
+                .as("GET /api/ai/commentary response (incl. 502 error body) must NEVER contain the API key (T-06-01)")
                 .doesNotContain(testKey);
 
         // 5. Assert no captured log line contains the test key

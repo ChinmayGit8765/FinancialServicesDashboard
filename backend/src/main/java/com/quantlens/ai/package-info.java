@@ -11,12 +11,13 @@
  *       provider + API key in a {@code @SessionScope} bean — never persisted or logged.</li>
  * </ul>
  *
- * <p><strong>Module boundary:</strong> Only {@code portfolio::domain} is allowed as a
- * cross-module dependency (holdings data for explain-position prompts).
+ * <p><strong>Module boundary:</strong> {@code portfolio::domain} (holdings for explain-position
+ * prompts) and {@code marketdata::domain} (the {@code Security} reached via {@code Position.getSecurity()}
+ * for ticker/sector context) are allowed cross-module dependencies, plus the {@code seed} module.
  * Spring AI provider beans (AnthropicChatModel, OpenAiChatModel) are direct classpath
  * dependencies resolved by the spring-ai-bom, not cross-module Modulith references.
  */
 @org.springframework.modulith.ApplicationModule(
         displayName = "AI",
-        allowedDependencies = {"portfolio::domain", "seed"})
+        allowedDependencies = {"portfolio::domain", "marketdata::domain", "seed"})
 package com.quantlens.ai;

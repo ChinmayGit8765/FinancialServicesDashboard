@@ -75,6 +75,17 @@ class ChatDemoModeIntegrationTest extends AbstractPostgresIntegrationTest {
         assertThat(response.getBody())
                 .as("Demo chat answer must not be blank")
                 .doesNotContain("\"answer\":\"\"");
+        assertThat(response.getBody())
+                .as("Demo chat response must contain 'citations' array (parsed from authored RAG_QA JSON)")
+                .contains("\"citations\"");
+        assertThat(response.getBody())
+                .as("Demo citations must include at least one ticker from the seeded corpus")
+                .satisfiesAnyOf(
+                        body -> assertThat(body).contains("\"AAPL\""),
+                        body -> assertThat(body).contains("\"NVDA\""),
+                        body -> assertThat(body).contains("\"JPM\""),
+                        body -> assertThat(body).contains("\"XOM\"")
+                );
         assertThat(NoNetworkProofConfig.NEXT_CALL_COUNT.get())
                 .as("EXECUTABLE no-network proof: chain.nextCall() must never fire in demo mode")
                 .isZero();

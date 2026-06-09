@@ -1,9 +1,13 @@
 package com.quantlens.ai.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.quantlens.ai.api.ChatResponseDto;
 import com.quantlens.ai.api.CitationDto;
 import com.quantlens.ai.chat.ChatClientStrategy;
 import com.quantlens.ai.session.LlmKeySessionHolder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClientResponse;
 import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
@@ -13,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Service that handles freeform chat Q&A with RAG retrieval and conversation memory.
@@ -50,6 +55,8 @@ import java.util.List;
 @Service
 public class ChatService {
 
+    private static final Logger log = LoggerFactory.getLogger(ChatService.class);
+
     /**
      * System prompt for the chat endpoint.
      *
@@ -67,14 +74,28 @@ public class ChatService {
 
     private final ChatClientStrategy strategy;
     private final LlmKeySessionHolder keyHolder;
+    private final ObjectMapper objectMapper;
 
-    public ChatService(ChatClientStrategy strategy, LlmKeySessionHolder keyHolder) {
-        this.strategy  = strategy;
-        this.keyHolder = keyHolder;
+    public ChatService(ChatClientStrategy strategy,
+                       LlmKeySessionHolder keyHolder,
+                       ObjectMapper objectMapper) {
+        this.strategy     = strategy;
+        this.keyHolder    = keyHolder;
+        this.objectMapper = objectMapper;
     }
 
     /**
      * Handles a chat message and returns an answer with optional citations.
+     *
+     * <p>Citation source branches on data shape, NOT on demo/live flag:
+     * <ul>
+     *   <li><strong>Live mode:</strong> {@code RETRIEVED_DOCUMENTS} is present in
+     *       {@code clientResponse.context()} (QuestionAnswerAdvisor ran) → map docs to CitationDto.</li>
+     *   <li><strong>Demo mode:</strong> {@code RETRIEVED_DOCUMENTS} is null (DemoModeAdvisor
+     *       short-circuited before the QA advisor) → authored RAG_QA content is JSON
+     *       {@code {"answer":..,"citations":[..]}} → parse with Jackson; graceful fallback
+     *       if content is not JSON (treat whole text as answer, empty citations).</li>
+     * </ul>
      *
      * @param message        the user's question (validated upstream via @NotBlank @Size)
      * @param conversationId the session-scoped conversation ID; required by MessageChatMemoryAdvisor
@@ -95,7 +116,7 @@ public class ChatService {
                     .call()
                     .chatClientResponse();
 
-            String answer = clientResponse.chatResponse()
+            String rawText = clientResponse.chatResponse()
                     .getResult()
                     .getOutput()
                     .getText();
@@ -106,17 +127,23 @@ public class ChatService {
             List<Document> docs = (List<Document>) clientResponse.context()
                     .get(QuestionAnswerAdvisor.RETRIEVED_DOCUMENTS);
 
-            List<CitationDto> citations = (docs != null)
-                    ? docs.stream()
-                          .map(d -> new CitationDto(
-                                  (String) d.getMetadata().getOrDefault("ticker",  ""),
-                                  (String) d.getMetadata().getOrDefault("section", ""),
-                                  (String) d.getMetadata().getOrDefault("source",  ""),
-                                  d.getText().substring(0, Math.min(200, d.getText().length()))))
-                          .toList()
-                    : List.of();
+            if (docs != null) {
+                // ── Live mode: citations from RETRIEVED_DOCUMENTS ──────────────
+                List<CitationDto> citations = docs.stream()
+                        .map(d -> new CitationDto(
+                                (String) d.getMetadata().getOrDefault("ticker",  ""),
+                                (String) d.getMetadata().getOrDefault("section", ""),
+                                (String) d.getMetadata().getOrDefault("source",  ""),
+                                d.getText().substring(0, Math.min(200, d.getText().length()))))
+                        .toList();
+                return new ChatResponseDto(rawText != null ? rawText : "", citations);
+            }
 
-            return new ChatResponseDto(answer != null ? answer : "", citations);
+            // ── Demo mode: citations parsed from authored RAG_QA JSON ──────────
+            // DemoModeAdvisor short-circuited — RETRIEVED_DOCUMENTS is null.
+            // Authored content is JSON: {"answer":"...","citations":[...]}
+            // Graceful fallback: if not JSON, treat whole text as answer with empty citations.
+            return parseDemoResponse(rawText);
 
         } catch (ResponseStatusException rse) {
             throw rse;
@@ -124,6 +151,51 @@ public class ChatService {
             // T-07-LEAK: never echo provider error messages (could carry the API key)
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
                     "AI provider temporarily unavailable");
+        }
+    }
+
+    /**
+     * Parses a demo-mode RAG_QA authored answer from its JSON envelope.
+     *
+     * <p>Expected shape: {@code {"answer":"...","citations":[{"ticker":..,"section":..,"source":..,"excerpt":..}]}}
+     *
+     * <p>If the text is not valid JSON or is missing the expected fields, the raw text is
+     * returned as the answer with empty citations — mirrors CommentaryService's defensive
+     * parsing (graceful fallback, no exception thrown to the caller).
+     */
+    private ChatResponseDto parseDemoResponse(String rawText) {
+        if (rawText == null || rawText.isBlank()) {
+            return new ChatResponseDto("", List.of());
+        }
+        String trimmed = rawText.trim();
+        if (!trimmed.startsWith("{")) {
+            // Not JSON — plain-text demo answer (legacy or fallback seed content)
+            return new ChatResponseDto(trimmed, List.of());
+        }
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> envelope = objectMapper.readValue(trimmed, Map.class);
+
+            String answer = (String) envelope.getOrDefault("answer", trimmed);
+
+            @SuppressWarnings("unchecked")
+            List<Map<String, String>> rawCitations =
+                    (List<Map<String, String>>) envelope.getOrDefault("citations", List.of());
+
+            List<CitationDto> citations = rawCitations.stream()
+                    .map(c -> new CitationDto(
+                            c.getOrDefault("ticker",  ""),
+                            c.getOrDefault("section", ""),
+                            c.getOrDefault("source",  ""),
+                            c.getOrDefault("excerpt", "")))
+                    .toList();
+
+            return new ChatResponseDto(answer != null ? answer : trimmed, citations);
+
+        } catch (Exception ex) {
+            // JSON parse failed — graceful fallback: return raw text, no citations
+            log.debug("ChatService: demo response is not valid JSON, using raw text as answer", ex);
+            return new ChatResponseDto(trimmed, List.of());
         }
     }
 }

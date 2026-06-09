@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: ready_to_plan
-stopped_at: Phase 08 complete (3/3) — ready to discuss Phase 9
-last_updated: 2026-06-09T14:06:03.460Z
-last_activity: 2026-06-09
+status: executing
+stopped_at: "Completed 06-01-PLAN.md — Spring AI scaffold + demo-mode seam: DemoModeAdvisor, ChatClientStrategy, LlmKeySessionHolder, ai_seed_content V4, KeyLeakageIntegrationTest GREEN"
+last_updated: "2026-06-09T14:40:30.184Z"
+last_activity: 2026-06-09 -- Phase 09 execution started
 progress:
   total_phases: 10
   completed_phases: 8
-  total_plans: 30
+  total_plans: 32
   completed_plans: 30
   percent: 80
 ---
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-07)
 
 **Core value:** A working, screenshot-ready dashboard that demonstrates real quantitative-finance analytics narrated by a real Spring AI layer — convincing with zero setup, genuinely live when you add a key.
-**Current focus:** Phase 9 — mcp server
+**Current focus:** Phase 09 — mcp-server
 
 ## Current Position
 
-Phase: 9
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-06-09
+Phase: 09 (mcp-server) — EXECUTING
+Plan: 09-01 complete; 09-02 next
+Status: Executing Phase 09 (Wave 1 done — MCP starter + 3 @McpTool beans + auth gate + boundary verified)
+Last activity: 2026-06-10 -- Phase 09 plan 09-01 complete (test-compile + Modulith verify + /mcp 401 boot gate all green)
 
 Progress: [██████████] 100%
 

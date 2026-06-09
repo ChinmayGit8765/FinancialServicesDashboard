@@ -174,7 +174,7 @@ Plans:
   3. The README documents how any MCP client connects to the server and what tools are available
 **Plans**: 2 plans
 Plans:
-- [ ] 09-01-PLAN.md — Wave 1: MCP starter + /mcp Streamable-HTTP config + SecurityConfig (httpBasic + /mcp CSRF exemption) + mcp Modulith module (named interfaces) + 3 @McpTool beans + result records + .mcp.json quantlens entry + RED scaffolds; resolve open questions at compile (MCP-01, MCP-02)
+- [x] 09-01-PLAN.md — Wave 1: MCP starter + /mcp Streamable-HTTP config + SecurityConfig (httpBasic + /mcp CSRF exemption) + mcp Modulith module (named interfaces) + 3 @McpTool beans + result records + .mcp.json quantlens entry + RED scaffolds; resolve open questions at compile (MCP-01, MCP-02) (completed 2026-06-10)
 - [ ] 09-02-PLAN.md — Wave 2: green tool-correctness (golden/service values) + error-hygiene tests + full backend suite + README Product MCP Server section (MCP-01, MCP-02)
 
 ### Phase 10: Polish & Documentation
@@ -203,5 +203,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 6. Demo-Mode AI Seam | 4/4 | Complete   | 2026-06-09 |
 | 7. RAG Pipeline | 3/3 | Complete   | 2026-06-09 |
 | 8. Live AI Features | 3/3 | Complete   | 2026-06-09 |
-| 9. MCP Server | 0/2 | Not started | - |
+| 9. MCP Server | 1/2 | In progress | - |
 | 10. Polish & Documentation | 0/TBD | Not started | - |

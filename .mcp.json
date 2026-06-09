@@ -11,6 +11,13 @@
       "env": {
         "POSTGRES_CONNECTION_STRING": "postgresql://quantlens:quantlens_dev@localhost:5432/quantlens"
       }
+    },
+    "quantlens": {
+      "type": "http",
+      "url": "http://localhost:8080/mcp",
+      "headers": {
+        "Authorization": "Basic ${QUANTLENS_MCP_AUTH:-YWxpY2U6ZGVtbzEyMzQ=}"
+      }
     }
   }
 }

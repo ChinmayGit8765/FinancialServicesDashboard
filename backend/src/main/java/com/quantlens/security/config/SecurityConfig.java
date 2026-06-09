@@ -129,8 +129,17 @@ public class SecurityConfig {
                                 // using TestRestTemplate do not.  The route is protected by session auth
                                 // (Spring Security enforces /api/** authentication) and SameSite=Lax on the
                                 // session cookie provides the primary CSRF defence for browser clients.
-                                AntPathRequestMatcher.antMatcher(HttpMethod.POST, "/api/ai/chat"))
+                                AntPathRequestMatcher.antMatcher(HttpMethod.POST, "/api/ai/chat"),
+                                // Phase 9: MCP Streamable-HTTP POST cannot carry the XSRF-TOKEN cookie.
+                                // Exemption is safe because /mcp requires HTTP Basic authentication
+                                // (machine client sends Authorization: Basic header — not session-based).
+                                // T-09-04: This is NOT a relaxation — the endpoint stays authenticated.
+                                AntPathRequestMatcher.antMatcher("/mcp"))
                 )
+                // Phase 9: HTTP Basic for MCP machine-client authentication on /mcp.
+                // Coexists with existing .formLogin() — Vue SPA continues using session cookies on /api/**.
+                // MCP client (Claude Code) sends Authorization: Basic <base64(user:pass)> on each request.
+                .httpBasic(basic -> basic.realmName("QuantLens MCP"))
                 .exceptionHandling(ex -> ex
                         // Unauthenticated API requests → 401 JSON; no redirect to login page (T-01-10)
                         .authenticationEntryPoint((request, response, authException) -> {

@@ -1,6 +1,7 @@
 package com.quantlens.ai.api;
 
 import com.quantlens.ai.session.LlmKeySessionHolder;
+import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -58,6 +59,7 @@ public class AiKeyController {
      * @param request the validated key request (provider + apiKey, both @NotBlank)
      * @return 200 with {@code {mode:"live", provider}} on success; 400 on invalid provider
      */
+    @Hidden  // Phase 10 (T-10-01): exclude the key-intake surface (AiKeyRequest.apiKey) from the public OpenAPI spec
     @PostMapping("/key")
     public ResponseEntity<AiStatusDto> setKey(@RequestBody @Valid AiKeyRequest request) {
         if (!"anthropic".equals(request.provider()) && !"openai".equals(request.provider())) {
@@ -75,6 +77,7 @@ public class AiKeyController {
      *
      * @return 200 with {@code {mode:"demo"}} (provider omitted by @JsonInclude NON_NULL)
      */
+    @Hidden  // Phase 10 (T-10-01): key-management plumbing is not part of the published public API
     @DeleteMapping("/key")
     public ResponseEntity<AiStatusDto> clearKey() {
         keyHolder.clear();

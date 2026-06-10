@@ -88,7 +88,13 @@ public class SecurityConfig {
                                 "/api/auth/login",
                                 "/api/auth/logout",
                                 "/api/auth/personas",
-                                "/actuator/health"
+                                "/actuator/health",
+                                // Phase 10: public OpenAPI spec + Swagger UI (GET-only demo API docs).
+                                // Scoped to the doc paths only — no other matcher is broadened (T-10-02).
+                                "/v3/api-docs",
+                                "/v3/api-docs/**",
+                                "/swagger-ui.html",
+                                "/swagger-ui/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

@@ -1,11 +1,11 @@
 <script setup lang="ts">
 /**
- * StructuredOutputChart — DEMO STUB only.
+ * StructuredOutputChart — renders a horizontal bar chart from a StructuredChartDto (title + series[]).
  *
- * Renders a horizontal bar chart from a StructuredChartDto (title + series[]).
- * In demo mode, DashboardView fetches /ai-structured-demo.json into the ai store.
- * Phase 8 (AI-06) will swap the source for a live BeanOutputConverter-typed record
- * via the existing /api/ai endpoint — no chart changes required (same DTO shape).
+ * The chart binds to one ai-store slot regardless of mode (AI-06): in demo mode that slot holds a
+ * seeded fixture; with a BYO LLM key it holds a live, BeanOutputConverter-typed record returned by
+ * GET /api/ai/structured. The DTO shape is identical in both modes, so the component never changes
+ * between demo and live — the same typed structured output drives the chart either way.
  *
  * Three states: shimmer skeleton (loading), static error (error), chart (populated).
  */
@@ -120,8 +120,9 @@ const option = computed<EChartsOption>(() => {
     </template>
 
     <figcaption class="sr-only">
-      AI structured output chart showing detected sector exposure from seeded demo data.
-      Phase 8 will replace this demo fixture with a live BeanOutputConverter-typed record.
+      AI structured output chart showing detected sector exposure. The same typed structured output
+      drives this chart in both modes — a seeded record in demo mode, or a live
+      BeanOutputConverter-typed record from the LLM when a key is set.
     </figcaption>
 
   </figure>

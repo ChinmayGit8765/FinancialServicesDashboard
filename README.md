@@ -122,6 +122,44 @@ frontend (node:22 build → nginx:alpine)
 
 ---
 
+## Screenshots
+
+The dashboard ships **screenshot-ready in demo mode** (no keys, no setup) and turns genuinely live when you paste your own LLM key into the in-app popup. The images below are captured in **live mode** — the AI panels show real LLM output, not the seeded fixtures — via the BYO-key flow described in the Capture Guide.
+
+> Capturing the live-mode images is a manual step (it needs your own Anthropic or OpenAI key). Drop the PNGs into `docs/screenshots/` using the filenames below and they render here.
+
+| View | Image | What it shows |
+|------|-------|---------------|
+| Dashboard (all AI panels) | `docs/screenshots/dashboard.png` | P&L, allocation, risk scorecard, the "explain this position" panel, and AI daily commentary in one view |
+| Stochastic fan chart | `docs/screenshots/fan-chart.png` | Monte Carlo "potential futures" with the GBM / Merton / Heston / Bootstrap model selector active |
+| RAG Q&A | `docs/screenshots/rag-qa.png` | Natural-language question answered over the 10-K corpus with inline citations |
+| Structured-output chart | `docs/screenshots/structured-output.png` | The LLM's typed `StructuredChartDto` rendered directly as a chart (same component in demo + live) |
+| BYO-key popup | `docs/screenshots/byo-key-popup.png` | The API-key popup that flips the mode badge from DEMO to LIVE (key is session-only, never persisted) |
+
+### Capture Guide
+
+1. `docker compose up` and open the app at http://localhost:5173
+2. Log in as **alice** / `demo1234`
+3. Open the **BYO-key popup** (the "Use your own key" / mode badge control)
+4. Paste a real **Anthropic** or **OpenAI** API key — it is held in your session only and is never persisted or logged
+5. The mode badge flips **DEMO → LIVE**; the AI panels now call the real LLM
+6. Screenshot each AI panel; cycle the fan-chart **model selector** (GBM → Merton → Heston → Bootstrap) for the fan-chart image
+7. Save the PNGs into `docs/screenshots/` using the filenames in the table above
+
+---
+
+## API & Architecture Docs
+
+- **OpenAPI spec:** http://localhost:8080/v3/api-docs (raw JSON — all portfolio, analytics, and AI endpoints; the BYO-key intake endpoint is intentionally excluded so no key surface is published)
+- **Swagger UI:** http://localhost:8080/swagger-ui.html (interactive API explorer)
+- **Module diagram (Spring Modulith):** regenerate with `.\mvnw.cmd test -pl backend -Dtest=QuantLensModulithTest` (JAVA_HOME=Temurin 21) → `backend/target/spring-modulith-docs/components.puml`. The same test's `applicationModulesShouldBeValid()` enforces the module-boundary graph as a living contract on every build.
+- **Stochastic model rationale:** [docs/MODELS.md](docs/MODELS.md) — why each Monte Carlo model, key assumptions, parameters, and limitations
+- **RAG design:** [docs/RAG_DESIGN.md](docs/RAG_DESIGN.md) — the zero-key deterministic embedding + retrieval approach
+- **Product MCP server + dev MCP servers:** see the MCP sections below
+- **Auth upgrade path:** see [OAuth Upgrade Path](#oauth-upgrade-path) for the form-login → OAuth2/OIDC seam
+
+---
+
 ## Dev MCP Servers (DEVX-01)
 
 The repo includes `.mcp.json` configuring two Claude Code MCP servers for development:

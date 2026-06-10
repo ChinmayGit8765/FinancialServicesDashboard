@@ -126,6 +126,24 @@ public class SeedRunner implements ApplicationRunner {
 
         log.info("SeedRunner: starting data seed (seed_log {} not yet completed)...", SEED_VERSION);
 
+        // 0. Re-seedable: a PRIOR SEED_VERSION may already have populated the core tables on a
+        // persisted volume. All demo data is fully reproducible from the fixed RNG seed, so clear any
+        // existing core rows (FK-safe child→parent order) before re-seeding. This lets a version bump
+        // (e.g. v1 → v2) take effect on `docker compose up` WITHOUT a manual `docker compose down -v`,
+        // and avoids a UNIQUE(ticker)/username violation. No-op on a fresh database (count == 0).
+        // The independent AI/RAG seeders (ai_seed_content, vector_store) are keyed by string and are
+        // untouched here.
+        if (securityRepository.count() > 0 || appUserRepository.count() > 0) {
+            log.info("SeedRunner: existing core data found — clearing for a clean re-seed of {}", SEED_VERSION);
+            transactionRepository.deleteAllInBatch();
+            positionRepository.deleteAllInBatch();
+            ohlcvBarRepository.deleteAllInBatch();
+            factorReturnRepository.deleteAllInBatch();
+            portfolioRepository.deleteAllInBatch();
+            appUserRepository.deleteAllInBatch();
+            securityRepository.deleteAllInBatch();
+        }
+
         // 1. Build the securities universe + benchmark spec
         List<SecuritySpec> specs = buildSpecs();
 

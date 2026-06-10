@@ -186,7 +186,9 @@ Plans:
   1. The README includes screenshots of the running dashboard in demo mode (all AI panels visible, fan chart model selector active, RAG Q&A populated) captured via live mode with a real LLM key
   2. An OpenAPI spec is generated via springdoc-openapi and accessible at `/v3/api-docs`; all portfolio, analytics, and AI endpoints are documented
   3. A Spring Modulith ApplicationModules.verify() ArchUnit test passes, confirming the module dependency graph (ai → portfolio + analytics, analytics → portfolio, mcp → portfolio + analytics, auth standalone) and generating a module diagram
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 10-01-PLAN.md — OpenAPI (springdoc 2.8.17) + leak-free /v3/api-docs test; Modulith living contract + headless Documenter diagram; README Screenshots/Capture Guide + Docs pointers; StructuredOutputChart.vue cleanup (DOCS-01)
 
 ## Progress
 
@@ -204,4 +206,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 7. RAG Pipeline | 3/3 | Complete   | 2026-06-09 |
 | 8. Live AI Features | 3/3 | Complete   | 2026-06-09 |
 | 9. MCP Server | 2/2 | Plans done | - |
-| 10. Polish & Documentation | 0/TBD | Not started | - |
+| 10. Polish & Documentation | 0/1 | Not started | - |

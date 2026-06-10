@@ -322,8 +322,8 @@ function retryForecast(): void { portfolioStore.fetchForecast() }
   min-height: 100vh;
   color: var(--color-text-primary);
   background:
-    radial-gradient(900px 480px at 75% -10%, rgba(14, 165, 233, 0.10), transparent 60%),
-    radial-gradient(700px 420px at 0% 0%, rgba(56, 189, 248, 0.06), transparent 55%),
+    radial-gradient(900px 480px at 75% -10%, rgba(79, 159, 224, 0.10), transparent 60%),
+    radial-gradient(700px 420px at 0% 0%, rgba(116, 182, 236, 0.05), transparent 55%),
     var(--color-bg-base);
   background-attachment: fixed;
 }
@@ -336,7 +336,7 @@ function retryForecast(): void { portfolioStore.fetchForecast() }
 .ai-hero :deep(.commentary-card) {
   border-left: 3px solid var(--color-accent);
   background:
-    linear-gradient(180deg, rgba(14, 165, 233, 0.07), transparent 42%),
+    linear-gradient(180deg, rgba(79, 159, 224, 0.07), transparent 42%),
     var(--color-bg-surface);
 }
 

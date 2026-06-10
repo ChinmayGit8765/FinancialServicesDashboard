@@ -4,6 +4,7 @@ import VChart from 'vue-echarts'
 import CardHeading from './CardHeading.vue'
 import type { EChartsOption } from 'echarts/types/dist/shared'
 import type { AttributionDto } from '@/api/analytics'
+import { CHART_COLORS } from '@/plugins/chart-colors'
 
 // T-04-08: props-driven — tests mount directly without store.
 // No theme prop: THEME_KEY is provided globally in App.vue; VChart picks it up automatically.
@@ -47,7 +48,7 @@ const option = computed<EChartsOption>(() => {
         data: values.map((v, i) => ({
           value: v,
           name: labels[i],
-          itemStyle: { color: v >= 0 ? '#22c55e' : '#ef4444' },
+          itemStyle: { color: v >= 0 ? CHART_COLORS.up : CHART_COLORS.down },
         })),
         label: {
           show: true,

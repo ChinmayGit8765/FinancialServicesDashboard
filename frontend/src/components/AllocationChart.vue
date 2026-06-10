@@ -43,7 +43,7 @@ const donutOption = computed<EChartsOption>(() => {
         style: {
           text: totalLabel,
           textAlign: 'center',
-          fill: '#e2e8f0',
+          fill: CHART_COLORS.textPrimary,
           fontSize: 14,
           fontWeight: 600,
           fontFamily: "ui-monospace, 'Cascadia Code', Consolas, monospace",

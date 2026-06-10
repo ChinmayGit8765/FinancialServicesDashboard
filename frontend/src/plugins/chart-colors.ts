@@ -18,10 +18,16 @@ function cssVar(name: string, fallback: string): string {
 }
 
 export const CHART_COLORS = {
-  accent:        cssVar('--color-accent',         '#0ea5e9'),
-  border:        cssVar('--color-border',          '#334155'),
-  textSecondary: cssVar('--color-text-secondary',  '#94a3b8'),
-  bgBase:        cssVar('--color-bg-base',         '#0b0f1a'),
+  accent:        cssVar('--color-accent',          '#4f9fe0'),
+  border:        cssVar('--color-border',          '#2a3546'),
+  textPrimary:   cssVar('--color-text-primary',    '#e8edf4'),
+  textSecondary: cssVar('--color-text-secondary',  '#a7b4c4'),
+  bgBase:        cssVar('--color-bg-base',          '#0d1117'),
+  surface:       cssVar('--color-bg-surface',       '#1a2230'),
+  up:            cssVar('--color-up',               '#4cc08c'),
+  down:          cssVar('--color-down',             '#e87b73'),
+  // Diverging heatmap scale for correlation cells: down (−1) → neutral (0) → accent (+1)
+  heatmap:       [cssVar('--color-down', '#e87b73'), '#e9eef4', cssVar('--color-accent', '#4f9fe0')] as string[],
 } as const
 
 /**
@@ -37,15 +43,15 @@ export const CHART_COLORS = {
  * paint time — getComputedStyle must be called at JS runtime.
  * These tokens are defined in style.css lines 65-68.
  *
- * median    = --color-fan-p50    (#0ea5e9)              — median line
- * bandInner = --color-fan-band-1 (rgba 14,165,233,0.25) — IQR p25-p75
- * bandOuter = --color-fan-band-2 (rgba 14,165,233,0.12) — outer p5-p25, p75-p95
+ * median    = --color-fan-p50    (#4f9fe0)              — median line
+ * bandInner = --color-fan-band-1 (rgba 79,159,224,0.22) — IQR p25-p75
+ * bandOuter = --color-fan-band-2 (rgba 79,159,224,0.10) — outer p5-p25, p75-p95
  */
 export function getFanColors() {
   return {
-    median:    cssVar('--color-fan-p50',    '#0ea5e9'),
-    bandInner: cssVar('--color-fan-band-1', 'rgba(14,165,233,0.25)'),
-    bandOuter: cssVar('--color-fan-band-2', 'rgba(14,165,233,0.12)'),
+    median:    cssVar('--color-fan-p50',    '#4f9fe0'),
+    bandInner: cssVar('--color-fan-band-1', 'rgba(79,159,224,0.22)'),
+    bandOuter: cssVar('--color-fan-band-2', 'rgba(79,159,224,0.10)'),
   }
 }
 

@@ -194,13 +194,13 @@ td.numeric {
 }
 
 .signal-buy {
-  background: var(--color-up-subtle, rgba(34,197,94,0.15));
+  background: var(--color-up-subtle, rgba(76,192,140,0.13));
   color: var(--color-up);
   border: 1px solid var(--color-up);
 }
 
 .signal-sell {
-  background: var(--color-down-subtle, rgba(239,68,68,0.15));
+  background: var(--color-down-subtle, rgba(232,123,115,0.13));
   color: var(--color-down);
   border: 1px solid var(--color-down);
 }

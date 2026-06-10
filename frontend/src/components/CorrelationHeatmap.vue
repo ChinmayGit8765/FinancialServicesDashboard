@@ -4,6 +4,7 @@ import VChart from 'vue-echarts'
 import type { EChartsOption } from 'echarts/types/dist/shared'
 import type { CorrelationMatrixDto } from '@/api/analytics'
 import CardHeading from './CardHeading.vue'
+import { CHART_COLORS } from '@/plugins/chart-colors'
 
 // T-04-08: props-driven — tests mount directly without store.
 // No theme prop: THEME_KEY is provided globally in App.vue; VChart picks it up automatically.
@@ -56,7 +57,7 @@ const option = computed<EChartsOption>(() => {
       orient: 'horizontal',
       left: 'center',
       bottom: 8,
-      color: ['#ef4444', '#f8fafc', '#3b82f6'],  // red=+1, white=0, blue=-1
+      color: CHART_COLORS.heatmap,  // warm=+1, neutral=0, cool=−1 (tracks design tokens)
     },
     series: [
       {
@@ -66,7 +67,7 @@ const option = computed<EChartsOption>(() => {
           show: true,
           formatter: (p: any) => p.data[2].toFixed(2),
           fontSize: 10,
-          color: '#1e293b',
+          color: CHART_COLORS.bgBase,
         },
         emphasis: {
           itemStyle: { shadowBlur: 10 },

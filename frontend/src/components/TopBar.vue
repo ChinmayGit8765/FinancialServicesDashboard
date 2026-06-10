@@ -57,158 +57,55 @@ async function handleLogout(): Promise<void> {
 </script>
 
 <template>
-  <header class="top-bar" role="banner">
-    <!-- Left: brand wordmark -->
-    <div class="brand">
-      <span class="brand-name">QuantLens</span>
-      <span class="brand-subtitle">AI Portfolio Intelligence</span>
+  <header
+    role="banner"
+    class="fixed inset-x-0 top-0 z-50 flex h-14 items-center justify-between gap-4 border-b border-edge/70 bg-elevated/85 px-4 backdrop-blur-xl sm:px-6"
+  >
+    <!-- Left: brand -->
+    <div class="flex shrink-0 items-center gap-2.5">
+      <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-brand to-brand-light shadow-glow">
+        <svg viewBox="0 0 24 24" class="h-4 w-4 text-ink-inverse" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 17l5-6 4 4 6-8" />
+          <path d="M3 21h18" />
+        </svg>
+      </div>
+      <div class="flex flex-col leading-tight">
+        <span class="text-[15px] font-bold tracking-tight text-ink">QuantLens</span>
+        <span class="hidden text-[10px] text-ink-muted sm:block">AI Portfolio Intelligence</span>
+      </div>
     </div>
 
-    <!-- Center: persona switcher -->
-    <nav aria-label="Persona switcher" class="persona-nav">
+    <!-- Center: persona switcher (segmented control) -->
+    <nav
+      aria-label="Persona switcher"
+      class="hidden items-center gap-1 rounded-full border border-edge/70 bg-base/60 p-1 md:flex"
+    >
       <button
         v-for="p in personaList"
         :key="p.username"
-        class="persona-pill"
-        :class="{ active: authStore.username === p.username }"
         :aria-pressed="authStore.username === p.username"
         :disabled="switching"
+        class="rounded-full px-4 py-1.5 text-[13px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-60"
+        :class="authStore.username === p.username
+          ? 'bg-brand text-ink-inverse shadow-glow'
+          : 'text-ink-soft hover:text-ink'"
         @click="switchPersona(p.username)"
       >
-        <template v-if="switching && switchingTo === p.username">
-          Switching to {{ p.persona }}&hellip;
-        </template>
-        <template v-else>
-          {{ p.persona }}
-        </template>
+        <template v-if="switching && switchingTo === p.username">{{ p.persona }}&hellip;</template>
+        <template v-else>{{ p.persona }}</template>
       </button>
     </nav>
 
     <!-- Right: AI mode badge + username + logout -->
-    <div class="user-area">
+    <div class="flex shrink-0 items-center gap-3">
       <AiModeBadge :mode="aiMode" :provider="aiProvider" />
-      <span class="username-display">@{{ authStore.username }}</span>
-      <button class="logout-btn" @click="handleLogout">Log out</button>
+      <span class="hidden text-sm text-ink-soft sm:inline">@{{ authStore.username }}</span>
+      <button
+        class="rounded-lg border border-edge px-3 py-1.5 text-[13px] text-ink-soft transition hover:border-down hover:text-down focus:outline-none focus:ring-2 focus:ring-brand/40"
+        @click="handleLogout"
+      >
+        Log out
+      </button>
     </div>
   </header>
 </template>
-
-<style scoped>
-.top-bar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 48px;
-  z-index: 100;
-  background: var(--color-bg-elevated);
-  border-bottom: 1px solid var(--color-border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 var(--space-lg);
-  gap: var(--space-md);
-  box-sizing: border-box;
-}
-
-/* --- Brand --- */
-.brand {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-sm);
-  flex-shrink: 0;
-}
-
-.brand-name {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--color-accent);
-  line-height: 1;
-  white-space: nowrap;
-}
-
-.brand-subtitle {
-  font-size: 11px;
-  color: var(--color-text-muted);
-  white-space: nowrap;
-}
-
-/* --- Persona switcher --- */
-.persona-nav {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
-.persona-pill {
-  min-height: 44px;
-  padding: 6px 16px;
-  border-radius: var(--radius-pill);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  border: 1px solid var(--color-border);
-  background: transparent;
-  color: var(--color-text-secondary);
-  transition: border-color 0.15s, background 0.15s, color 0.15s;
-  white-space: nowrap;
-}
-
-.persona-pill:hover:not(:disabled):not(.active) {
-  border-color: var(--color-accent-light);
-  color: var(--color-text-primary);
-}
-
-.persona-pill.active {
-  border-color: var(--color-accent);
-  background: var(--color-accent-subtle);
-  color: var(--color-text-primary);
-}
-
-.persona-pill:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.persona-pill:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 3px;
-}
-
-/* --- User area --- */
-.user-area {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  flex-shrink: 0;
-}
-
-.username-display {
-  font-size: 14px;
-  color: var(--color-text-secondary);
-  white-space: nowrap;
-}
-
-.logout-btn {
-  min-height: 44px;
-  padding: 6px 14px;
-  background: transparent;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  color: var(--color-text-secondary);
-  font-size: 13px;
-  cursor: pointer;
-  transition: border-color 0.15s, color 0.15s;
-  white-space: nowrap;
-}
-
-.logout-btn:hover {
-  border-color: var(--color-destructive);
-  color: var(--color-destructive);
-}
-
-.logout-btn:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 3px;
-}
-</style>

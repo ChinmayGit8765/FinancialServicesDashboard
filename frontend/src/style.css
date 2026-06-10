@@ -2,6 +2,40 @@
    Source: Phase 3 UI-SPEC § Design Tokens
    Full replace of Vite scaffold — all components reference var(--token) */
 
+@import "tailwindcss";
+
+/* Tailwind v4 design system — utilities backed by the SAME dark palette the components/charts use,
+   so Tailwind classes (bg-surface, text-ink, text-brand, rounded-card, shadow-card …) stay cohesive
+   with the existing token-based scoped styles. */
+@theme {
+  --color-base:        #0b0f1a;
+  --color-elevated:    #0f172a;
+  --color-surface:     #1e293b;
+  --color-overlay:     #263248;
+  --color-edge:        #334155;
+  --color-edge-soft:   #1e293b;
+  --color-ink:         #e2e8f0;
+  --color-ink-soft:    #94a3b8;
+  --color-ink-muted:   #64748b;
+  --color-ink-inverse: #0b0f1a;  /* dark text/icons ON bright brand surfaces (avoids the text-base collision) */
+  --color-brand:       #0ea5e9;
+  --color-brand-light: #38bdf8;
+  --color-brand-deep:  #1e3a5f;
+  --color-up:          #22c55e;
+  --color-down:        #ef4444;
+  --color-warn:        #f59e0b;
+
+  --radius-card: 12px;
+  --radius-xl2:  16px;
+
+  --shadow-card:  0 4px 16px rgb(0 0 0 / 0.40);
+  --shadow-float: 0 8px 32px rgb(0 0 0 / 0.55);
+  --shadow-glow:  0 0 0 1px rgb(14 165 233 / 0.25), 0 8px 40px rgb(14 165 233 / 0.12);
+
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', Consolas, monospace;
+}
+
 :root {
   /* --- Background Layers (deep-to-shallow) --- */
   --color-bg-base:      #0b0f1a;  /* page canvas; deepest layer */

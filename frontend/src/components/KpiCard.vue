@@ -51,61 +51,30 @@ const borderClass = computed(() => {
     :aria-busy="true"
     :aria-label="`Loading ${label}`"
   />
-  <div v-else class="kpi-card" :class="borderClass">
-    <span class="kpi-label">{{ label }}</span>
-    <span class="kpi-primary">{{ primary }}</span>
-    <span v-if="secondary" class="kpi-secondary">{{ secondary }}</span>
-    <span v-if="delta !== undefined && delta !== null" class="kpi-delta" :class="deltaColorClass">
+  <div
+    v-else
+    class="group flex min-h-[92px] flex-col gap-1 rounded-xl border border-edge bg-surface p-4 transition hover:-translate-y-0.5 hover:border-brand/50 hover:shadow-card"
+    :class="borderClass"
+  >
+    <span class="text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-muted">{{ label }}</span>
+    <span class="font-mono text-[22px] font-semibold leading-tight tabular-nums text-ink">{{ primary }}</span>
+    <span v-if="secondary" class="font-mono text-sm tabular-nums text-ink-soft">{{ secondary }}</span>
+    <span
+      v-if="delta !== undefined && delta !== null"
+      class="kpi-delta font-mono text-sm tabular-nums"
+      :class="deltaColorClass"
+    >
       {{ deltaFormatted }}
     </span>
   </div>
 </template>
 
 <style scoped>
-.kpi-card {
-  background: var(--color-bg-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: var(--space-md);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-  min-height: 88px;
-}
-
+/* Semantic accent classes — kept as stable hooks (KpiCard.test.ts asserts these) and to carry
+   the left-border + delta colours that Tailwind utilities alone wouldn't express semantically. */
 .border-up   { border-left: 3px solid var(--color-up); }
 .border-down { border-left: 3px solid var(--color-down); }
 .border-flat { border-left: 3px solid var(--color-border); }
-
-.kpi-label {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--color-text-muted);
-}
-
-.kpi-primary {
-  font-size: 20px;
-  font-weight: 600;
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  color: var(--color-text-primary);
-  line-height: 1.2;
-}
-
-.kpi-secondary {
-  font-size: 14px;
-  color: var(--color-text-secondary);
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-}
-
-.kpi-delta {
-  font-size: 14px;
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-}
 
 .kpi-up   { color: var(--color-up); }
 .kpi-down { color: var(--color-down); }
@@ -125,8 +94,8 @@ const borderClass = computed(() => {
   );
   background-size: 200% auto;
   animation: shimmer 1.4s linear infinite;
-  border-radius: var(--radius-md);
-  height: 88px;
+  border-radius: var(--radius-lg);
+  height: 92px;
   border: 1px solid var(--color-border);
 }
 </style>

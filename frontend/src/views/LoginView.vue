@@ -67,36 +67,64 @@ async function loginAsPersona(p: PersonaInfo) {
 </script>
 
 <template>
-  <div class="login-page">
-    <div class="login-card">
-      <h1 class="app-title">QuantLens</h1>
-      <p class="app-subtitle">AI Portfolio &amp; Market Intelligence Dashboard</p>
+  <div
+    class="relative flex min-h-screen items-center justify-center overflow-hidden bg-base px-4 py-10 text-ink"
+  >
+    <!-- ambient brand glow -->
+    <div class="pointer-events-none absolute -top-40 left-1/2 h-[480px] w-[480px] -translate-x-1/2 rounded-full bg-brand/20 blur-[140px]"></div>
+    <div class="pointer-events-none absolute bottom-0 right-0 h-[360px] w-[360px] translate-x-1/3 translate-y-1/3 rounded-full bg-brand-light/10 blur-[120px]"></div>
+
+    <div
+      class="relative z-10 w-full max-w-md rounded-2xl border border-edge/70 bg-surface/80 p-8 shadow-float backdrop-blur-xl"
+    >
+      <!-- brand -->
+      <div class="mb-8 flex flex-col items-center text-center">
+        <div class="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-brand to-brand-light shadow-glow">
+          <svg viewBox="0 0 24 24" class="h-6 w-6 text-ink-inverse" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 17l5-6 4 4 6-8" />
+            <path d="M3 21h18" />
+          </svg>
+        </div>
+        <h1 class="bg-gradient-to-r from-brand-light to-brand bg-clip-text text-2xl font-extrabold tracking-tight text-transparent">
+          QuantLens
+        </h1>
+        <p class="mt-1 text-sm text-ink-soft">AI Portfolio &amp; Market Intelligence</p>
+      </div>
 
       <!-- One-click persona switcher -->
-      <section v-if="personaList.length > 0" class="persona-switcher">
-        <h2>Quick Login</h2>
-        <p class="hint">Demo password: <code>{{ personaList[0]?.passwordHint }}</code></p>
-        <div class="persona-buttons">
+      <section v-if="personaList.length > 0" class="mb-6">
+        <div class="mb-3 flex items-center justify-between">
+          <h2 class="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-soft">Quick login</h2>
+          <span class="text-xs text-ink-muted">
+            pass <code class="rounded bg-elevated px-1.5 py-0.5 font-mono text-brand">{{ personaList[0]?.passwordHint }}</code>
+          </span>
+        </div>
+        <div class="grid grid-cols-3 gap-2">
           <button
             v-for="p in personaList"
             :key="p.username"
-            class="persona-btn"
+            type="button"
+            class="group flex flex-col items-center rounded-xl border border-edge bg-elevated px-2 py-3 transition hover:-translate-y-0.5 hover:border-brand hover:bg-brand-deep/40 hover:shadow-glow disabled:cursor-not-allowed disabled:opacity-50"
             :disabled="loading"
             @click="loginAsPersona(p)"
           >
-            <span class="persona-name">Log in as {{ p.persona }}</span>
-            <span class="persona-username">@{{ p.username }}</span>
-            <span v-if="p.description" class="persona-desc">{{ p.description }}</span>
+            <span class="text-sm font-semibold text-ink group-hover:text-brand-light">{{ p.persona }}</span>
+            <span class="mt-0.5 text-[11px] text-ink-muted">@{{ p.username }}</span>
           </button>
         </div>
       </section>
 
-      <div class="divider">or log in manually</div>
+      <!-- divider -->
+      <div class="my-5 flex items-center gap-3 text-[11px] uppercase tracking-wider text-ink-muted">
+        <span class="h-px flex-1 bg-edge"></span>
+        or log in manually
+        <span class="h-px flex-1 bg-edge"></span>
+      </div>
 
       <!-- Manual login form -->
-      <form class="login-form" @submit.prevent="handleLogin">
-        <div class="field">
-          <label for="username">Username</label>
+      <form class="flex flex-col gap-3" @submit.prevent="handleLogin">
+        <div class="flex flex-col gap-1.5">
+          <label for="username" class="text-xs text-ink-soft">Username</label>
           <input
             id="username"
             v-model="username"
@@ -104,10 +132,11 @@ async function loginAsPersona(p: PersonaInfo) {
             placeholder="alice"
             autocomplete="username"
             :disabled="loading"
+            class="rounded-lg border border-edge bg-elevated px-3 py-2.5 text-sm text-ink placeholder:text-ink-muted transition focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/40 disabled:opacity-50"
           />
         </div>
-        <div class="field">
-          <label for="password">Password</label>
+        <div class="flex flex-col gap-1.5">
+          <label for="password" class="text-xs text-ink-soft">Password</label>
           <input
             id="password"
             v-model="password"
@@ -115,212 +144,18 @@ async function loginAsPersona(p: PersonaInfo) {
             placeholder="demo1234"
             autocomplete="current-password"
             :disabled="loading"
+            class="rounded-lg border border-edge bg-elevated px-3 py-2.5 text-sm text-ink placeholder:text-ink-muted transition focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/40 disabled:opacity-50"
           />
         </div>
-        <p v-if="errorMessage" class="error" role="alert">{{ errorMessage }}</p>
-        <button type="submit" class="submit-btn" :disabled="loading">
+        <p v-if="errorMessage" class="text-sm text-down" role="alert">{{ errorMessage }}</p>
+        <button
+          type="submit"
+          :disabled="loading"
+          class="mt-1 min-h-11 rounded-lg bg-gradient-to-r from-brand to-brand-light px-4 py-2.5 text-sm font-semibold text-ink-inverse shadow-glow transition hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-brand/50 disabled:cursor-not-allowed disabled:opacity-50"
+        >
           {{ loading ? 'Logging in…' : 'Log In' }}
         </button>
       </form>
     </div>
   </div>
 </template>
-
-<style scoped>
-.login-page {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-bg-base);
-  padding: var(--space-md);
-}
-
-.login-card {
-  background: var(--color-bg-surface);
-  border-radius: var(--radius-lg);
-  padding: 2.5rem 2rem;
-  width: 100%;
-  max-width: 420px;
-  color: var(--color-text-primary);
-  box-shadow: var(--shadow-modal);
-}
-
-.app-title {
-  margin: 0 0 var(--space-xs);
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--color-accent);
-  text-align: center;
-}
-
-.app-subtitle {
-  margin: 0 0 var(--space-xl);
-  font-size: 0.85rem;
-  color: var(--color-text-secondary);
-  text-align: center;
-}
-
-.persona-switcher h2 {
-  margin: 0 0 var(--space-xs);
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.hint {
-  margin: 0 0 0.75rem;
-  font-size: 0.8rem;
-  color: var(--color-text-muted);
-}
-
-.hint code {
-  background: var(--color-bg-elevated);
-  padding: 0.1em 0.4em;
-  border-radius: var(--radius-sm);
-  color: var(--color-accent);
-}
-
-.persona-buttons {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  margin-bottom: 1rem;
-}
-
-.persona-btn {
-  flex: 1;
-  min-width: 110px;
-  min-height: 44px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 0.75rem 0.5rem;
-  background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  color: var(--color-text-primary);
-  transition: border-color 0.15s, background 0.15s;
-}
-
-.persona-btn:hover:not(:disabled) {
-  border-color: var(--color-accent-light);
-  background: var(--color-accent-subtle);
-}
-
-.persona-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.persona-btn:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 3px;
-}
-
-.persona-name {
-  font-weight: 600;
-  font-size: 0.95rem;
-}
-
-.persona-username {
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
-  margin-top: 0.15rem;
-}
-
-.persona-desc {
-  font-size: 11px;
-  color: var(--color-text-muted);
-  margin-top: 0.1rem;
-}
-
-.divider {
-  text-align: center;
-  color: var(--color-text-muted);
-  font-size: 0.8rem;
-  margin: 1.25rem 0;
-  position: relative;
-}
-
-.divider::before,
-.divider::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  width: 35%;
-  height: 1px;
-  background: var(--color-border);
-}
-
-.divider::before { left: 0; }
-.divider::after { right: 0; }
-
-.login-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
-.field label {
-  font-size: 0.8rem;
-  color: var(--color-text-secondary);
-}
-
-.field input {
-  padding: 0.6rem 0.75rem;
-  background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  color: var(--color-text-primary);
-  font-size: 0.95rem;
-  transition: border-color 0.15s;
-}
-
-.field input:focus {
-  border-color: var(--color-accent);
-}
-
-.field input:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
-}
-
-.error {
-  color: var(--color-destructive);
-  font-size: 0.85rem;
-  margin: 0;
-}
-
-.submit-btn {
-  padding: 0.7rem;
-  background: var(--color-accent);
-  border: none;
-  border-radius: var(--radius-md);
-  color: var(--color-text-inverse);
-  font-size: 0.95rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s;
-  min-height: 44px;
-}
-
-.submit-btn:hover:not(:disabled) {
-  background: var(--color-accent-light);
-}
-
-.submit-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-</style>

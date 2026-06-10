@@ -320,12 +320,24 @@ function retryForecast(): void { portfolioStore.fetchForecast() }
 <style scoped>
 .dashboard-page {
   min-height: 100vh;
-  background: var(--color-bg-base);
   color: var(--color-text-primary);
+  background:
+    radial-gradient(900px 480px at 75% -10%, rgba(14, 165, 233, 0.10), transparent 60%),
+    radial-gradient(700px 420px at 0% 0%, rgba(56, 189, 248, 0.06), transparent 55%),
+    var(--color-bg-base);
+  background-attachment: fixed;
 }
 
 .dashboard-main {
-  padding-top: 48px; /* top-bar height */
+  padding-top: 56px; /* sticky top-bar height (h-14) */
+}
+
+/* AI hero: make the seeded commentary read as the headline of the page */
+.ai-hero :deep(.commentary-card) {
+  border-left: 3px solid var(--color-accent);
+  background:
+    linear-gradient(180deg, rgba(14, 165, 233, 0.07), transparent 42%),
+    var(--color-bg-surface);
 }
 
 .dashboard-grid {

@@ -101,7 +101,74 @@ See [Model documentation](docs/MODELS.md) for rationale, key assumptions, parame
 
 ---
 
-## Architecture
+## Tech Stack
+
+QuantLens pairs a quantitative-finance backend with a modern Spring AI layer, fronted by a Vue 3 SPA. Versions below are the ones actually pinned in `backend/pom.xml` and `frontend/package.json`.
+
+### Backend & platform
+
+| Tech | Version | Why |
+|------|---------|-----|
+| Java | 21 LTS | Records, sealed types, virtual threads; the Spring Boot 3.5 baseline, and the compile target every quant JAR runs on cleanly |
+| Spring Boot | 3.5.13 | Latest stable 3.5.x; pairs with the Spring AI 1.1.x line. Web, Data JPA, Security, Validation, Actuator starters |
+| Spring Modulith | 1.4.11 | Declares module boundaries in `package-info.java` and verifies them on every build (see Architecture) |
+
+### AI layer — Spring AI 1.1.6
+
+Pinned via the `spring-ai-bom`, multi-provider (Anthropic + OpenAI starters both on the classpath):
+
+- **ChatClient + advisors** — fluent per-request prompts; a custom `DemoModeAdvisor` short-circuits the advisor chain in seeded mode, `ChatMemorySessionListener` scopes conversation memory.
+- **Tool calling** — `StockQuoteToolService` exposes a live-quote tool backed by a Finnhub client.
+- **Structured output** — `entity(...)` maps model responses into records (`StructuredInsightRecord`) that drive the charts directly.
+- **RAG** — `spring-ai-starter-vector-store-pgvector` + `spring-ai-advisors-vector-store` (`QuestionAnswerAdvisor`) for retrieval over filings/earnings, with a deterministic seed-mode embedding model so RAG works with no key.
+- **MCP server** — `spring-ai-starter-mcp-server-webmvc` (Streamable-HTTP, same port 8080) re-exposes portfolio/analytics as MCP tools (`PortfolioMcpTools`).
+
+### Quant / math
+
+| Tech | Version | Role |
+|------|---------|------|
+| finmath-lib | 6.1.7 | Monte Carlo SDE engine — GBM, Merton jump-diffusion, Heston stochastic-vol paths for the stochastic forecasts |
+| Hipparchus | 4.0.3 (core + stat) | Statistics & linear algebra — OLS (Fama-French attribution), Pearson/Spearman correlation matrices, VaR percentiles, Engle-Granger / ADF cointegration, seedable MersenneTwister RNG |
+
+Math is library-backed rather than hand-rolled: correctness on the Heston discretisation and the ADF critical-value table is exactly where bugs hide.
+
+### Data
+
+- **PostgreSQL 16 + pgvector** — single store for relational data *and* RAG embeddings (HNSW / cosine), no separate vector DB.
+- **Flyway** (`flyway-core` + `flyway-database-postgresql`) — owns all DDL, including the pgvector schema (`initialize-schema=false` on the vector store).
+
+### Frontend
+
+| Tech | Version | Role |
+|------|---------|------|
+| Vue 3 | 3.5.34 | SPA, Composition API / `<script setup>` |
+| Vite | 8.0.12 | Dev server & build (`vue-tsc` type-checked) |
+| TypeScript | 6.0.x | Strict typing across the app |
+| Pinia | 3.0.4 | State management |
+| ECharts / vue-echarts | 6.1.0 / 8.0.1 | Native candlestick, heatmap, and fan-chart rendering on Canvas |
+| Tailwind CSS | 4.3.0 | Styling, via `@tailwindcss/vite` (v4 zero-config) |
+| Vue Router | 4.6.4 | Routing |
+| axios | 1.17.0 | HTTP client to the Spring Boot API |
+
+### Tooling & infra
+
+- **springdoc-openapi** 2.8.17 — OpenAPI 3 spec + Swagger UI (`OpenApiConfig`).
+- **Testcontainers** (postgresql + junit-jupiter) — backend integration tests against a real Postgres.
+- **Vitest** 4.1.8 + `@vue/test-utils` + jsdom — frontend unit/component tests.
+- **Docker / docker-compose** — full stack (Postgres+pgvector, backend, frontend) via one `docker compose up`.
+
+### Architecture
+
+The backend is a **Spring Modulith** application; each top-level package is a module whose allowed cross-module dependencies are declared in `package-info.java`, forming a living contract:
+
+- `ai` → `portfolio::domain`, `marketdata::domain`, `seed`
+- `analytics` → `portfolio::domain`, `marketdata::domain`
+- `mcp` → `portfolio` (service/api/domain) + `analytics` (service/api) — a thin protocol adapter that recomputes nothing
+- `security` → `portfolio::domain`; `config` is standalone (no QuantLens dependencies)
+
+`QuantLensModulithTest` enforces this graph on every build via `ApplicationModules.verify()` (no illegal references, no cycles) and renders the module dependency graph to a PlantUML component diagram. The **demo ↔ live AI seam** is a first-class boundary: with no key the `DemoModeAdvisor` serves authored seed content (and a deterministic seed embedding model powers RAG), so the dashboard always runs and demos; paste a session-scoped key (`LlmKeySessionHolder`, never persisted or logged) and the same endpoints go live against Anthropic or OpenAI.
+
+The entire stack comes up with a single `docker compose up`:
 
 ```
 docker compose up
@@ -111,40 +178,51 @@ db (pgvector/pgvector:pg16, named volume, healthcheck)
       │ service_healthy
       ▼
 backend (eclipse-temurin:21, Spring Boot 3.5.13)
-      │ Flyway migrations → ApplicationRunner seeder → Spring Security
-      │ depends_on: backend started
+      │ Flyway migrations → ApplicationRunner seeder → Spring Security → /mcp + /v3/api-docs
+      │ depends_on: backend healthy
       ▼
 frontend (node:22 build → nginx:alpine)
-      Vite SPA, Pinia + Axios (withCredentials, XSRF-TOKEN interceptor)
+      Vue 3 SPA (Tailwind), Pinia + Axios (withCredentials, XSRF-TOKEN interceptor)
 ```
-
-**Stack:** Java 21 + Spring Boot 3.5.13 + Spring AI 1.1.6 (BOM-pinned, no starters yet) + Spring Modulith + Flyway + pgvector/Postgres 16 + Vue 3 (Composition API) + Vite + Pinia + Axios + ECharts (charts deferred to Phase 3)
 
 ---
 
 ## Screenshots
 
-The dashboard ships **screenshot-ready in demo mode** (no keys, no setup) and turns genuinely live when you paste your own LLM key into the in-app popup. The images below are captured in **live mode** — the AI panels show real LLM output, not the seeded fixtures — via the BYO-key flow described in the Capture Guide.
+Everything below is captured in **DEMO mode** — no API key, no network calls, zero setup — and turns fully live the moment you paste your own LLM key.
 
-> Capturing the live-mode images is a manual step (it needs your own Anthropic or OpenAI key). Drop the PNGs into `docs/screenshots/` using the filenames below and they render here.
+### AI Daily Commentary
 
-| View | Image | What it shows |
-|------|-------|---------------|
-| Dashboard (all AI panels) | `docs/screenshots/dashboard.png` | P&L, allocation, risk scorecard, the "explain this position" panel, and AI daily commentary in one view |
-| Stochastic fan chart | `docs/screenshots/fan-chart.png` | Monte Carlo "potential futures" with the GBM / Merton / Heston / Bootstrap model selector active |
-| RAG Q&A | `docs/screenshots/rag-qa.png` | Natural-language question answered over the 10-K corpus with inline citations |
-| Structured-output chart | `docs/screenshots/structured-output.png` | The LLM's typed `StructuredChartDto` rendered directly as a chart (same component in demo + live) |
-| BYO-key popup | `docs/screenshots/byo-key-popup.png` | The API-key popup that flips the mode badge from DEMO to LIVE (key is session-only, never persisted) |
+![QuantLens AI Daily Commentary hero card with seeded narrative and bullet insights](docs/screenshots/ai-commentary.png)
 
-### Capture Guide
+The hero card: a seeded LLM narrative plus bullet insights, rendered with no key — the same surface a live Spring AI provider drives once a key is supplied.
 
-1. `docker compose up` and open the app at http://localhost:5173
-2. Log in as **alice** / `demo1234`
-3. Open the **BYO-key popup** (the "Use your own key" / mode badge control)
-4. Paste a real **Anthropic** or **OpenAI** API key — it is held in your session only and is never persisted or logged
-5. The mode badge flips **DEMO → LIVE**; the AI panels now call the real LLM
-6. Screenshot each AI panel; cycle the fan-chart **model selector** (GBM → Merton → Heston → Bootstrap) for the fan-chart image
-7. Save the PNGs into `docs/screenshots/` using the filenames in the table above
+### Portfolio Performance
+
+![Portfolio Value P&L over two years beside Portfolio vs S&P 500 rebased](docs/screenshots/portfolio-charts.png)
+
+Portfolio Value (P&L over ~2 years) and Portfolio vs S&P 500 (rebased to a common base) side by side — your equity curve against the benchmark.
+
+### Correlation & Risk
+
+![Correlation heatmap in azure shading alongside portfolio risk metrics](docs/screenshots/correlation-matrix.png)
+
+The correlation heatmap (azure = more correlated) next to the risk metrics panel — Sharpe, VaR, beta, and volatility computed from real return series.
+
+### Holdings & Transactions
+
+![Holdings table with value, weight, cost and P&L beside transaction history with running cost basis](docs/screenshots/holdings-transactions.png)
+
+The Holdings table (value / weight / cost / P&L — click any row for an AI explanation) and Transaction history with a running cost basis.
+
+### Potential Futures
+
+![Monte Carlo fan chart with GBM, Jump-Diffusion, Heston and Bootstrap model selector](docs/screenshots/fan-chart.png)
+
+"Potential Futures": a Monte Carlo fan chart with a model selector for GBM / Jump-Diffusion / Heston / Bootstrap — stochastic forecasts of where the portfolio could land.
+
+> Capture: these are taken at `localhost:5173` after `docker compose up`.
+> See the API & Architecture Docs section to reproduce.
 
 ---
 
@@ -206,67 +284,133 @@ After configuring, verify with `claude mcp list` inside this project directory.
 
 ---
 
-## Product MCP Server (MCP-01 / MCP-02)
+## Product MCP Server
 
-QuantLens also ships its **own** MCP server — the portfolio analytics are exposed as Model
-Context Protocol tools so any MCP client (Claude Code, Claude Desktop, or your own agent) can
-query the live, computed portfolio. This is the product surface, distinct from the *dev* MCP
-servers above: it runs inside the Spring Boot app itself, over Streamable HTTP at `/mcp`.
-
-> The tools are a thin protocol adapter over the same golden-tested `PortfolioService` and
-> `RiskCalculator` used by the REST API and the Vue UI — **no math is recomputed**. Every tool
-> resolves the portfolio from the authenticated principal (never from a tool parameter), so one
-> credential only ever sees its own portfolio.
-
-### Transport & auth
-
-| Property | Value |
-|----------|-------|
-| Endpoint | `http://localhost:8080/mcp` (Streamable HTTP, embedded in the backend on port 8080) |
-| Protocol | Spring AI MCP server (`spring-ai-starter-mcp-server-webmvc`, BOM 1.1.6), SYNC |
-| Auth | **HTTP Basic** — `/mcp` requires authentication before any tool is reachable (unauthenticated POST → `401`) |
-| Demo credential | `alice` / `demo1234` (the seeded login shown on the sign-in screen) |
-
-The endpoint is exempt from CSRF (a machine client cannot replay the `XSRF-TOKEN` cookie) — this
-is **not** a relaxation, because `/mcp` still requires HTTP Basic auth. Error responses are
-sanitized: a tool failure returns a static safe message, never a Java stack trace or internal detail.
+QuantLens exposes its portfolio analytics as a **Model Context Protocol (MCP) server** — the freshest 2026 resume signal — over Streamable HTTP at `/mcp`, embedded directly in the Spring Boot app (no sidecar process). The endpoint is **HTTP-Basic gated** and **IDOR-safe**: the target portfolio is derived solely from the authenticated principal in the `SecurityContextHolder`, never from a tool parameter. Every tool body is wrapped in try/catch so the MCP client receives a **static safe message** while the full stack trace stays in the server log — no exception classes, messages, or stack traces ever cross the wire.
 
 ### Tool catalog
 
-| Tool | Parameters | Returns |
-|------|-----------|---------|
-| `get_portfolio_summary` | _(none)_ | Total market value, cost basis, unrealized P&L (abs + %), daily change (abs + %), and sector allocation weights |
-| `get_risk_metrics` | _(none)_ | Annualized Sharpe ratio, annualized volatility, max drawdown, beta vs SPX500, historical VaR (95%, 1-day), parametric VaR (95%, 1-day) |
-| `get_position_detail` | `ticker` (e.g. `AAPL`) | A single holding: ticker, name, sector, quantity, avg cost basis, current price, market value, portfolio weight, unrealized P&L (abs + %) |
+| Tool | Params | Returns |
+|------|--------|---------|
+| `get_portfolio_summary` | _(none — principal-derived)_ | Total market value, total cost basis, total unrealized P&L (absolute + %), daily change (absolute + %), and sector allocation weights. |
+| `get_risk_metrics` | _(none — principal-derived)_ | Annualized Sharpe ratio, annualized volatility, max drawdown, beta vs SPX500, historical VaR (95%, 1-day), parametric VaR (95%, 1-day). |
+| `get_position_detail` | `ticker` (string, required — e.g. `AAPL`, `BRK.B`) | A single holding: ticker, name, sector, quantity, avg cost basis, current price, market value, portfolio weight, and unrealized P&L (absolute + %). The ticker identifies a *security*, not a user — it is sanitized (uppercased, stripped to `[A-Z0-9.]`, capped at 10 chars) before the lookup. |
+
+Each tool is a thin protocol adapter: it delegates all computation to `PortfolioService` / `RiskCalculator` and recomputes nothing.
+
+```java
+@McpTool(
+        name = "get_risk_metrics",
+        description = "Returns risk metrics for the authenticated user's portfolio: " +
+                      "annualized Sharpe ratio, annualized volatility, max drawdown, " +
+                      "beta vs SPX500, historical VaR (95%, 1-day), parametric VaR (95%, 1-day)."
+)
+public McpSchema.CallToolResult getRiskMetrics() {
+    try {
+        Long portfolioId = resolvePortfolioId();                 // principal-derived, never a param
+        RiskScorecardDto scorecard = riskCalculator.computeRiskScorecard(portfolioId);
+
+        // Extract VaR amounts by method name — no recompute
+        BigDecimalRef histVar = new BigDecimalRef();
+        BigDecimalRef paramVar = new BigDecimalRef();
+        for (VarResultDto var : scorecard.var()) {
+            if ("HISTORICAL".equals(var.method())) histVar.value = var.amount();
+            else if ("PARAMETRIC".equals(var.method())) paramVar.value = var.amount();
+        }
+        // never serialize null VaR to the client/LLM — surface a static error instead
+        if (histVar.value == null || paramVar.value == null) { /* … log + isError result … */ }
+
+        RiskMetricsResult result = new RiskMetricsResult(
+                scorecard.sharpeRatio(), scorecard.annualizedVolatility(),
+                scorecard.maxDrawdown(), scorecard.beta(),
+                histVar.value, paramVar.value);
+        String json = objectMapper.writeValueAsString(result);
+        return McpSchema.CallToolResult.builder()
+                .content(List.of(new McpSchema.TextContent(json)))
+                .isError(false)
+                .build();
+    } catch (ResponseStatusException e) {
+        return McpSchema.CallToolResult.builder()
+                .content(List.of(new McpSchema.TextContent("Portfolio not found for authenticated user")))
+                .isError(true)
+                .build();
+    } catch (Exception e) {
+        log.error("get_risk_metrics failed (not forwarded to client)", e);   // full trace stays server-side
+        return McpSchema.CallToolResult.builder()
+                .content(List.of(new McpSchema.TextContent("Risk metrics unavailable")))
+                .isError(true)
+                .build();
+    }
+}
+
+// Typed result — a plain record (no Spring/JPA annotations) for reliable JSON-schema generation
+public record RiskMetricsResult(
+        double sharpeRatio,
+        double annualizedVolatility,
+        double maxDrawdown,
+        double beta,
+        BigDecimal historicalVar95,   // positive loss amount, method=="HISTORICAL"
+        BigDecimal parametricVar95    // positive loss amount, method=="PARAMETRIC"
+) {}
+```
+
+The principal resolution is defence-in-depth behind the `/mcp` auth gate: `resolvePortfolioId()` rejects `null`, unauthenticated, and `AnonymousAuthenticationToken` principals (whose `isAuthenticated()` returns `true` by design), then maps the username to a portfolio — both "user not found" and "no portfolio" return `401`, so the LLM cannot probe for other users' portfolios.
 
 ### Connect from Claude Code
 
-The committed `.mcp.json` already includes a `quantlens` entry pointing at the running server:
+The repo ships a committed `quantlens` server entry in `.mcp.json`:
 
 ```jsonc
-"quantlens": {
-  "type": "http",
-  "url": "http://localhost:8080/mcp",
-  "headers": { "Authorization": "Basic ${QUANTLENS_MCP_AUTH:-YWxpY2U6ZGVtbzEyMzQ=}" }
+{
+  "mcpServers": {
+    "quantlens": {
+      "type": "http",
+      "url": "http://localhost:8080/mcp",
+      "headers": {
+        // base64("alice:demo1234") — overridable via the QUANTLENS_MCP_AUTH env var
+        "Authorization": "Basic ${QUANTLENS_MCP_AUTH:-YWxpY2U6ZGVtbzEyMzQ=}"
+      }
+    }
+  }
 }
 ```
 
-The base64 token `YWxpY2U6ZGVtbzEyMzQ=` decodes to `alice:demo1234` (the demo credential — safe to
-commit). Override it with a different user via the `QUANTLENS_MCP_AUTH` env var
-(`echo -n 'bob:demo1234' | base64`).
+1. `docker compose up` — brings up the Spring Boot app with the embedded MCP server on `:8080`.
+2. `claude mcp get quantlens` — confirms Claude Code picked up the committed entry.
+3. In a Claude Code session, run `/mcp` — it lists the three QuantLens tools (`get_portfolio_summary`, `get_risk_metrics`, `get_position_detail`).
+
+The demo credential is `alice:demo1234`, supplied as base64 (`YWxpY2U6ZGVtbzEyMzQ=`) in the `Authorization` header. Override it for any user/password without editing the file by exporting `QUANTLENS_MCP_AUTH` (e.g. `export QUANTLENS_MCP_AUTH="Basic $(printf 'bob:secret' | base64)"`).
+
+### Try it by hand
+
+Drive the MCP `initialize` handshake directly with `curl` — Basic auth plus the dual `Accept` header that Streamable HTTP requires:
 
 ```bash
-# 1. Start the stack so /mcp is live
-docker compose up
-
-# 2. From inside this project directory, Claude Code auto-loads .mcp.json — verify:
-claude mcp get quantlens
-# In a Claude Code session, /mcp lists the three tools; then ask, e.g.:
-#   "Use get_risk_metrics to show my portfolio's Sharpe and 95% VaR."
+curl -s http://localhost:8080/mcp \
+  -u alice:demo1234 \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {
+          "protocolVersion": "2024-11-05",
+          "capabilities": {},
+          "clientInfo": { "name": "curl", "version": "1.0" }
+        }
+      }'
 ```
 
-Any MCP client can connect the same way: point it at `http://localhost:8080/mcp` with an
-`Authorization: Basic <base64(user:pass)>` header and call `tools/list` then `tools/call`.
+The real server response:
+
+```json
+{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2024-11-05","capabilities":{"completions":{},"logging":{},"prompts":{"listChanged":true},"resources":{"subscribe":false,"listChanged":true},"tools":{"listChanged":true}},"serverInfo":{"name":"quantlens-mcp","version":"1.0.0"}}}
+```
+
+Notes:
+- **`GET /mcp` without credentials returns `401`** — the HTTP-Basic auth gate in `SecurityConfig` (`.anyRequest().authenticated()` + `.httpBasic(...)`). The `/mcp` POST transport is also explicitly exempted from CSRF, which is safe because the endpoint stays Basic-authenticated rather than session-based.
+- **`/mcp` is a machine endpoint** (JSON-RPC + SSE), not a browsable page. Opening it in a browser yields `Invalid Accept header. Expected TEXT_EVENT_STREAM` — that error is expected; the endpoint is meant for MCP clients, not eyeballs.
 
 ---
 

@@ -57,6 +57,8 @@ class OpenApiDocsIntegrationTest extends AbstractPostgresIntegrationTest {
                 .doesNotContain("AiKeyRequest")
                 .doesNotContain("llmKey")
                 .doesNotContain("\"password\"")
+                .doesNotContain("passwordHint")   // PersonaDto.passwordHint is @Schema(hidden=true)
+                .doesNotContain("/actuator")       // springdoc.show-actuator=false (IN-03)
                 .doesNotContain("sk-ant-")
                 .doesNotContain("sk-proj-");
     }

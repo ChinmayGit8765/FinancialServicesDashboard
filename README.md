@@ -152,7 +152,9 @@ The dashboard ships **screenshot-ready in demo mode** (no keys, no setup) and tu
 
 - **OpenAPI spec:** http://localhost:8080/v3/api-docs (raw JSON — all portfolio, analytics, and AI endpoints; the BYO-key intake endpoint is intentionally excluded so no key surface is published)
 - **Swagger UI:** http://localhost:8080/swagger-ui.html (interactive API explorer)
-- **Module diagram (Spring Modulith):** regenerate with `.\mvnw.cmd test -pl backend -Dtest=QuantLensModulithTest` (JAVA_HOME=Temurin 21) → `backend/target/spring-modulith-docs/components.puml`. The same test's `applicationModulesShouldBeValid()` enforces the module-boundary graph as a living contract on every build.
+- **Module diagram (Spring Modulith):** regenerate (JAVA_HOME=Temurin 21) → `backend/target/spring-modulith-docs/components.puml`. The same test's `applicationModulesShouldBeValid()` enforces the module-boundary graph as a living contract on every build.
+  - Windows (PowerShell): `.\mvnw.cmd test -pl backend -Dtest=QuantLensModulithTest`
+  - Linux/macOS: `./mvnw test -pl backend -Dtest=QuantLensModulithTest`
 - **Stochastic model rationale:** [docs/MODELS.md](docs/MODELS.md) — why each Monte Carlo model, key assumptions, parameters, and limitations
 - **RAG design:** [docs/RAG_DESIGN.md](docs/RAG_DESIGN.md) — the zero-key deterministic embedding + retrieval approach
 - **Product MCP server + dev MCP servers:** see the MCP sections below

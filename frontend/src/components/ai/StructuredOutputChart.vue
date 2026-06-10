@@ -87,9 +87,9 @@ const option = computed<EChartsOption>(() => {
     aria-label="AI Structured Output chart"
   >
 
-    <!-- Demo badge — clarifies this is the structured-output seam panel -->
+    <!-- Mode-neutral badge: accurate in both demo and live (the panel renders the same DTO in both) -->
     <div v-if="!props.loading && !props.error" class="chart-badge">
-      <span class="demo-label">Structured Output · Demo</span>
+      <span class="demo-label">Structured Output</span>
     </div>
 
     <!-- Loading: shimmer skeleton -->

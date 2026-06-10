@@ -4,6 +4,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.modulith.core.ApplicationModules;
 import org.springframework.modulith.docs.Documenter;
 
+import java.nio.file.Path;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
 /**
  * Spring Modulith architecture verification + documentation (Phase 10, SC-3).
  * <p>
@@ -34,9 +38,13 @@ class QuantLensModulithTest {
     @Test
     void generatesModuleDocumentation() {
         // Writes the PlantUML component diagram to target/spring-modulith-docs/ (git-ignored under
-        // **/target/). Asserts only that generation completes without throwing — the diagram is a
-        // build artifact, not a committed file. Canvas generation is intentionally omitted (see Javadoc).
+        // **/target/). The diagram is a build artifact, not a committed file. Canvas generation is
+        // intentionally omitted (see Javadoc). Assert the artifact is actually produced (IN-01).
         new Documenter(MODULES)
                 .writeModulesAsPlantUml();
+
+        assertThat(Path.of("target/spring-modulith-docs/components.puml"))
+                .as("Documenter must generate the module component diagram")
+                .exists();
     }
 }

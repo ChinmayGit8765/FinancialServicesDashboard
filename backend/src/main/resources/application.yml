@@ -61,6 +61,10 @@ spring:
         streamable-http:
           mcp-endpoint: /mcp    # default /mcp; explicit for documentation
 
+# Phase 10: OpenAPI / springdoc
+springdoc:
+  show-actuator: false          # explicit (default false) — keep actuator endpoints out of the public spec (IN-03)
+
 logging:
   level:
     # WARN — prevents SimpleLoggerAdvisor from logging prompt/response details at DEBUG (RESEARCH Pitfall 4 / T-06-02)

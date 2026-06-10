@@ -3,7 +3,6 @@ package com.quantlens.config;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
-import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -41,8 +40,9 @@ public class OpenApiConfig {
                         .addSecuritySchemes("http-basic-mcp", new SecurityScheme()
                                 .type(SecurityScheme.Type.HTTP)
                                 .scheme("basic")
-                                .description("HTTP Basic auth for the /mcp Streamable-HTTP MCP server")))
-                // Default: the browser/SPA session cookie.
-                .addSecurityItem(new SecurityRequirement().addList("session-cookie"));
+                                .description("HTTP Basic auth for the /mcp Streamable-HTTP MCP server")));
+        // WR-02: no GLOBAL security requirement — a global addSecurityItem would falsely mark the
+        // public endpoints (POST /api/auth/login, GET /api/auth/personas) as requiring auth in Swagger UI.
+        // The schemes are documented in components; per-operation requirements are a deferred enhancement.
     }
 }

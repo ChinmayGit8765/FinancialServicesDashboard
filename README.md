@@ -215,6 +215,12 @@ The correlation heatmap (azure = more correlated) next to the risk metrics panel
 
 The Holdings table (value / weight / cost / P&L — click any row for an AI explanation) and Transaction history with a running cost basis.
 
+### Cointegration Pairs
+
+![Cointegration pairs table showing the detected XOM/COP mean-reverting pair](docs/screenshots/cointegration-pairs.png)
+
+The pairs scanner flags **statistically cointegrated** holdings (Engle-Granger two-step + ADF, `p < 0.05`). Here it detects the **XOM / COP** energy pair — `p = 0.000`, hedge ratio `0.75`, spread Z-score `−0.59` — a genuine mean-reverting relationship the *unmodified* scanner finds in the seeded data, not a hand-picked result.
+
 ### Potential Futures
 
 ![Monte Carlo fan chart with GBM, Jump-Diffusion, Heston and Bootstrap model selector](docs/screenshots/fan-chart.png)

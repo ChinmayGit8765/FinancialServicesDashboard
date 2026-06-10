@@ -344,15 +344,17 @@ function retryForecast(): void { portfolioStore.fetchForecast() }
   display: grid;
   grid-template-columns: repeat(12, 1fr);
   gap: var(--space-xl);
-  padding: var(--space-lg);
+  max-width: 1680px;
+  margin: 0 auto;
+  padding: var(--space-xl) var(--space-lg) var(--space-2xl);
 }
 
 /* KPI strip: auto-fit row spanning full width */
 .kpi-strip {
   grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: var(--space-md);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-lg);
 }
 
 /* Phase-4 KPI placeholders: 50% opacity per UI-SPEC */

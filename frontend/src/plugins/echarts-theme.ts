@@ -6,28 +6,28 @@ export const quantlensDarkTheme = {
 
   textStyle: {
     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-    color: '#94a3b8',                // --color-text-secondary
+    color: '#a7b4c4',                // --color-text-secondary
     fontSize: 12,
   },
 
   title: {
-    textStyle: { color: '#e2e8f0', fontSize: 14, fontWeight: 600 },
-    subtextStyle: { color: '#64748b', fontSize: 11 },
+    textStyle: { color: '#e8edf4', fontSize: 14, fontWeight: 600 },
+    subtextStyle: { color: '#75828f', fontSize: 11 },
   },
 
   legend: {
-    textStyle: { color: '#94a3b8', fontSize: 12 },
+    textStyle: { color: '#a7b4c4', fontSize: 12 },
     icon: 'circle',
     itemWidth: 8,
     itemHeight: 8,
   },
 
   tooltip: {
-    backgroundColor: '#1e293b',      // --color-bg-surface
-    borderColor: '#334155',          // --color-border
+    backgroundColor: '#1a2230',      // --color-bg-surface
+    borderColor: '#2a3546',          // --color-border
     borderWidth: 1,
-    textStyle: { color: '#e2e8f0', fontSize: 13 },
-    extraCssText: 'border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.55)',
+    textStyle: { color: '#e8edf4', fontSize: 13 },
+    extraCssText: 'border-radius: 10px; box-shadow: 0 12px 40px rgba(0,0,0,0.45)',
   },
 
   grid: {
@@ -39,21 +39,21 @@ export const quantlensDarkTheme = {
   },
 
   xAxis: {
-    axisLine:  { lineStyle: { color: '#334155' } },
-    axisTick:  { lineStyle: { color: '#334155' } },
-    axisLabel: { color: '#64748b', fontSize: 11 },
+    axisLine:  { lineStyle: { color: '#2a3546' } },
+    axisTick:  { lineStyle: { color: '#2a3546' } },
+    axisLabel: { color: '#75828f', fontSize: 11 },
     splitLine: { show: false },
   },
 
   yAxis: {
     axisLine:  { show: false },
     axisTick:  { show: false },
-    axisLabel: { color: '#64748b', fontSize: 11 },
-    splitLine: { lineStyle: { color: '#1e293b', type: 'dashed' } },  // --color-border-subtle
+    axisLabel: { color: '#75828f', fontSize: 11 },
+    splitLine: { lineStyle: { color: '#1b232f', type: 'dashed' } },  // --color-border-subtle
   },
 
-  // Default color cycle (allocation donut sectors, etc.)
-  color: ['#0ea5e9', '#8b5cf6', '#f59e0b', '#22c55e', '#ec4899', '#14b8a6', '#f97316', '#6366f1'],
+  // Default color cycle (allocation donut sectors, etc.) — muted, natural tones
+  color: ['#4f9fe0', '#9b8cf0', '#d7a657', '#4cc08c', '#df85b4', '#46b5b0', '#dd9a63', '#7e8ce8'],
 
   line: {
     smooth: true,
@@ -61,10 +61,9 @@ export const quantlensDarkTheme = {
     lineStyle: { width: 2 },
   },
 
-  // Heatmap (Phase 4 correlation): color scale blue → white → red
-  // Registered now so Phase 4 can use it without touching the theme:
+  // Heatmap (correlation): muted coral → neutral → azure
   visualMap: {
-    color: ['#ef4444', '#f8fafc', '#3b82f6'],   // --color-down, near-white, blue
-    textStyle: { color: '#94a3b8' },
+    color: ['#e87b73', '#e9eef4', '#4f9fe0'],   // --color-down, near-white, --color-accent
+    textStyle: { color: '#a7b4c4' },
   },
 }

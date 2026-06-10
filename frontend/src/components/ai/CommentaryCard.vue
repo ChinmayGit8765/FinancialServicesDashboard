@@ -73,35 +73,37 @@ const emit = defineEmits<{
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
   border: 1px solid var(--color-border);
-  padding: var(--space-lg);
+  padding: var(--space-xl);
   min-height: 120px;
 }
 
 .commentary-header {
-  margin-bottom: var(--space-sm);
+  margin-bottom: var(--space-md);
 }
 
 .commentary-label {
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   color: var(--color-accent);
 }
 
 .commentary-headline {
-  font-size: 17px;
+  font-size: 19px;
   font-weight: 700;
   color: var(--color-text-primary);
-  margin: 0 0 var(--space-sm) 0;
-  line-height: 1.4;
+  margin: 0 0 var(--space-md) 0;
+  line-height: 1.45;
+  letter-spacing: -0.01em;
 }
 
 .commentary-body {
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: 15px;
+  line-height: 1.75;
   color: var(--color-text-secondary);
-  margin: 0 0 var(--space-md) 0;
+  margin: 0 0 var(--space-lg) 0;
+  max-width: 76ch;
 }
 
 .commentary-bullets {
@@ -110,11 +112,12 @@ const emit = defineEmits<{
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-xs);
+  gap: var(--space-sm);
 }
 
 .bullet-item {
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 1.6;
   color: var(--color-text-secondary);
   padding-left: var(--space-md);
   position: relative;

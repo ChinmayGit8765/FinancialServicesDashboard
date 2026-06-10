@@ -53,19 +53,21 @@ const borderClass = computed(() => {
   />
   <div
     v-else
-    class="group flex min-h-[92px] flex-col gap-1 rounded-xl border border-edge bg-surface p-4 transition hover:-translate-y-0.5 hover:border-brand/50 hover:shadow-card"
+    class="group flex min-h-[116px] flex-col gap-2 rounded-2xl border border-edge bg-surface px-5 py-4 transition hover:-translate-y-0.5 hover:border-brand/50 hover:shadow-card"
     :class="borderClass"
   >
-    <span class="text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-muted">{{ label }}</span>
-    <span class="font-mono text-[22px] font-semibold leading-tight tabular-nums text-ink">{{ primary }}</span>
-    <span v-if="secondary" class="font-mono text-sm tabular-nums text-ink-soft">{{ secondary }}</span>
-    <span
-      v-if="delta !== undefined && delta !== null"
-      class="kpi-delta font-mono text-sm tabular-nums"
-      :class="deltaColorClass"
-    >
-      {{ deltaFormatted }}
-    </span>
+    <span class="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-muted">{{ label }}</span>
+    <span class="font-mono text-[27px] font-semibold leading-none tabular-nums text-ink">{{ primary }}</span>
+    <div class="mt-auto flex items-baseline gap-2">
+      <span v-if="secondary" class="font-mono text-sm tabular-nums text-ink-soft">{{ secondary }}</span>
+      <span
+        v-if="delta !== undefined && delta !== null"
+        class="kpi-delta font-mono text-sm tabular-nums"
+        :class="deltaColorClass"
+      >
+        {{ deltaFormatted }}
+      </span>
+    </div>
   </div>
 </template>
 
@@ -94,8 +96,8 @@ const borderClass = computed(() => {
   );
   background-size: 200% auto;
   animation: shimmer 1.4s linear infinite;
-  border-radius: var(--radius-lg);
-  height: 92px;
+  border-radius: var(--radius-xl);
+  height: 116px;
   border: 1px solid var(--color-border);
 }
 </style>

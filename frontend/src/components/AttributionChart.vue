@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import VChart from 'vue-echarts'
+import CardHeading from './CardHeading.vue'
 import type { EChartsOption } from 'echarts/types/dist/shared'
 import type { AttributionDto } from '@/api/analytics'
 
@@ -66,6 +67,8 @@ const option = computed<EChartsOption>(() => {
     :aria-busy="loading"
     aria-label="Factor attribution chart"
   >
+    <CardHeading title="Factor Attribution" subtitle="Fama-French breakdown: how much return came from market, size & value exposure vs. stock-picking (alpha)." />
+
     <!-- Loading skeleton -->
     <div v-if="loading" class="skeleton" style="height: 280px" aria-hidden="true" />
 

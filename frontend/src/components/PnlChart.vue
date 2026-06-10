@@ -4,6 +4,7 @@ import VChart from 'vue-echarts'
 import type { EChartsOption } from 'echarts/types/dist/shared'
 import type { PortfolioPnlDto } from '@/api/portfolio'
 import { CHART_COLORS } from '@/plugins/chart-colors'
+import CardHeading from './CardHeading.vue'
 
 // T-03-07: tooltip/axis formatters use typed numbers/ISO dates only — no v-html, no raw API strings injected into DOM
 // T-03-08: error state shows static copy from UI-SPEC, never the raw error object
@@ -98,6 +99,8 @@ const option = computed<EChartsOption>(() => {
     :aria-busy="loading"
     aria-label="P&L equity curve chart"
   >
+    <CardHeading title="Portfolio Value" subtitle="Total portfolio market value over ~2 years. Hover any point for that day’s value." />
+
     <!-- Loading skeleton -->
     <div v-if="loading" class="skeleton" style="height: 320px" aria-hidden="true" />
 

@@ -5,6 +5,7 @@ import type { EChartsOption } from 'echarts/types/dist/shared'
 import type { ForecastDto } from '@/api/forecast'
 import type { ModelType } from '@/api/forecast'
 import { getFanColors } from '@/plugins/chart-colors'
+import CardHeading from './CardHeading.vue'
 
 // T-03-07: axis/tooltip formatters use typed numbers only — no v-html, no raw API strings
 // T-03-08: error state shows static copy from UI-SPEC, never the raw error object
@@ -133,6 +134,11 @@ const option = computed<EChartsOption>(() => {
     :aria-busy="loading"
     aria-label="Monte Carlo fan chart"
   >
+    <CardHeading
+      title="Potential Futures"
+      subtitle="Monte Carlo simulation of where the portfolio could go. Switch the model to compare assumptions."
+    />
+
     <!-- Model selector toggle (AllocationChart.vue .chart-toggle pattern) -->
     <div
       v-if="!loading && !error && props.forecast?.p50?.length"

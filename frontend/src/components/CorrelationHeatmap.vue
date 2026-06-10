@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import VChart from 'vue-echarts'
 import type { EChartsOption } from 'echarts/types/dist/shared'
 import type { CorrelationMatrixDto } from '@/api/analytics'
+import CardHeading from './CardHeading.vue'
 
 // T-04-08: props-driven — tests mount directly without store.
 // No theme prop: THEME_KEY is provided globally in App.vue; VChart picks it up automatically.
@@ -82,6 +83,8 @@ const option = computed<EChartsOption>(() => {
     :aria-busy="loading"
     aria-label="Correlation heatmap"
   >
+    <CardHeading title="Correlation Matrix" subtitle="How closely each pair of holdings moves together (−1 to +1). Warmer = more correlated." />
+
     <!-- Loading skeleton -->
     <div v-if="loading" class="skeleton" style="height: 320px" aria-hidden="true" />
 

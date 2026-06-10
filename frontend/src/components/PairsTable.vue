@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { PairResultDto } from '@/api/analytics'
+import CardHeading from './CardHeading.vue'
 
 // T-04-08: props-driven — tests mount directly without store.
 const props = defineProps<{
@@ -25,6 +26,8 @@ function zScoreClass(z: number): string {
 
 <template>
   <div class="table-panel">
+    <CardHeading title="Cointegration Pairs" subtitle="Statistically mean-reverting pairs (Engle-Granger ADF, p < 0.05) — pairs-trading candidates." />
+
     <!-- Loading skeleton -->
     <div v-if="loading" class="skeleton" style="height: 200px" aria-hidden="true" />
 

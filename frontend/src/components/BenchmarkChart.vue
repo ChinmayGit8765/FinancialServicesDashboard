@@ -4,6 +4,7 @@ import VChart from 'vue-echarts'
 import type { EChartsOption } from 'echarts/types/dist/shared'
 import type { BenchmarkComparisonDto } from '@/api/portfolio'
 import { CHART_COLORS } from '@/plugins/chart-colors'
+import CardHeading from './CardHeading.vue'
 
 // T-03-07: tooltip formatters use typed numbers/ISO dates only — no v-html, no raw API strings
 // T-03-08: error state shows static copy from UI-SPEC, never the raw error object
@@ -97,6 +98,8 @@ const option = computed<EChartsOption>(() => {
     :aria-busy="loading"
     aria-label="Benchmark comparison chart"
   >
+    <CardHeading title="Portfolio vs S&P 500" subtitle="Both rebased to 100 at the start — compares growth, not dollar size." />
+
     <!-- Loading skeleton -->
     <div v-if="loading" class="skeleton" style="height: 320px" aria-hidden="true" />
 

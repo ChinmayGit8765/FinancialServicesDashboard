@@ -14,6 +14,7 @@ import VChart from 'vue-echarts'
 import type { EChartsOption } from 'echarts/types/dist/shared'
 import type { StructuredChartDto } from '../../api/ai'
 import { CHART_COLORS } from '../../plugins/chart-colors'
+import CardHeading from '../CardHeading.vue'
 
 const props = defineProps<{
   structured: StructuredChartDto | null
@@ -87,10 +88,7 @@ const option = computed<EChartsOption>(() => {
     aria-label="AI Structured Output chart"
   >
 
-    <!-- Mode-neutral badge: accurate in both demo and live (the panel renders the same DTO in both) -->
-    <div v-if="!props.loading && !props.error" class="chart-badge">
-      <span class="demo-label">Structured Output</span>
-    </div>
+    <CardHeading title="AI Structured Output" subtitle="The LLM’s typed JSON rendered straight to a chart — seeded in demo, live LLM with a key." />
 
     <!-- Loading: shimmer skeleton -->
     <div v-if="props.loading" class="skeleton" style="height: 240px" aria-hidden="true" />

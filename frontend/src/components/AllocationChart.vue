@@ -4,6 +4,7 @@ import VChart from 'vue-echarts'
 import type { EChartsOption } from 'echarts/types/dist/shared'
 import type { AllocationSliceDto } from '@/api/portfolio'
 import { CHART_COLORS } from '@/plugins/chart-colors'
+import CardHeading from './CardHeading.vue'
 
 // T-03-07: label formatters use typed numbers only — no v-html, no raw API strings
 // T-03-08: error state shows static copy from UI-SPEC, never the raw error object
@@ -147,6 +148,8 @@ const option = computed<EChartsOption>(() =>
     :aria-busy="loading"
     aria-label="Allocation chart"
   >
+    <CardHeading title="Allocation" subtitle="Current portfolio weight by sector. Toggle donut / treemap." />
+
     <!-- Toggle control — positioned top-right; outside v-if so always visible when populated -->
     <div
       v-if="!loading && !error && props.allocation?.length"

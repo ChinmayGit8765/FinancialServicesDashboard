@@ -12,6 +12,7 @@
  */
 import type { ChatMessage } from '../../api/ai'
 import { ref, nextTick, watch } from 'vue'
+import CardHeading from '../CardHeading.vue'
 
 const props = defineProps<{
   messages: ChatMessage[]
@@ -44,10 +45,7 @@ function submitMessage() {
 <template>
   <div class="chat-panel">
 
-    <!-- Header -->
-    <div class="chat-header">
-      <span class="chat-label">AI Q&amp;A</span>
-    </div>
+    <CardHeading title="Ask the Portfolio" subtitle="Natural-language Q&A (RAG) over the seeded filings corpus. Try: “What are AAPL’s key risks?”" />
 
     <!-- Message list -->
     <div class="message-list" ref="messageList">

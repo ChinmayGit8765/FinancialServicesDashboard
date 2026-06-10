@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { PageResponse, TransactionDto } from '@/api/portfolio'
 import { formatCurrency, formatDate } from '@/utils/format'
+import CardHeading from './CardHeading.vue'
 
 const props = defineProps<{
   page: PageResponse<TransactionDto> | null
@@ -18,6 +19,7 @@ const isEmpty = () =>
 
 <template>
   <div class="transactions-wrapper">
+    <CardHeading title="Transactions" subtitle="Buy / sell history with running cost basis." />
     <table class="transactions-table" aria-label="Transactions">
       <thead>
         <tr>

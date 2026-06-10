@@ -8,6 +8,7 @@ import {
   formatSignedPercent,
 } from '@/utils/format'
 import SignedValue from './SignedValue.vue'
+import CardHeading from './CardHeading.vue'
 
 const props = defineProps<{
   holdings: HoldingDto[] | null
@@ -85,6 +86,7 @@ const isEmpty = computed(
 
 <template>
   <div class="holdings-wrapper">
+    <CardHeading title="Holdings" subtitle="Each position’s value, weight, cost basis and unrealized P&L. Click a row for an AI explanation." />
     <table class="holdings-table" aria-label="Holdings">
       <thead>
         <tr>

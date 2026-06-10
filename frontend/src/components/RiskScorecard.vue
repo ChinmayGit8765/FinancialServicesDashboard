@@ -2,6 +2,7 @@
 import type { RiskScorecardDto } from '@/api/analytics'
 import { formatPercent, formatSignedPercent, formatCurrency } from '@/utils/format'
 import KpiCard from './KpiCard.vue'
+import CardHeading from './CardHeading.vue'
 
 // T-04-08: props-driven so tests can mount directly without store.
 // Components in DashboardView bind portfolioStore.risk.{data,loading,error}.
@@ -16,6 +17,12 @@ const emit = defineEmits<{ retry: [] }>()
 
 <template>
   <section class="risk-scorecard" aria-label="Risk Scorecard">
+    <CardHeading
+      style="grid-column: 1 / -1"
+      title="Risk Metrics"
+      subtitle="Annualized risk for this portfolio — Sharpe, volatility, max drawdown, beta, and 1-day Value-at-Risk (VaR)."
+    />
+
     <!-- Loading state: one outer skeleton shown when loading, plus KpiCard skeletons -->
     <template v-if="loading">
       <div class="skeleton kpi-skeleton" aria-hidden="true" />

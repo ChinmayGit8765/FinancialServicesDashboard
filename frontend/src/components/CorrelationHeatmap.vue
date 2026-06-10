@@ -84,7 +84,7 @@ const option = computed<EChartsOption>(() => {
     :aria-busy="loading"
     aria-label="Correlation heatmap"
   >
-    <CardHeading title="Correlation Matrix" subtitle="How closely each pair of holdings moves together (−1 to +1). Warmer = more correlated." />
+    <CardHeading title="Correlation Matrix" subtitle="How closely each pair of holdings moves together (−1 to +1). Deeper blue = more correlated." />
 
     <!-- Loading skeleton -->
     <div v-if="loading" class="skeleton" style="height: 320px" aria-hidden="true" />

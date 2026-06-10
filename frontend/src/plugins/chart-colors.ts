@@ -26,8 +26,9 @@ export const CHART_COLORS = {
   surface:       cssVar('--color-bg-surface',       '#1a2230'),
   up:            cssVar('--color-up',               '#4cc08c'),
   down:          cssVar('--color-down',             '#e87b73'),
-  // Diverging heatmap scale for correlation cells: down (−1) → neutral (0) → accent (+1)
-  heatmap:       [cssVar('--color-down', '#e87b73'), '#e9eef4', cssVar('--color-accent', '#4f9fe0')] as string[],
+  // Diverging heatmap scale for correlation cells (ECharts order = high→low):
+  // strong positive = brand azure (+1), neutral (0), inverse = soft coral (−1).
+  heatmap:       [cssVar('--color-accent', '#4f9fe0'), '#dbe4ee', cssVar('--color-down', '#e87b73')] as string[],
 } as const
 
 /**

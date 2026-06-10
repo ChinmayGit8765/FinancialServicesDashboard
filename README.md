@@ -241,6 +241,7 @@ The pairs scanner flags **statistically cointegrated** holdings (Engle-Granger t
   - Linux/macOS: `./mvnw test -pl backend -Dtest=QuantLensModulithTest`
 - **Stochastic model rationale:** [docs/MODELS.md](docs/MODELS.md) — why each Monte Carlo model, key assumptions, parameters, and limitations
 - **RAG design:** [docs/RAG_DESIGN.md](docs/RAG_DESIGN.md) — the zero-key deterministic embedding + retrieval approach
+- **Try the RAG Q&A in your terminal:** `./scripts/rag-chat.ps1` — logs in and lets you ask questions over the filings corpus (grounded answer + 10-K citations). Demo mode needs no key; pass `-ApiKey sk-...` for live retrieval.
 - **Product MCP server + dev MCP servers:** see the MCP sections below
 - **Auth upgrade path:** see [OAuth Upgrade Path](#oauth-upgrade-path) for the form-login → OAuth2/OIDC seam
 

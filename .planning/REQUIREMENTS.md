@@ -130,11 +130,11 @@ Which phases cover which requirements. Populated during roadmap creation.
 | AUTH-01 | Phase 1 | Complete |
 | AUTH-02 | Phase 1 | Complete |
 | DEVX-01 | Phase 1 | Complete |
-| PORT-01 | Phase 2 | Pending |
-| PORT-02 | Phase 2 | Pending |
-| PORT-03 | Phase 2 | Pending |
+| PORT-01 | Phase 2 | Complete |
+| PORT-02 | Phase 2 | Complete |
+| PORT-03 | Phase 2 | Complete |
 | PORT-04 | Phase 2 | Complete |
-| PORT-05 | Phase 2 | Pending |
+| PORT-05 | Phase 2 | Complete |
 | AUTH-03 | Phase 3 | Complete |
 | UI-01 | Phase 3 | Complete |
 | RISK-01 | Phase 4 | Complete |
@@ -153,8 +153,8 @@ Which phases cover which requirements. Populated during roadmap creation.
 | AI-04 | Phase 7 | Complete |
 | AI-05 | Phase 8 | Complete |
 | AI-06 | Phase 8 | Complete |
-| MCP-01 | Phase 9 | Pending |
-| MCP-02 | Phase 9 | Pending |
+| MCP-01 | Phase 9 | Complete |
+| MCP-02 | Phase 9 | Complete |
 | DOCS-01 | Phase 10 | Complete |
 
 **Coverage:**

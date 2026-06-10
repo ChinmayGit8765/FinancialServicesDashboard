@@ -166,6 +166,46 @@ class PortfolioMcpToolsTest extends AbstractPostgresIntegrationTest {
                 .doesNotContain("java.lang");
     }
 
+    @Test
+    void getRiskMetrics_exception_doesNotLeakStackTrace() {
+        // WR-03: getRiskMetrics has the same catch structure — prove its hygiene too.
+        String secret = "INTERNAL_RISK_ERROR_secret_xyz";
+        RiskCalculator throwingCalc = mock(RiskCalculator.class);
+        when(throwingCalc.computeRiskScorecard(org.mockito.ArgumentMatchers.anyLong()))
+                .thenThrow(new RuntimeException(secret));
+
+        PortfolioMcpTools failingTools =
+                new PortfolioMcpTools(portfolioService, throwingCalc, portfolioRepository, objectMapper);
+
+        McpSchema.CallToolResult result = failingTools.getRiskMetrics();
+        assertThat(result.isError()).isTrue();
+        assertThat(extractText(result))
+                .doesNotContain(secret)
+                .doesNotContain("RuntimeException")
+                .doesNotContain("com.quantlens")
+                .doesNotContain("java.lang");
+    }
+
+    @Test
+    void getPositionDetail_exception_doesNotLeakStackTrace() {
+        // WR-03: getPositionDetail has the same catch structure — prove its hygiene too.
+        String secret = "INTERNAL_HOLDINGS_ERROR_secret_xyz";
+        PortfolioService throwingService = mock(PortfolioService.class);
+        when(throwingService.getHoldings(org.mockito.ArgumentMatchers.anyLong()))
+                .thenThrow(new RuntimeException(secret));
+
+        PortfolioMcpTools failingTools =
+                new PortfolioMcpTools(throwingService, riskCalculator, portfolioRepository, objectMapper);
+
+        McpSchema.CallToolResult result = failingTools.getPositionDetail("AAPL");
+        assertThat(result.isError()).isTrue();
+        assertThat(extractText(result))
+                .doesNotContain(secret)
+                .doesNotContain("RuntimeException")
+                .doesNotContain("com.quantlens")
+                .doesNotContain("java.lang");
+    }
+
     // ── helpers ─────────────────────────────────────────────────────────────────
 
     private String extractText(McpSchema.CallToolResult result) {

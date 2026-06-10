@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import org.springaicommunity.mcp.annotation.McpTool;
 import org.springaicommunity.mcp.annotation.McpToolParam;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -146,6 +147,18 @@ public class PortfolioMcpTools {
                 }
             }
 
+            // WR-02: never serialize null VaR to the client/LLM — if either method is absent
+            // (empty/unexpected VaR list), surface a static error rather than {"...Var95":null}.
+            if (histVar.value == null || paramVar.value == null) {
+                log.error("get_risk_metrics: VaR list missing HISTORICAL or PARAMETRIC entry "
+                        + "(methods present: {})",
+                        scorecard.var().stream().map(VarResultDto::method).toList());
+                return McpSchema.CallToolResult.builder()
+                        .content(List.of(new McpSchema.TextContent("Risk metrics unavailable")))
+                        .isError(true)
+                        .build();
+            }
+
             RiskMetricsResult result = new RiskMetricsResult(
                     scorecard.sharpeRatio(),
                     scorecard.annualizedVolatility(),
@@ -200,8 +213,9 @@ public class PortfolioMcpTools {
                     .orElse(null);
 
             if (holding == null) {
+                // IN-02: static message — do not echo even sanitized input (no ticker enumeration).
                 return McpSchema.CallToolResult.builder()
-                        .content(List.of(new McpSchema.TextContent("Position not found for ticker: " + sanitized)))
+                        .content(List.of(new McpSchema.TextContent("Position not found for the requested ticker")))
                         .isError(true)
                         .build();
             }
@@ -253,7 +267,10 @@ public class PortfolioMcpTools {
      */
     private Long resolvePortfolioId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated()) {
+        // AnonymousAuthenticationToken.isAuthenticated() returns true by design, so the
+        // isAuthenticated() check alone would let "anonymousUser" through (CR-02). Reject it
+        // explicitly — defence-in-depth behind the /mcp .authenticated() + httpBasic gate.
+        if (auth == null || !auth.isAuthenticated() || auth instanceof AnonymousAuthenticationToken) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         }
         String username = auth.getName();
@@ -271,9 +288,9 @@ public class PortfolioMcpTools {
         if (ticker == null) {
             return "";
         }
-        return ticker.toUpperCase()
-                .replaceAll("[^A-Z0-9.]", "")
-                .substring(0, Math.min(ticker.toUpperCase().replaceAll("[^A-Z0-9.]", "").length(), 10));
+        // IN-01: compute the cleaned form once, then cap length.
+        String cleaned = ticker.toUpperCase().replaceAll("[^A-Z0-9.]", "");
+        return cleaned.length() > 10 ? cleaned.substring(0, 10) : cleaned;
     }
 
     /**

@@ -134,7 +134,9 @@ public class SecurityConfig {
                                 // Exemption is safe because /mcp requires HTTP Basic authentication
                                 // (machine client sends Authorization: Basic header — not session-based).
                                 // T-09-04: This is NOT a relaxation — the endpoint stays authenticated.
-                                AntPathRequestMatcher.antMatcher("/mcp"))
+                                // WR-01: scope to POST (the MCP transport verb) — consistent with the
+                                // /api/ai/key and /api/ai/chat exemptions above; GET is never CSRF-checked.
+                                AntPathRequestMatcher.antMatcher(HttpMethod.POST, "/mcp"))
                 )
                 // Phase 9: HTTP Basic for MCP machine-client authentication on /mcp.
                 // Coexists with existing .formLogin() — Vue SPA continues using session cookies on /api/**.

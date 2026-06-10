@@ -23,9 +23,10 @@ export interface CommentaryDto {
 }
 
 /**
- * Typed DTO for the structured-output chart — mirrors the Phase-8 live BeanOutputConverter
- * record shape so the chart component is source-agnostic (demo stub feeds this from
- * /ai-structured-demo.json; Phase 8 swaps source to live typed record with no chart changes).
+ * Typed DTO for the structured-output chart — mirrors the live BeanOutputConverter record shape
+ * so the chart component is source-agnostic. The store fetches GET /api/ai/structured for both
+ * modes: in demo mode the backend returns the seeded STRUCTURED_INSIGHT record (no key, no network);
+ * with a key it returns the live LLM-generated typed record — same shape, no chart changes.
  */
 export interface StructuredChartDto {
   title: string

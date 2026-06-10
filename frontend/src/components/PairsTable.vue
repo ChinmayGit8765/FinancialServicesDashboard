@@ -36,7 +36,7 @@ function zScoreClass(z: number): string {
 
     <!-- Empty state -->
     <div v-else-if="!props.pairs?.length" class="chart-empty">
-      No cointegrated pairs found in current holdings.
+      No statistically cointegrated pairs in current holdings (Engle–Granger ADF, p &lt; 0.05).
     </div>
 
     <!-- Data table -->

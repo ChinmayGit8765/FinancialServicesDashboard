@@ -154,6 +154,40 @@ function retryForecast(): void { portfolioStore.fetchForecast() }
           />
         </div>
 
+        <!-- Hero: AI Daily Commentary — the headline of the demo, visible with NO key.
+             Seeded content is fetched on mount (onMounted) and served by DemoModeAdvisor
+             with zero network call when no LLM key is set. -->
+        <div class="col-8 ai-hero">
+          <div class="ai-hero-eyebrow">
+            <span class="ai-hero-kicker">AI Daily Commentary</span>
+            <span class="ai-hero-demo">Seeded demo · no key required</span>
+          </div>
+          <CommentaryCard
+            :commentary="aiStore.commentary.data"
+            :loading="aiStore.commentary.loading"
+            :error="aiStore.commentary.error"
+            @retry="aiStore.fetchCommentary()"
+          />
+        </div>
+        <div class="col-4">
+          <div class="connect-ai-panel">
+            <span class="ai-hero-kicker">Live AI</span>
+            <p class="connect-ai-hint">
+              You're seeing seeded demo responses across every AI panel. Paste your own
+              Anthropic or OpenAI key — session-only, never stored — to switch them all to
+              live LLM responses.
+            </p>
+            <button class="connect-ai-btn" @click="keyModalOpen = true">
+              Connect Live AI
+            </button>
+          </div>
+          <BYOKeyModal
+            :open="keyModalOpen"
+            @close="keyModalOpen = false"
+            @submitted="aiStore.fetchStatus(); aiStore.fetchCommentary(); aiStore.fetchStructured()"
+          />
+        </div>
+
         <!-- Row 2: P&L Chart (col 7) + Benchmark Chart (col 5) -->
         <div class="col-7">
           <PnlChart
@@ -250,20 +284,9 @@ function retryForecast(): void { portfolioStore.fetchForecast() }
           />
         </div>
 
-        <!-- Row 8: AI Daily Commentary (col 12) — Phase 6 -->
-        <div class="col-12">
-          <CommentaryCard
-            :commentary="aiStore.commentary.data"
-            :loading="aiStore.commentary.loading"
-            :error="aiStore.commentary.error"
-            @retry="aiStore.fetchCommentary()"
-          />
-        </div>
-
-        <!-- Row 9: Structured Output Chart (col 8) + BYO Key slot (col 4) — Phase 6 -->
+        <!-- Row 8: Structured Output Chart + AI Q&A RAG chat (col 12) — Phase 6/7.
+             (Daily commentary + the Connect Live AI CTA were promoted to the hero row above the fold.) -->
         <div class="col-8">
-          <!-- Structured-output chart: seeded demo fixture (Phase 6 AI panel).
-               Phase 8 (AI-06) will swap source to live BeanOutputConverter typed record. -->
           <StructuredOutputChart
             :structured="aiStore.structured.data"
             :loading="aiStore.structured.loading"
@@ -277,25 +300,6 @@ function retryForecast(): void { portfolioStore.fetchForecast() }
             :error="aiStore.chatError"
             @send="aiStore.sendMessage($event)"
             style="margin-top: 16px;"
-          />
-        </div>
-        <div class="col-4">
-          <!-- Connect Live AI trigger + BYO-key popup -->
-          <div class="connect-ai-panel">
-            <button
-              class="connect-ai-btn"
-              @click="keyModalOpen = true"
-            >
-              Connect Live AI
-            </button>
-            <p class="connect-ai-hint">
-              Paste your own Anthropic or OpenAI key to switch from demo to live AI responses.
-            </p>
-          </div>
-          <BYOKeyModal
-            :open="keyModalOpen"
-            @close="keyModalOpen = false"
-            @submitted="aiStore.fetchStatus(); aiStore.fetchCommentary()"
           />
         </div>
 
@@ -351,6 +355,33 @@ function retryForecast(): void { portfolioStore.fetchForecast() }
 .col-7  { grid-column: span 7; }
 .col-8  { grid-column: span 8; }
 .col-12 { grid-column: 1 / -1; }
+
+/* Hero AI commentary block (above the fold) */
+.ai-hero {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.ai-hero-eyebrow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.ai-hero-kicker {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-accent);
+}
+
+.ai-hero-demo {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
 
 /* Connect Live AI panel (LLM Key slot) */
 .connect-ai-panel {

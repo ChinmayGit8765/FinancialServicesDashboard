@@ -23,8 +23,10 @@ const emit = defineEmits<{
 <template>
   <div class="commentary-card">
 
-    <!-- Loading: shimmer skeleton (~120px per SlotPlaceholder height) -->
-    <template v-if="props.loading">
+    <!-- Loading: shimmer skeleton (~120px per SlotPlaceholder height).
+         Also covers the brief null window before the first response so the card never
+         flashes muted "loading…" placeholder text — it screenshots cleanly mid-load. -->
+    <template v-if="props.loading || (!props.commentary && !props.error)">
       <div class="skeleton" style="height: 20px; width: 55%; margin-bottom: 12px" aria-hidden="true" />
       <div class="skeleton" style="height: 14px; margin-bottom: 8px" aria-hidden="true" />
       <div class="skeleton" style="height: 14px; margin-bottom: 8px" aria-hidden="true" />
@@ -61,11 +63,6 @@ const emit = defineEmits<{
         </li>
       </ul>
     </template>
-
-    <!-- Empty state -->
-    <div v-else class="commentary-empty">
-      AI commentary is loading…
-    </div>
 
   </div>
 </template>

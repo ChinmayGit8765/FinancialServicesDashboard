@@ -3,13 +3,14 @@
 // IMPORTANT: import from 'echarts/core' NOT 'echarts' (avoids full ~1MB bundle)
 
 import * as echarts from 'echarts/core'
-import { LineChart, PieChart, TreemapChart } from 'echarts/charts'
+import { LineChart, PieChart, TreemapChart, HeatmapChart } from 'echarts/charts'
 import {
   GridComponent,
   TooltipComponent,
   LegendComponent,
   TitleComponent,
   DataZoomComponent,
+  VisualMapComponent,
 } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
 import { quantlensDarkTheme } from './echarts-theme'
@@ -19,11 +20,16 @@ echarts.use([
   LineChart,
   PieChart,
   TreemapChart,
+  // HeatmapChart + VisualMapComponent: required by CorrelationHeatmap.vue. Without them the
+  // category axes still draw (GridComponent) but the heatmap series + colour scale are silently
+  // dropped — the cells render blank. (Fix: correlation heatmap showed empty cells.)
+  HeatmapChart,
   GridComponent,
   TooltipComponent,
   LegendComponent,
   TitleComponent,
   DataZoomComponent,
+  VisualMapComponent,
   CanvasRenderer,
 ])
 

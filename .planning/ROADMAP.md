@@ -188,7 +188,7 @@ Plans:
   3. A Spring Modulith ApplicationModules.verify() ArchUnit test passes, confirming the module dependency graph (ai → portfolio + analytics, analytics → portfolio, mcp → portfolio + analytics, auth standalone) and generating a module diagram
 **Plans**: 1 plan
 Plans:
-- [ ] 10-01-PLAN.md — OpenAPI (springdoc 2.8.17) + leak-free /v3/api-docs test; Modulith living contract + headless Documenter diagram; README Screenshots/Capture Guide + Docs pointers; StructuredOutputChart.vue cleanup (DOCS-01)
+- [x] 10-01-PLAN.md — OpenAPI (springdoc 2.8.17) + leak-free /v3/api-docs test; Modulith living contract + headless Documenter diagram; README Screenshots/Capture Guide + Docs pointers; StructuredOutputChart.vue cleanup (DOCS-01) (completed 2026-06-10)
 
 ## Progress
 

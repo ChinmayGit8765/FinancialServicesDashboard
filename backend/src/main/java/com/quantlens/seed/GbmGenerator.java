@@ -260,6 +260,72 @@ public class GbmGenerator {
         return rows;
     }
 
+    /**
+     * Generate a price series deliberately <strong>cointegrated</strong> with an existing base series.
+     *
+     * <p>Builds log-prices as {@code logB[t] = alpha + beta*logA[t] + u[t]}, where
+     * {@code u[t] = phi*u[t-1] + sigmaU*eps[t]} is a stationary AR(1) / Ornstein-Uhlenbeck spread
+     * ({@code |phi| < 1}). Because the spread {@code u} is stationary, the Engle-Granger residual of
+     * regressing {@code logB} on {@code logA} is stationary, so the ADF test rejects the unit root
+     * ({@code p < 0.05}) and {@code CointegrationScanner} legitimately detects the pair — no scanner
+     * change and no threshold loosening; the quant stays defensible. {@code alpha} is chosen so the
+     * series starts exactly at {@code startPrice} (with {@code u[0] = 0}).
+     *
+     * <p><strong>Determinism / isolation:</strong> uses a DEDICATED {@link MersenneTwister} seeded
+     * with {@code rngSeed}, completely independent of the main price-series RNG stream. Adding a
+     * partner therefore does NOT perturb any other security's prices, so all existing golden values
+     * are preserved.
+     *
+     * @param baseRows   the partner's base series (e.g. XOM's OHLCV rows); dates are reused verbatim
+     * @param startPrice the partner's starting price
+     * @param beta       cointegration slope (≈1 for two like-for-like names)
+     * @param phi        AR(1) spread persistence in (0,1); smaller = faster mean reversion
+     * @param sigmaU     AR(1) spread innovation volatility (per day, in log space)
+     * @param rngSeed    dedicated RNG seed (independent of the main stream)
+     * @return OHLCV rows for the cointegrated partner, one per base row
+     */
+    public List<OhlcvRow> generateCointegratedPartner(List<OhlcvRow> baseRows, double startPrice,
+                                                      double beta, double phi, double sigmaU,
+                                                      long rngSeed) {
+        if (baseRows == null || baseRows.isEmpty()) {
+            throw new IllegalArgumentException("baseRows must be non-empty");
+        }
+        MersenneTwister rng = new MersenneTwister(rngSeed);
+        int n = baseRows.size();
+        double logA0 = Math.log(baseRows.get(0).close().doubleValue());
+        // Pin B[0] = startPrice with u[0]=0:  ln(startPrice) = alpha + beta*logA0
+        double alpha = Math.log(startPrice) - beta * logA0;
+
+        List<OhlcvRow> rows = new ArrayList<>(n);
+        double u = 0.0;
+        double prevClose = startPrice;
+        for (int t = 0; t < n; t++) {
+            OhlcvRow base = baseRows.get(t);
+            double logA = Math.log(base.close().doubleValue());
+            if (t > 0) {
+                u = phi * u + sigmaU * rng.nextGaussian();
+            }
+            double close = Math.exp(alpha + beta * logA + u);
+            double open = (t == 0) ? startPrice : prevClose;
+
+            // Intraday range: noise proportional to the day's move (mirrors the GBM path)
+            double absMove = Math.abs(close - open);
+            double rangeNoise = absMove * 0.3 * Math.abs(rng.nextGaussian());
+            double high = Math.max(open, close) + rangeNoise;
+            double low  = Math.min(open, close) - rangeNoise;
+            high = Math.max(high, Math.max(open, close));
+            low  = Math.max(low, 0.01);
+
+            double logRet = (open > 0.0) ? Math.log(close / open) : 0.0;
+            long volume = (long) (1_000_000L * (0.8 + 5.0 * Math.abs(logRet)));
+            volume = Math.max(volume, 100_000L);
+
+            rows.add(new OhlcvRow(base.date(), bd(open), bd(high), bd(low), bd(close), volume));
+            prevClose = close;
+        }
+        return rows;
+    }
+
     // ── helpers ───────────────────────────────────────────────────────────────
 
     /**

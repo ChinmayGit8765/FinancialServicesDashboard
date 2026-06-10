@@ -61,7 +61,12 @@ public class SeedRunner implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(SeedRunner.class);
 
-    private static final String SEED_VERSION = "v1";
+    // v2: added the COP↔XOM cointegrated Energy pair to Bob's Income portfolio.
+    // (Bump forces a re-seed; the idempotence guard skips seeding once a version is completed.)
+    private static final String SEED_VERSION = "v2";
+
+    /** Dedicated RNG seed for the cointegrated partner — independent of the main price stream. */
+    private static final long PARTNER_RNG_SEED = 1042L;
 
     // Trading-day calendar anchor: first Monday of 2023 series (~504 days to ~end 2024)
     private static final LocalDate SERIES_START = LocalDate.of(2022, 9, 12);
@@ -115,11 +120,11 @@ public class SeedRunner implements ApplicationRunner {
                 .map(SeedLog::isCompleted)
                 .orElse(false);
         if (alreadyDone) {
-            log.info("SeedRunner: seed_log v1 already completed — skipping");
+            log.info("SeedRunner: seed_log {} already completed — skipping", SEED_VERSION);
             return;
         }
 
-        log.info("SeedRunner: starting data seed (seed_log v1 not yet completed)...");
+        log.info("SeedRunner: starting data seed (seed_log {} not yet completed)...", SEED_VERSION);
 
         // 1. Build the securities universe + benchmark spec
         List<SecuritySpec> specs = buildSpecs();
@@ -177,6 +182,25 @@ public class SeedRunner implements ApplicationRunner {
             byTicker.put(sec.getTicker(), sec);
         }
 
+        // 5b. Cointegrated Energy partner. COP is generated as a stationary-spread partner of XOM
+        // (logCOP = alpha + 1.0*logXOM + AR(1) spread) using a DEDICATED RNG, so it does not perturb
+        // any other security's prices (all existing golden values are preserved). It gives the
+        // Engle-Granger/ADF CointegrationScanner a genuine, mathematically-valid cointegrated pair to
+        // detect in Bob's Income portfolio — no scanner change, no threshold loosening.
+        List<OhlcvRow> xomRows = ohlcvData.get(specIndexOf(specs, "XOM"));
+        List<OhlcvRow> copRows = gbmGenerator.generateCointegratedPartner(
+                xomRows, 105.0, 1.0, 0.85, 0.02, PARTNER_RNG_SEED);
+        Security cop = securityRepository.save(
+                new Security("COP", nameFor("COP"), sectorFor("COP"), false));
+        List<OhlcvBar> copBars = new ArrayList<>(copRows.size());
+        for (OhlcvRow row : copRows) {
+            copBars.add(new OhlcvBar(cop, row.date(),
+                    row.open(), row.high(), row.low(), row.close(), row.volume()));
+        }
+        ohlcvBarRepository.saveAll(copBars);
+        log.info("SeedRunner: saved cointegrated Energy partner COP (XOM-coupled) with {} bars",
+                copBars.size());
+
         // First OHLCV date is the cost basis reference; last close is ~"current" price
         // We use the close of bar 250 (~halfway) as the early-buy cost basis
         // and bars 0–250 as "early" buys, 251–503 as "recent" activity
@@ -190,6 +214,8 @@ public class SeedRunner implements ApplicationRunner {
         Portfolio bobPortfolio = portfolioRepository.save(
                 new Portfolio(bob, "Bob's Income Portfolio", "Income"));
         seedIncomePortfolio(bobPortfolio, byTicker, ohlcvData, specs);
+        // Add the cointegrated COP position so the scanner detects the COP↔XOM Energy pair for Bob.
+        seedPositionWithHistory(bobPortfolio, cop, copRows, 45.0);
 
         // 8. Charlie — Balanced (mixed)
         Portfolio charliePortfolio = portfolioRepository.save(
@@ -204,7 +230,7 @@ public class SeedRunner implements ApplicationRunner {
         seedLog.setCompletedAt(LocalDateTime.now());
         seedLogRepository.save(seedLog);
 
-        log.info("SeedRunner: seed complete — seed_log v1 marked completed");
+        log.info("SeedRunner: seed complete — seed_log {} marked completed", SEED_VERSION);
     }
 
     // ── universe definition ───────────────────────────────────────────────────
@@ -290,38 +316,46 @@ public class SeedRunner implements ApplicationRunner {
             int specIdx = specIndexOf(specs, ticker);
             if (specIdx < 0) continue;
 
-            List<OhlcvRow> rows = ohlcvData.get(specIdx);
-
-            // Early buy at bar 50
-            int buyBar = Math.min(50, rows.size() - 1);
-            BigDecimal buyPrice = rows.get(buyBar).close();
-            // Use BigDecimal throughout for all quantity arithmetic (WR-06)
-            BigDecimal bdQty = BigDecimal.valueOf(shares[i]);
-            BigDecimal quantity = bdQty.setScale(4, RoundingMode.HALF_UP);
-            LocalDate buyDate = rows.get(buyBar).date();
-
-            transactionRepository.save(new Transaction(
-                    portfolio, sec, buyDate, "BUY", quantity, buyPrice));
-
-            // Partial sell at bar 200 (sell ~30% of position).
-            if (rows.size() > 200) {
-                int sellBar = 200;
-                BigDecimal sellPrice = rows.get(sellBar).close();
-                BigDecimal sellQty = bdQty.multiply(new BigDecimal("0.3"))
-                        .setScale(0, RoundingMode.FLOOR);
-                if (sellQty.compareTo(BigDecimal.ONE) >= 0) {
-                    BigDecimal sellQuantity = sellQty.setScale(4, RoundingMode.HALF_UP);
-                    LocalDate sellDate = rows.get(sellBar).date();
-                    transactionRepository.save(new Transaction(
-                            portfolio, sec, sellDate, "SELL", sellQuantity, sellPrice));
-                    bdQty = bdQty.subtract(sellQty);
-                }
-            }
-
-            // Current position: remaining shares at original buy cost basis
-            BigDecimal finalQty = bdQty.setScale(4, RoundingMode.HALF_UP);
-            positionRepository.save(new Position(portfolio, sec, finalQty, buyPrice));
+            seedPositionWithHistory(portfolio, sec, ohlcvData.get(specIdx), shares[i]);
         }
+    }
+
+    /**
+     * Create one position with a BUY (bar 50) + optional partial SELL (bar 200) history.
+     * Extracted so derived securities (the cointegrated COP partner, which is not in the spec list)
+     * can be seeded with identical buy/sell/cost-basis logic.
+     */
+    private void seedPositionWithHistory(Portfolio portfolio, Security sec,
+                                         List<OhlcvRow> rows, double shareCount) {
+        // Early buy at bar 50
+        int buyBar = Math.min(50, rows.size() - 1);
+        BigDecimal buyPrice = rows.get(buyBar).close();
+        // Use BigDecimal throughout for all quantity arithmetic (WR-06)
+        BigDecimal bdQty = BigDecimal.valueOf(shareCount);
+        BigDecimal quantity = bdQty.setScale(4, RoundingMode.HALF_UP);
+        LocalDate buyDate = rows.get(buyBar).date();
+
+        transactionRepository.save(new Transaction(
+                portfolio, sec, buyDate, "BUY", quantity, buyPrice));
+
+        // Partial sell at bar 200 (sell ~30% of position).
+        if (rows.size() > 200) {
+            int sellBar = 200;
+            BigDecimal sellPrice = rows.get(sellBar).close();
+            BigDecimal sellQty = bdQty.multiply(new BigDecimal("0.3"))
+                    .setScale(0, RoundingMode.FLOOR);
+            if (sellQty.compareTo(BigDecimal.ONE) >= 0) {
+                BigDecimal sellQuantity = sellQty.setScale(4, RoundingMode.HALF_UP);
+                LocalDate sellDate = rows.get(sellBar).date();
+                transactionRepository.save(new Transaction(
+                        portfolio, sec, sellDate, "SELL", sellQuantity, sellPrice));
+                bdQty = bdQty.subtract(sellQty);
+            }
+        }
+
+        // Current position: remaining shares at original buy cost basis
+        BigDecimal finalQty = bdQty.setScale(4, RoundingMode.HALF_UP);
+        positionRepository.save(new Position(portfolio, sec, finalQty, buyPrice));
     }
 
     // ── metadata helpers ──────────────────────────────────────────────────────
@@ -344,6 +378,7 @@ public class SeedRunner implements ApplicationRunner {
             case "BAC"    -> "Bank of America Corporation";
             case "XOM"    -> "Exxon Mobil Corporation";
             case "CVX"    -> "Chevron Corporation";
+            case "COP"    -> "ConocoPhillips";
             case "JNJ"    -> "Johnson & Johnson";
             case "PFE"    -> "Pfizer Inc.";
             case "PG"     -> "Procter & Gamble Co.";
@@ -359,7 +394,7 @@ public class SeedRunner implements ApplicationRunner {
         return switch (ticker) {
             case "AAPL", "MSFT", "NVDA", "AMZN", "GOOGL" -> "Technology";
             case "JPM", "BAC"                             -> "Financials";
-            case "XOM", "CVX"                             -> "Energy";
+            case "XOM", "CVX", "COP"                      -> "Energy";
             case "JNJ", "PFE"                             -> "Healthcare";
             case "PG", "KO", "WMT"                        -> "Consumer Staples";
             case "TSLA"                                   -> "Automotive";

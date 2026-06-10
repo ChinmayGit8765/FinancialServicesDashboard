@@ -369,7 +369,7 @@ Also update `<figcaption class="sr-only">` to:
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED — answered inline; plan 10-01 implements both)
 
 1. **Should the generated Modulith docs be committed to `docs/` or remain in `target/` only?**
    - What we know: `target/` is git-ignored; `docs/` would make the diagram browsable on GitHub without a local build.

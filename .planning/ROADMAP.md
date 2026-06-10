@@ -20,8 +20,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 6: Demo-Mode AI Seam** - DemoModeAdvisor, LlmKeySessionHolder, ChatClientStrategy, seeded fixtures, BYO-key popup, explain-position and commentary in demo mode (completed 2026-06-09)
 - [x] **Phase 7: RAG Pipeline** - pgvector ingestion, pre-seeded embeddings, QuestionAnswerAdvisor, NL Q&A chat with conversation memory (completed 2026-06-09)
 - [x] **Phase 8: Live AI Features** - Finnhub @Tool integration, multi-provider ChatClient (Claude + OpenAI), structured output driving a chart (completed 2026-06-09)
-- [ ] **Phase 9: MCP Server** - @McpTool beans, Streamable HTTP transport, Spring Security on /mcp, Claude Code .mcp.json config, MCP docs
-- [ ] **Phase 10: Polish & Documentation** - README screenshots, OpenAPI spec, Spring Modulith ArchUnit verification test
+- [x] **Phase 9: MCP Server** - @McpTool beans, Streamable HTTP transport, Spring Security on /mcp, Claude Code .mcp.json config, MCP docs (completed 2026-06-10)
+- [x] **Phase 10: Polish & Documentation** - README screenshots, OpenAPI spec, Spring Modulith ArchUnit verification test (completed 2026-06-10)
 
 ## Phase Details
 
@@ -206,4 +206,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 7. RAG Pipeline | 3/3 | Complete   | 2026-06-09 |
 | 8. Live AI Features | 3/3 | Complete   | 2026-06-09 |
 | 9. MCP Server | 2/2 | Plans done | - |
-| 10. Polish & Documentation | 0/1 | Not started | - |
+| 10. Polish & Documentation | 1/1 | Complete    | 2026-06-10 |

@@ -73,7 +73,7 @@ Requirements for the initial release (the screenshot-ready demo). Each maps to r
 
 ### Documentation
 
-- [ ] **DOCS-01**: README includes screenshots demonstrating the app running live with an LLM (captured via live mode)
+- [x] **DOCS-01**: README includes screenshots demonstrating the app running live with an LLM (captured via live mode)
 
 ## Definition of Done
 
@@ -155,7 +155,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | AI-06 | Phase 8 | Complete |
 | MCP-01 | Phase 9 | Pending |
 | MCP-02 | Phase 9 | Pending |
-| DOCS-01 | Phase 10 | Pending |
+| DOCS-01 | Phase 10 | Complete |
 
 **Coverage:**
 - v1 requirements: 32 total
